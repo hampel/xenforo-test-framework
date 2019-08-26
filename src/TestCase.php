@@ -24,6 +24,21 @@ abstract class TestCase extends BaseTestCase
     protected static $app;
 
     /**
+     * The callbacks that should be run after the application is created.
+     *
+     * @var array
+     */
+    protected static $afterApplicationCreatedCallbacks = [];
+
+    /**
+     * The callbacks that should be run before the application is destroyed.
+     *
+     * @var array
+     */
+    protected static $beforeApplicationDestroyedCallbacks = [];
+
+
+    /**
      * Indicates if we have made it through the base setUp function.
      *
      * @var bool
@@ -50,7 +65,11 @@ abstract class TestCase extends BaseTestCase
             self::refreshApplication();
         }
 
-//        $this->setUpTraits();
+        self::setUpTraits();
+
+        foreach (self::afterApplicationCreatedCallbacks as $callback) {
+            call_user_func($callback);
+        }
 
         self::$setUpHasRun = true;
     }
@@ -70,15 +89,15 @@ abstract class TestCase extends BaseTestCase
         self::$app = static::createApplication();
     }
 
-//    /**
-//     * Boot the testing helper traits.
-//     *
-//     * @return array
-//     */
-//    protected function setUpTraits()
-//    {
-//        $uses = array_flip(class_uses_recursive(static::class));
-//
+    /**
+     * Boot the testing helper traits.
+     *
+     * @return array
+     */
+    protected static function setUpTraits()
+    {
+        $uses = array_flip(class_uses_recursive(static::class));
+
 //        if (isset($uses[RefreshDatabase::class])) {
 //            $this->refreshDatabase();
 //        }
@@ -102,9 +121,9 @@ abstract class TestCase extends BaseTestCase
 //        if (isset($uses[WithFaker::class])) {
 //            $this->setUpFaker();
 //        }
-//
-//        return $uses;
-//    }
+
+        return $uses;
+    }
 
     /**
      * Clean up the testing environment before the next test.
@@ -115,7 +134,7 @@ abstract class TestCase extends BaseTestCase
     {
     	// reset options
     	$this->app()->container('em')->getRepository('XF:Option')->rebuildOptionCache();
-    	
+
         if (class_exists('Mockery')) {
             if ($container = Mockery::getContainer()) {
                 $this->addToAssertionCount($container->mockery_getExpectationCount());
@@ -133,4 +152,12 @@ abstract class TestCase extends BaseTestCase
         }
     }
 
+	public static function tearDownAfterClass(): void
+	{
+        if (self::$app) {
+            foreach (self::$beforeApplicationDestroyedCallbacks as $callback) {
+                call_user_func($callback);
+            }
+        }
+	}
 }
