@@ -113,6 +113,9 @@ abstract class TestCase extends BaseTestCase
      */
     protected function tearDown(): void
     {
+    	// reset options
+    	$this->app()->container('em')->getRepository('XF:Option')->rebuildOptionCache();
+    	
         if (class_exists('Mockery')) {
             if ($container = Mockery::getContainer()) {
                 $this->addToAssertionCount($container->mockery_getExpectationCount());
