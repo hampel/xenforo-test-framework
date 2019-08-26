@@ -1,4 +1,4 @@
-<?php namespace Hampel\XF\Mvc\Entity;
+<?php namespace Hampel\Testing\XF\Mvc\Entity;
 
 use Mockery;
 use XF\Mvc\Entity\Manager as BaseManager;
