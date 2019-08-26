@@ -98,7 +98,7 @@ abstract class TestCase extends BaseTestCase
      */
     protected static function setUpTraits()
     {
-        $uses = array_flip(class_uses_recursive(static::class));
+        $uses = array_flip(self::class_uses_recursive(static::class));
 
         if (isset($uses[InteractsWithEntityManager::class])) {
             self::setUpManager();
@@ -129,6 +129,21 @@ abstract class TestCase extends BaseTestCase
 //        }
 
         return $uses;
+    }
+
+    protected static function class_uses_recursive($class)
+    {
+        if (is_object($class)) {
+            $class = get_class($class);
+        }
+
+        $results = [];
+
+        foreach (array_reverse(class_parents($class)) + [$class => $class] as $class) {
+            $results += trait_uses_recursive($class);
+        }
+
+        return array_unique($results);
     }
 
     /**
