@@ -140,10 +140,27 @@ abstract class TestCase extends BaseTestCase
         $results = [];
 
         foreach (array_reverse(class_parents($class)) + [$class => $class] as $class) {
-            $results += trait_uses_recursive($class);
+            $results += self::trait_uses_recursive($class);
         }
 
         return array_unique($results);
+    }
+
+    /**
+     * Returns all traits used by a trait and its traits.
+     *
+     * @param  string  $trait
+     * @return array
+     */
+    protected static function trait_uses_recursive($trait)
+    {
+        $traits = class_uses($trait);
+
+        foreach ($traits as $trait) {
+            $traits += self::trait_uses_recursive($trait);
+        }
+
+        return $traits;
     }
 
     /**
