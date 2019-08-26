@@ -21,11 +21,9 @@
 		"MIT"
 	],
 	"require": {
-		"php": ">=5.5.0"
-	},
-	"suggest": {
-		"phpunit/phpunit": "Use require-dev to install PHPUnit directly into your development server",
-		"mockery/mockery": "Mockery is a simple yet flexible PHP mock object framework"
+		"php": ">=5.5.0",
+		"phpunit/phpunit": "^8",
+		"mockery/mockery": "^1"
 	},
 	"autoload": {
 		"psr-4": {
