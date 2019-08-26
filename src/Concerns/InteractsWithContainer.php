@@ -12,9 +12,9 @@ trait InteractsWithContainer
      * @param  object  $instance
      * @return object
      */
-    protected function swap($key, $instance)
+    protected static function swap($key, $instance)
     {
-        return $this->instance($key, $instance);
+        return self::instance($key, $instance);
     }
 
     /**
@@ -24,7 +24,7 @@ trait InteractsWithContainer
      * @param  object  $instance
      * @return object
      */
-    protected function instance($key, $instance)
+    protected static function instance($key, $instance)
     {
         self::$app->container()->set($key, $instance);
 
@@ -38,9 +38,9 @@ trait InteractsWithContainer
      * @param  \Closure|null  $mock
      * @return object
      */
-    protected function mock($key, Closure $mock = null)
+    protected static function mock($key, Closure $mock = null)
     {
-        return $this->instance($key, Mockery::mock(...array_filter(func_get_args())));
+        return self::instance($key, Mockery::mock(...array_filter(func_get_args())));
     }
 
     /**
@@ -50,8 +50,8 @@ trait InteractsWithContainer
      * @param  \Closure|null  $mock
      * @return object
      */
-    protected function spy($abstract, Closure $mock = null)
+    protected static function spy($abstract, Closure $mock = null)
     {
-        return $this->instance($abstract, Mockery::spy(...array_filter(func_get_args())));
+        return self::instance($abstract, Mockery::spy(...array_filter(func_get_args())));
     }
 }
