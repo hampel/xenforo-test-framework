@@ -26,7 +26,7 @@ trait InteractsWithContainer
      */
     protected function instance($key, $instance)
     {
-        self::$app->container->set($key, $instance);
+        self::$app->container()->set($key, $instance);
 
         return $instance;
     }
