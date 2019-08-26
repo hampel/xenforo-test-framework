@@ -21,39 +21,38 @@ abstract class TestCase extends BaseTestCase
      *
      * @var \XF\App
      */
-    protected $app;
+    protected static $app;
 
     /**
      * Indicates if we have made it through the base setUp function.
      *
      * @var bool
      */
-    protected $setUpHasRun = false;
+    protected static $setUpHasRun = false;
 
     /**
      * Creates the application.
      *
      * Needs to be implemented by subclasses.
      *
-     * @return \Symfony\Component\HttpKernel\HttpKernelInterface
+     * @return \XF\App
      */
-    abstract public function createApplication();
+    abstract public static function createApplication();
 
     /**
      * Setup the test environment.
      *
      * @return void
      */
-    protected function setUp(): void
+    public static function setUpBeforeClass(): void
     {
-        if (! $this->app) {
-            $this->refreshApplication();
+        if (! self::$app) {
+            self::refreshApplication();
         }
 
 //        $this->setUpTraits();
 
-
-        $this->setUpHasRun = true;
+        self::$setUpHasRun = true;
     }
 
     /**
@@ -61,9 +60,9 @@ abstract class TestCase extends BaseTestCase
      *
      * @return void
      */
-    protected function refreshApplication()
+    protected static function refreshApplication()
     {
-        $this->app = $this->createApplication();
+        self::$app = static::createApplication();
     }
 
 //    /**
@@ -109,18 +108,6 @@ abstract class TestCase extends BaseTestCase
      */
     protected function tearDown(): void
     {
-        if ($this->app) {
-            foreach ($this->beforeApplicationDestroyedCallbacks as $callback) {
-                call_user_func($callback);
-            }
-
-            $this->app->flush();
-
-            $this->app = null;
-        }
-
-        $this->setUpHasRun = false;
-
         if (class_exists('Mockery')) {
             if ($container = Mockery::getContainer()) {
                 $this->addToAssertionCount($container->mockery_getExpectationCount());

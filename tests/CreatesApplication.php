@@ -7,7 +7,7 @@ trait CreatesApplication
      *
      * @return \XF\App
      */
-    public function createApplication()
+    public static function createApplication()
     {
 		$dir = '../../../..';
 		require_once($dir . '/src/XF.php');
