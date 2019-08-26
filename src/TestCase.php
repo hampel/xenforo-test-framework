@@ -69,7 +69,7 @@ abstract class TestCase extends BaseTestCase
 
         self::setUpTraits();
 
-        foreach (self::afterApplicationCreatedCallbacks as $callback) {
+        foreach (self::$afterApplicationCreatedCallbacks as $callback) {
             call_user_func($callback);
         }
 
