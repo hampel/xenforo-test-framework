@@ -1,4 +1,4 @@
-<?php namespace Hampel\Testing\XF\App;
+<?php namespace Hampel\Testing\XF;
 
 use XF\Container;
 
