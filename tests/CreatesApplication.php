@@ -10,7 +10,7 @@ trait CreatesApplication
     public function createApplication()
     {
 		$dir = '../../../..';
-		require($dir . '/src/XF.php');
+		require_once($dir . '/src/XF.php');
 
 		\XF::start($dir);
 
