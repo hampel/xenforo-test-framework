@@ -27,7 +27,7 @@
 		"phpunit/phpunit": "Use require-dev to install PHPUnit directly into your development server",
 		"mockery/mockery": "Mockery is a simple yet flexible PHP mock object framework"
 	},
-	"autoload-dev": {
+	"autoload": {
 		"psr-4": {
 			"Hampel\\Testing\\": "src/"
 		}
