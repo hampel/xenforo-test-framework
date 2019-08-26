@@ -7,7 +7,7 @@ use PHPUnit\Framework\TestCase as BaseTestCase;
 
 abstract class TestCase extends BaseTestCase
 {
-//    use Concerns\InteractsWithContainer,
+    use Concerns\InteractsWithContainer;//,
 //        Concerns\MakesHttpRequests,
 //        Concerns\InteractsWithAuthentication,
 //        Concerns\InteractsWithConsole,
@@ -53,6 +53,11 @@ abstract class TestCase extends BaseTestCase
 //        $this->setUpTraits();
 
         self::$setUpHasRun = true;
+    }
+
+    public function app()
+    {
+    	return self::$app;
     }
 
     /**
