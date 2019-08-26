@@ -4,10 +4,12 @@ use Mockery;
 use Carbon\Carbon;
 use Carbon\CarbonImmutable;
 use PHPUnit\Framework\TestCase as BaseTestCase;
+use Hampel\Testing\Concerns\InteractsWithEntityManager;
 
 abstract class TestCase extends BaseTestCase
 {
-    use Concerns\InteractsWithContainer;//,
+    use Concerns\InteractsWithContainer,
+	    Concerns\InteractsWithEntityManager;//,
 //        Concerns\MakesHttpRequests,
 //        Concerns\InteractsWithAuthentication,
 //        Concerns\InteractsWithConsole,
@@ -97,6 +99,10 @@ abstract class TestCase extends BaseTestCase
     protected static function setUpTraits()
     {
         $uses = array_flip(class_uses_recursive(static::class));
+
+        if (isset($uses[InteractsWithEntityManager::class])) {
+            self::setUpManager();
+        }
 
 //        if (isset($uses[RefreshDatabase::class])) {
 //            $this->refreshDatabase();
