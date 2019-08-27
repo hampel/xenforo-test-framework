@@ -4,7 +4,6 @@ use Mockery;
 use Carbon\Carbon;
 use Carbon\CarbonImmutable;
 use PHPUnit\Framework\TestCase as BaseTestCase;
-use Hampel\Testing\Concerns\InteractsWithEntityManager;
 
 abstract class TestCase extends BaseTestCase
 {
@@ -103,30 +102,6 @@ abstract class TestCase extends BaseTestCase
         if (isset($uses[InteractsWithEntityManager::class])) {
             self::setUpManager();
         }
-
-//        if (isset($uses[RefreshDatabase::class])) {
-//            $this->refreshDatabase();
-//        }
-//
-//        if (isset($uses[DatabaseMigrations::class])) {
-//            $this->runDatabaseMigrations();
-//        }
-//
-//        if (isset($uses[DatabaseTransactions::class])) {
-//            $this->beginDatabaseTransaction();
-//        }
-//
-//        if (isset($uses[WithoutMiddleware::class])) {
-//            $this->disableMiddlewareForAllTests();
-//        }
-//
-//        if (isset($uses[WithoutEvents::class])) {
-//            $this->disableEventsForAllTests();
-//        }
-//
-//        if (isset($uses[WithFaker::class])) {
-//            $this->setUpFaker();
-//        }
 
         return $uses;
     }
