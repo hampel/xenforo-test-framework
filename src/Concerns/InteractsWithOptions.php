@@ -2,6 +2,13 @@
 
 trait InteractsWithOptions
 {
+	protected function setUpOptions()
+	{
+        $this->beforeApplicationDestroyed(function () {
+            $this->resetOptions();
+        });
+	}
+
     /**
      * Set an array of options key=>value pairs
      *

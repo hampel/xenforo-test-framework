@@ -23,14 +23,14 @@ abstract class TestCase extends BaseTestCase
      *
      * @var array
      */
-    protected static $afterApplicationCreatedCallbacks = [];
+    protected $afterApplicationCreatedCallbacks = [];
 
     /**
      * The callbacks that should be run before the application is destroyed.
      *
      * @var array
      */
-    protected static $beforeApplicationDestroyedCallbacks = [];
+    protected $beforeApplicationDestroyedCallbacks = [];
 
 
     /**
@@ -60,15 +60,28 @@ abstract class TestCase extends BaseTestCase
             self::refreshApplication();
         }
 
-        self::setUpTraits();
-
-        foreach (self::$afterApplicationCreatedCallbacks as $callback) {
-            call_user_func($callback);
-        }
-
         self::$setUpHasRun = true;
     }
 
+    /**
+     * Setup the test environment.
+     *
+     * @return void
+     */
+    protected function setUp(): void
+    {
+    	$this->setUpTraits();
+
+        foreach ($this->afterApplicationCreatedCallbacks as $callback) {
+            call_user_func($callback);
+        }
+    }
+
+	/**
+	 * Return our application instance
+	 *
+	 * @return \XF\App
+	 */
     public function app()
     {
     	return self::$app;
@@ -89,18 +102,22 @@ abstract class TestCase extends BaseTestCase
      *
      * @return array
      */
-    protected static function setUpTraits()
+    protected function setUpTraits()
     {
-        $uses = array_flip(self::class_uses_recursive(static::class));
+        $uses = array_flip($this->class_uses_recursive(static::class));
 
         if (isset($uses[Concerns\InteractsWithEntityManager::class])) {
-            self::setUpManager();
+            $this->setUpEntityManager();
+        }
+
+        if (isset($uses[Concerns\InteractsWithOptions::class])) {
+            $this->setUpOptions();
         }
 
         return $uses;
     }
 
-    protected static function class_uses_recursive($class)
+    protected function class_uses_recursive($class)
     {
         if (is_object($class)) {
             $class = get_class($class);
@@ -109,7 +126,7 @@ abstract class TestCase extends BaseTestCase
         $results = [];
 
         foreach (array_reverse(class_parents($class)) + [$class => $class] as $class) {
-            $results += self::trait_uses_recursive($class);
+            $results += $this->trait_uses_recursive($class);
         }
 
         return array_unique($results);
@@ -121,12 +138,12 @@ abstract class TestCase extends BaseTestCase
      * @param  string  $trait
      * @return array
      */
-    protected static function trait_uses_recursive($trait)
+    protected function trait_uses_recursive($trait)
     {
         $traits = class_uses($trait);
 
         foreach ($traits as $trait) {
-            $traits += self::trait_uses_recursive($trait);
+            $traits += $this->trait_uses_recursive($trait);
         }
 
         return $traits;
@@ -139,7 +156,11 @@ abstract class TestCase extends BaseTestCase
      */
     protected function tearDown(): void
     {
-		$this->resetOptions();
+        if ($this->app) {
+            foreach ($this->beforeApplicationDestroyedCallbacks as $callback) {
+                call_user_func($callback);
+            }
+        }
 
         if (class_exists('Mockery')) {
             if ($container = Mockery::getContainer()) {
@@ -160,10 +181,6 @@ abstract class TestCase extends BaseTestCase
 
 	public static function tearDownAfterClass(): void
 	{
-        if (self::$app) {
-            foreach (self::$beforeApplicationDestroyedCallbacks as $callback) {
-                call_user_func($callback);
-            }
-        }
+        self::$setUpHasRun = false;
 	}
 }
