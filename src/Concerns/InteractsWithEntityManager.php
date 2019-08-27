@@ -1,7 +1,5 @@
 <?php namespace Hampel\Testing\Concerns;
 
-use Closure;
-use Mockery;
 use XF\Container;
 use Hampel\Testing\XF\Mvc\Entity\Manager;
 
