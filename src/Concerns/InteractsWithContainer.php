@@ -62,7 +62,7 @@ trait InteractsWithContainer
      */
     protected static function _mock($key, $abstract, Closure $mock = null)
     {
-        return self::swap($key, Mockery::mock($abstract, $mock));
+        return self::_swap($key, Mockery::mock($abstract, $mock));
     }
 
     /**
@@ -88,6 +88,6 @@ trait InteractsWithContainer
      */
     protected static function _spy($key, $abstract, Closure $mock = null)
     {
-        return self::instance($key, Mockery::spy($abstract, $mock));
+        return self::_swap($key, Mockery::spy($abstract, $mock));
     }
 }
