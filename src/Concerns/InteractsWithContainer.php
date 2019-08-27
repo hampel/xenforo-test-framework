@@ -5,17 +5,6 @@ use Mockery;
 
 trait InteractsWithContainer
 {
-    /**
-     * Register an instance of an object in the container.
-     *
-     * @param  mixed  $key
-     * @param  object  $instance
-     * @return object
-     */
-    protected static function swap($key, $instance)
-    {
-        return self::instance($key, $instance);
-    }
 
     /**
      * Register an instance of an object in the container.
@@ -24,7 +13,7 @@ trait InteractsWithContainer
      * @param  object  $instance
      * @return object
      */
-    protected static function instance($key, $instance)
+    protected static function swap($key, $instance)
     {
     	if (is_array($key))
 	    {
@@ -43,23 +32,25 @@ trait InteractsWithContainer
      * Mock an instance of an object in the container.
      *
      * @param  mixed  $key
+     * @param  string $abstract
      * @param  \Closure|null  $mock
      * @return object
      */
-    protected static function mock($key, Closure $mock = null)
+    protected static function mock($key, $abstract, Closure $mock = null)
     {
-        return self::instance($key, Mockery::mock(...array_filter(func_get_args())));
+        return self::swap($key, Mockery::mock($abstract, $mock));
     }
 
     /**
      * Spy an instance of an object in the container.
      *
      * @param  mixed  $key
+     * @param  string $abstract
      * @param  \Closure|null  $mock
      * @return object
      */
-    protected static function spy($key, Closure $mock = null)
+    protected static function spy($key, $abstract, Closure $mock = null)
     {
-        return self::instance($key, Mockery::spy(...array_filter(func_get_args())));
+        return self::instance($key, Mockery::spy($abstract, $mock));
     }
 }
