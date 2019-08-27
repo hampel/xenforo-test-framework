@@ -9,14 +9,15 @@ abstract class TestCase extends BaseTestCase
 {
     use Concerns\InteractsWithContainer,
 	    Concerns\InteractsWithEntityManager,
-	    Concerns\InteractsWithOptions;
+	    Concerns\InteractsWithOptions,
+	    Concerns\UsesReflection;
 
     /**
      * The XenForo application instance.
      *
      * @var \XF\App
      */
-    protected static $app;
+    protected $app;
 
     /**
      * The callbacks that should be run after the application is created.
@@ -38,7 +39,7 @@ abstract class TestCase extends BaseTestCase
      *
      * @var bool
      */
-    protected static $setUpHasRun = false;
+    protected $setUpHasRun = false;
 
     /**
      * Creates the application.
@@ -56,11 +57,7 @@ abstract class TestCase extends BaseTestCase
      */
     public static function setUpBeforeClass(): void
     {
-        if (! self::$app) {
-            self::refreshApplication();
-        }
 
-        self::$setUpHasRun = true;
     }
 
     /**
@@ -70,11 +67,17 @@ abstract class TestCase extends BaseTestCase
      */
     protected function setUp(): void
     {
+        if (! $this->app) {
+            self::refreshApplication();
+        }
+
     	$this->setUpTraits();
 
         foreach ($this->afterApplicationCreatedCallbacks as $callback) {
             call_user_func($callback);
         }
+
+        $this->setUpHasRun = true;
     }
 
 	/**
@@ -104,7 +107,7 @@ abstract class TestCase extends BaseTestCase
      */
     protected function setUpTraits()
     {
-        $uses = array_flip($this->class_uses_recursive(static::class));
+        $uses = array_flip($this->classUsesRecursive(static::class));
 
         if (isset($uses[Concerns\InteractsWithEntityManager::class])) {
             $this->setUpEntityManager();
@@ -117,38 +120,6 @@ abstract class TestCase extends BaseTestCase
         return $uses;
     }
 
-    protected function class_uses_recursive($class)
-    {
-        if (is_object($class)) {
-            $class = get_class($class);
-        }
-
-        $results = [];
-
-        foreach (array_reverse(class_parents($class)) + [$class => $class] as $class) {
-            $results += $this->trait_uses_recursive($class);
-        }
-
-        return array_unique($results);
-    }
-
-    /**
-     * Returns all traits used by a trait and its traits.
-     *
-     * @param  string  $trait
-     * @return array
-     */
-    protected function trait_uses_recursive($trait)
-    {
-        $traits = class_uses($trait);
-
-        foreach ($traits as $trait) {
-            $traits += $this->trait_uses_recursive($trait);
-        }
-
-        return $traits;
-    }
-
     /**
      * Clean up the testing environment before the next test.
      *
@@ -156,11 +127,15 @@ abstract class TestCase extends BaseTestCase
      */
     protected function tearDown(): void
     {
-        if (self::$app) {
+        if ($this->app) {
             foreach ($this->beforeApplicationDestroyedCallbacks as $callback) {
                 call_user_func($callback);
             }
+
+            $this->destroyProperty(\XF::class, 'app');
         }
+
+        $this->setUpHasRun = false;
 
         if (class_exists('Mockery')) {
             if ($container = Mockery::getContainer()) {
@@ -177,11 +152,14 @@ abstract class TestCase extends BaseTestCase
         if (class_exists(CarbonImmutable::class)) {
             CarbonImmutable::setTestNow();
         }
+
+        $this->afterApplicationCreatedCallbacks = [];
+        $this->beforeApplicationDestroyedCallbacks = [];
     }
 
 	public static function tearDownAfterClass(): void
 	{
-        self::$setUpHasRun = false;
+
 	}
 
     /**
