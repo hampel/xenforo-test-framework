@@ -8,14 +8,8 @@ use PHPUnit\Framework\TestCase as BaseTestCase;
 abstract class TestCase extends BaseTestCase
 {
     use Concerns\InteractsWithContainer,
-	    Concerns\InteractsWithEntityManager;//,
-//        Concerns\MakesHttpRequests,
-//        Concerns\InteractsWithAuthentication,
-//        Concerns\InteractsWithConsole,
-//        Concerns\InteractsWithDatabase,
-//        Concerns\InteractsWithExceptionHandling,
-//        Concerns\InteractsWithSession,
-//        Concerns\MocksApplicationServices;
+	    Concerns\InteractsWithEntityManager,
+	    Concerns\InteractsWithOptions;
 
     /**
      * The XenForo application instance.
@@ -99,7 +93,7 @@ abstract class TestCase extends BaseTestCase
     {
         $uses = array_flip(self::class_uses_recursive(static::class));
 
-        if (isset($uses[InteractsWithEntityManager::class])) {
+        if (isset($uses[Concerns\InteractsWithEntityManager::class])) {
             self::setUpManager();
         }
 
@@ -145,8 +139,7 @@ abstract class TestCase extends BaseTestCase
      */
     protected function tearDown(): void
     {
-    	// reset options
-    	$this->app()->container('em')->getRepository('XF:Option')->rebuildOptionCache();
+		$this->resetOptions();
 
         if (class_exists('Mockery')) {
             if ($container = Mockery::getContainer()) {
