@@ -68,7 +68,7 @@ abstract class TestCase extends BaseTestCase
     protected function setUp(): void
     {
         if (! $this->app) {
-            self::refreshApplication();
+            $this->refreshApplication();
         }
 
     	$this->setUpTraits();
@@ -87,7 +87,7 @@ abstract class TestCase extends BaseTestCase
 	 */
     public function app()
     {
-    	return self::$app;
+    	return $this->app;
     }
 
     /**
@@ -95,9 +95,9 @@ abstract class TestCase extends BaseTestCase
      *
      * @return void
      */
-    protected static function refreshApplication()
+    protected function refreshApplication()
     {
-        self::$app = static::createApplication();
+        $this->app = $this->createApplication();
     }
 
     /**
