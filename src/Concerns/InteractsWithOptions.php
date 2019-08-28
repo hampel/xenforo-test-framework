@@ -2,10 +2,14 @@
 
 trait InteractsWithOptions
 {
+	protected $originalOptions = [];
+
 	protected function setUpOptions()
 	{
+		$this->originalOptions = $this->app()->options();
+
         $this->beforeApplicationDestroyed(function () {
-            $this->resetOptions();
+            $this->restoreOptions();
         });
 	}
 
@@ -33,8 +37,9 @@ trait InteractsWithOptions
 		$options[$key] = $value;
 	}
 
-	protected function resetOptions()
+	protected function restoreOptions()
 	{
-    	$this->app()->container('em')->getRepository('XF:Option')->rebuildOptionCache();
+		$app = $this->app();
+		$app['options'] = $this->originalOptions;
 	}
 }
