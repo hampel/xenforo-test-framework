@@ -6,6 +6,8 @@ trait InteractsWithErrors
 {
 	protected function setUpErrors()
 	{
-        $this->mock('error', Error::class);
+        $this->mock('error', Error::class, function () {
+
+        });
 	}
 }
