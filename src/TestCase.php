@@ -112,6 +112,10 @@ abstract class TestCase extends BaseTestCase
             $this->setUpErrors();
         }
 
+        if (isset($uses[Concerns\InteractsWithLanguage::class])) {
+            $this->setUpLanguage();
+        }
+
         return $uses;
     }
 
