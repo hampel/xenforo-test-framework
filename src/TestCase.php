@@ -48,8 +48,7 @@ abstract class TestCase extends BaseTestCase
      *
      * @return \XF\App
      */
-    abstract public static function createApplication();
-
+    abstract public function createApplication();
 
     /**
      * Setup the test environment.
