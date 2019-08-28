@@ -9,10 +9,9 @@ trait CreatesApplication
      */
     public function createApplication()
     {
-		$dir = '../../../..';
-		require_once($dir . '/src/XF.php');
+		require_once("{$this->rootDir}/src/XF.php");
 
-		\XF::start($dir);
+		\XF::start($this->rootDir);
 
 		return \XF::setupApp('Hampel\Testing\XF\App');
     }
