@@ -10,6 +10,7 @@ abstract class TestCase extends BaseTestCase
     use Concerns\InteractsWithContainer,
 	    Concerns\InteractsWithEntityManager,
 	    Concerns\InteractsWithOptions,
+	    Concerns\InteractsWithErrors,
 	    Concerns\UsesReflection;
 
     /**
@@ -105,6 +106,10 @@ abstract class TestCase extends BaseTestCase
 
         if (isset($uses[Concerns\InteractsWithOptions::class])) {
             $this->setUpOptions();
+        }
+
+        if (isset($uses[Concerns\InteractsWithErrors::class])) {
+            $this->setUpErrors();
         }
 
         return $uses;
