@@ -50,15 +50,6 @@ abstract class TestCase extends BaseTestCase
      */
     abstract public static function createApplication();
 
-    /**
-     * Setup the test environment.
-     *
-     * @return void
-     */
-    public static function setUpBeforeClass(): void
-    {
-
-    }
 
     /**
      * Setup the test environment.
@@ -156,11 +147,6 @@ abstract class TestCase extends BaseTestCase
         $this->afterApplicationCreatedCallbacks = [];
         $this->beforeApplicationDestroyedCallbacks = [];
     }
-
-	public static function tearDownAfterClass(): void
-	{
-
-	}
 
     /**
      * Register a callback to be run after the application is created.
