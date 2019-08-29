@@ -41,6 +41,22 @@ trait InteractsWithContainer
     }
 
     /**
+     * Mock a factory builder in the container.
+     *
+     * @param  mixed  $key
+     * @param  string $abstract
+     * @param  \Closure|null  $mock
+     * @return object
+     */
+    protected function mockFactory($key, $abstract, Closure $mock = null)
+    {
+    	return $this->app()->container()->factory($key, function() use ($abstract, $mock)
+	    {
+	    	return Mockery::mock($abstract, $mock);
+	    });
+    }
+
+    /**
      * Spy an instance of an object in the container.
      *
      * @param  mixed  $key
