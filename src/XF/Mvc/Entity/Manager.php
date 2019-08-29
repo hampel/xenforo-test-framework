@@ -24,4 +24,27 @@ class Manager extends BaseManager
 
 		return $repository;
 	}
+
+	/**
+	 * @param string $shortName
+	 * @param bool $includeDefaultWith
+	 *
+	 * @return Finder
+	 */
+	public function mockFinder($shortName, $includeDefaultWith = true)
+	{
+		$structure = $this->getEntityStructure($shortName);
+
+		$finderClass = \XF::stringToClass($shortName, '%s\Finder\%s');
+		$finderClass = $this->extension->extendClass($finderClass, '\XF\Mvc\Entity\Finder');
+		if (!$finderClass || !class_exists($finderClass))
+		{
+			$finderClass = '\XF\Mvc\Entity\Finder';
+		}
+
+		/** @var Finder $finder */
+		$finder = Mockery::mock($finderClass, [$this, $structure]);
+
+		return $finder;
+	}
 }
