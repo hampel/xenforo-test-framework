@@ -14,8 +14,6 @@ trait InteractsWithContainer
      */
 	protected function swap($key, $instance)
 	{
-		$app = $this->app();
-
     	if (is_array($key))
 	    {
 	    	// [$subcontainer, $key]
@@ -23,7 +21,7 @@ trait InteractsWithContainer
 	    }
     	else
 	    {
-		    $app[$key] = $instance;
+		    $this->app()->container()->set($key, $instance);
 	    }
 
         return $instance;
