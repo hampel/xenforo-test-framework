@@ -7,8 +7,6 @@ trait InteractsWithEntityManager
 {
 	protected function setUpEntityManager()
 	{
-		$app = $this->app();
-
 		$this->swap('em', function (Container $c) {
 			return new Manager($c['db'], $c['em.valueFormatter'], $c['extension']);
 		});
@@ -19,7 +17,7 @@ trait InteractsWithEntityManager
 		$em = $this->app()->em();
 		if ($em instanceof Manager)
 		{
-			return $this->app()->em()->mockRepository($identifier);
+			return $em->mockRepository($identifier);
 		}
 		else
 		{
