@@ -19,11 +19,11 @@ trait InteractsWithOptions
      * @param  array  $options
      * @return array
      */
-	protected function setOptions(array $options)
+	protected function setOptions(array $newOptions)
 	{
 		$options = $this->app()->options();
 
-		foreach ($options as $key => $value)
+		foreach ($newOptions as $key => $value)
 		{
 			$options[$key] = $value;
 		}
