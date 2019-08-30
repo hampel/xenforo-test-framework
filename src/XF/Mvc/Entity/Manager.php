@@ -5,6 +5,9 @@ use XF\Mvc\Entity\Manager as BaseManager;
 
 class Manager extends BaseManager
 {
+	/** @var array $mockedFinders */
+	protected $mockedFinders = [];
+
 	/**
 	 * @param string $identifier
 	 *
@@ -31,9 +34,22 @@ class Manager extends BaseManager
 	 *
 	 * @return Finder
 	 */
-	public function mockFinder($shortName, $includeDefaultWith = true)
+	public function getFinder($shortName, $includeDefaultWith = true)
 	{
-		$structure = $this->getEntityStructure($shortName);
+		if ($shortName && isset($this->mockedFinders[$shortName]))
+		{
+			return $this->mockedFinders[$shortName];
+		}
+
+		return parent::getFinder($shortName, $includeDefaultWith);
+	}
+
+	public function mockFinder($shortName)
+	{
+		if ($shortName && isset($this->mockedFinders[$shortName]))
+		{
+			return $this->mockedFinders[$shortName];
+		}
 
 		$finderClass = \XF::stringToClass($shortName, '%s\Finder\%s');
 		$finderClass = $this->extension->extendClass($finderClass, '\XF\Mvc\Entity\Finder');
@@ -42,8 +58,9 @@ class Manager extends BaseManager
 			$finderClass = '\XF\Mvc\Entity\Finder';
 		}
 
-		/** @var Finder $finder */
-		$finder = Mockery::mock($finderClass, [$this, $structure]);
+		$finder = Mockery::mock($finderClass);
+
+		$this->mockedFinders[$shortName] = $finder;
 
 		return $finder;
 	}
