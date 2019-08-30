@@ -19,7 +19,7 @@ class Manager extends BaseManager
 			throw new \LogicException("Could not find repository '$repositoryClass' for '$identifier'");
 		}
 
-		$repository = Mockery::mock($repositoryClass, [$this, $identifier]);
+		$repository = Mockery::mock($repositoryClass);
 		$this->repositories[$identifier] = $repository;
 
 		return $repository;
