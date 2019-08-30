@@ -8,6 +8,9 @@ class Manager extends BaseManager
 	/** @var array $mockedFinders */
 	protected $mockedFinders = [];
 
+	/** @var array $mockedFinders */
+	protected $mockedEntities = [];
+
 	/**
 	 * @param string $identifier
 	 *
@@ -63,5 +66,38 @@ class Manager extends BaseManager
 		$this->mockedFinders[$shortName] = $finder;
 
 		return $finder;
+	}
+
+	/**
+	 * Instantiates the named entity with the specified values and relations.
+	 *
+	 * @param string $shortName
+	 * @param array $values Values for the columns in the entity, in source encoded form
+	 * @param array $relations
+	 * @param int $options Bit field of the INSTANTIATE_* options
+	 *
+	 * @return null|Entity
+	 *
+	 * @throws \LogicException
+	 */
+	public function instantiateEntity($shortName, array $values = [], array $relations = [], $options = 0)
+	{
+		if ($shortName && isset($this->mockedEntities[$shortName]))
+		{
+			return $this->mockedEntities[$shortName];
+		}
+
+		return parent::instantiateEntity($shortName, $values, $relations, $options);
+	}
+
+	public function mockEntity($shortName)
+	{
+		$className = $this->getEntityClassName($shortName);
+
+		$entity = Mockery::mock($className);
+
+		$this->mockedEntities[$shortName] = $entity;
+
+		return $entity;
 	}
 }

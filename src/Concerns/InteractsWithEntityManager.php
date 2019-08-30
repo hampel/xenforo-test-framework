@@ -37,4 +37,17 @@ trait InteractsWithEntityManager
 			throw new \Exception('Unable to mock finder. Extended entity manager not set up.');
 		}
 	}
+
+	protected function mockEntity($shortName)
+	{
+		$em = $this->app()->em();
+		if ($em instanceof Manager)
+		{
+			return $em->mockEntity($shortName);
+		}
+		else
+		{
+			throw new \Exception('Unable to mock entity. Extended entity manager not set up.');
+		}
+	}
 }
