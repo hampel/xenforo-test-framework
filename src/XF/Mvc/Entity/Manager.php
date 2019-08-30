@@ -47,6 +47,11 @@ class Manager extends BaseManager
 		return parent::getFinder($shortName, $includeDefaultWith);
 	}
 
+	/**
+	 * @param $shortName
+	 *
+	 * @return XF\Mvc\Entity\Finder
+	 */
 	public function mockFinder($shortName)
 	{
 		if ($shortName && isset($this->mockedFinders[$shortName]))
@@ -90,6 +95,11 @@ class Manager extends BaseManager
 		return parent::instantiateEntity($shortName, $values, $relations, $options);
 	}
 
+	/**
+	 * @param $shortName
+	 *
+	 * @return XF\Mvc\Entity\Entity
+	 */
 	public function mockEntity($shortName)
 	{
 		$className = $this->getEntityClassName($shortName);
