@@ -8,10 +8,21 @@ trait InteractsWithLanguage
 {
 	protected $languageMocked = false;
 
+	protected $originalLanguage;
+
+	protected function setUpLanguage()
+	{
+        $this->beforeApplicationDestroyed(function () {
+            $this->restoreLanguage();
+        });
+	}
+
 	protected function expectPhrase($key, $parameters = null, $response = null)
 	{
 		if (!$this->languageMocked)
 		{
+			$this->originalLanguage = $this->app()->language();
+
 	        $this->mockFactory('language', Language::class, function ($mock) {
 
 	        });
@@ -32,5 +43,13 @@ trait InteractsWithLanguage
 		   ->andReturn($phrase);
 
 		return $phrase;
+	}
+
+	protected function restoreLanguage()
+	{
+		if ($this->languageMocked && $this->originalLanguage)
+		{
+			\XF::setLanguage($this->originalLanguage);
+		}
 	}
 }
