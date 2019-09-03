@@ -105,6 +105,10 @@ abstract class TestCase extends BaseTestCase
     {
         $uses = array_flip($this->classUsesRecursive(static::class));
 
+        if (isset($uses[MocksDatabase::class])) {
+            $this->setUpDatabase();
+        }
+
         if (isset($uses[Concerns\InteractsWithEntityManager::class])) {
             $this->setUpEntityManager();
         }
