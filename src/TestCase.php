@@ -89,7 +89,11 @@ abstract class TestCase extends BaseTestCase
      */
     protected function refreshApplication()
     {
+		$outputBuffer = ob_get_contents(); // save the current contents of the output buffer
+		ob_end_clean(); // pre-emptively clean the output buffer
         $this->app = $this->createApplication();
+        \ob_start(); // restart our output buffer
+        echo $outputBuffer; // output our previously stored buffer contents
     }
 
     /**
