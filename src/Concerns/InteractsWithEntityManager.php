@@ -38,12 +38,12 @@ trait InteractsWithEntityManager
 		}
 	}
 
-	protected function mockEntity($shortName)
+	protected function mockEntity($shortName, $inherit = true)
 	{
 		$em = $this->app()->em();
 		if ($em instanceof Manager)
 		{
-			return $em->mockEntity($shortName);
+			return $em->mockEntity($shortName, $inherit);
 		}
 		else
 		{

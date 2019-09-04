@@ -100,9 +100,18 @@ class Manager extends BaseManager
 	 *
 	 * @return XF\Mvc\Entity\Entity
 	 */
-	public function mockEntity($shortName)
+	public function mockEntity($shortName, $inherit = true)
 	{
-		$className = $this->getEntityClassName($shortName);
+		if ($inherit)
+		{
+			$className = $this->getEntityClassName($shortName);
+		}
+		else
+		{
+			// use the suffix of the short name as the entity name since we're not mocking a real class
+			$parts = explode(':', $shortName, 3);
+			$className = array_pop($parts);
+		}
 
 		$entity = Mockery::mock($className);
 
