@@ -8,6 +8,7 @@ use PHPUnit\Framework\TestCase as BaseTestCase;
 abstract class TestCase extends BaseTestCase
 {
     use Concerns\InteractsWithContainer,
+		Concerns\InteractsWithDatabase,
 	    Concerns\InteractsWithEntityManager,
 	    Concerns\InteractsWithOptions,
 	    Concerns\InteractsWithErrors,
@@ -104,10 +105,6 @@ abstract class TestCase extends BaseTestCase
     protected function setUpTraits()
     {
         $uses = array_flip($this->classUsesRecursive(static::class));
-
-        if (isset($uses[MocksDatabase::class])) {
-            $this->setUpDatabase();
-        }
 
         if (isset($uses[Concerns\InteractsWithEntityManager::class])) {
             $this->setUpEntityManager();
