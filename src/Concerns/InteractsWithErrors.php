@@ -1,5 +1,6 @@
 <?php namespace Hampel\Testing\Concerns;
 
+use Closure;
 use Mockery;
 use XF\Error;
 use Mockery\MockInterface;
