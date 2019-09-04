@@ -1,5 +1,6 @@
 <?php namespace Hampel\Testing\XF\Mvc\Entity;
 
+use Closure;
 use Mockery;
 use XF\Mvc\Entity\Manager as BaseManager;
 
