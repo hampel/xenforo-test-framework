@@ -37,7 +37,10 @@ trait InteractsWithContainer
      */
     protected function mock($key, $abstract, Closure $mock = null)
     {
-    	return $this->swap($key, Mockery::mock($abstract, $mock));
+	    $args = func_get_args();
+	    array_shift($args);
+
+    	return $this->swap($key, Mockery::mock(...array_filter($args)));
     }
 
     /**
@@ -52,7 +55,9 @@ trait InteractsWithContainer
     {
     	return $this->app()->container()->factory($key, function() use ($abstract, $mock)
 	    {
-	    	return Mockery::mock($abstract, $mock);
+	    	$args = [$abstract, $mock];
+
+	    	return Mockery::mock(...array_filter($args));
 	    });
     }
 
@@ -66,6 +71,9 @@ trait InteractsWithContainer
      */
     protected function spy($key, $abstract, Closure $mock = null)
     {
-    	return $this->swap($key, Mockery::spy($abstract, $mock));
+	    $args = func_get_args();
+	    array_shift($args);
+
+    	return $this->swap($key, Mockery::spy(...array_filter($args)));
     }
 }
