@@ -7,22 +7,22 @@ use PHPUnit\Framework\TestCase as BaseTestCase;
 
 abstract class TestCase extends BaseTestCase
 {
-    use Concerns\InteractsWithContainer,
+	use Concerns\InteractsWithContainer,
 		Concerns\InteractsWithDatabase,
-	    Concerns\InteractsWithEntityManager,
-	    Concerns\InteractsWithErrors,
-	    Concerns\InteractsWithLanguage,
+		Concerns\InteractsWithEntityManager,
+		Concerns\InteractsWithErrors,
+		Concerns\InteractsWithLanguage,
 		Concerns\InteractsWithOptions,
-	    Concerns\UsesReflection;
+		Concerns\UsesReflection;
 
-    /**
+	/**
      * The XenForo application instance.
      *
      * @var \XF\App
      */
     protected $app;
 
-    /**
+	/**
      * The callbacks that should be run after the application is created.
      *
      * @var array
@@ -183,4 +183,25 @@ abstract class TestCase extends BaseTestCase
     {
         $this->beforeApplicationDestroyedCallbacks[] = $callback;
     }
+
+	public static function trace()
+	{
+		$cwd = getcwd();
+
+	    $e = new \Exception();
+	    $trace = explode("\n", $e->getTraceAsString());
+	    // reverse array to make steps line up chronologically
+	    $trace = array_reverse($trace);
+	    array_shift($trace); // remove {main}
+	    array_pop($trace); // remove call to this method
+	    $length = count($trace);
+	    $result = array();
+
+	    for ($i = 0; $i < $length; $i++)
+	    {
+	        $result[] = ($i + 1)  . ')' . str_replace("{$cwd}/", '', substr($trace[$i], strpos($trace[$i], ' '))); // replace '#someNum' with '$i)', set the right ordering
+	    }
+
+	    return "\t" . implode("\n\t", $result);
+	}
 }
