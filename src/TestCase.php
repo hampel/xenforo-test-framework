@@ -10,9 +10,9 @@ abstract class TestCase extends BaseTestCase
     use Concerns\InteractsWithContainer,
 		Concerns\InteractsWithDatabase,
 	    Concerns\InteractsWithEntityManager,
-	    Concerns\InteractsWithOptions,
 	    Concerns\InteractsWithErrors,
 	    Concerns\InteractsWithLanguage,
+		Concerns\InteractsWithOptions,
 	    Concerns\UsesReflection;
 
     /**
@@ -110,13 +110,13 @@ abstract class TestCase extends BaseTestCase
             $this->setUpEntityManager();
         }
 
-        if (isset($uses[Concerns\InteractsWithOptions::class])) {
-            $this->setUpOptions();
-        }
-
 		if (isset($uses[Concerns\InteractsWithLanguage::class])) {
 			$this->setUpLanguage();
 		}
+
+        if (isset($uses[Concerns\InteractsWithOptions::class])) {
+            $this->setUpOptions();
+        }
 
         return $uses;
     }
