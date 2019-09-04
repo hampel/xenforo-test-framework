@@ -114,10 +114,6 @@ abstract class TestCase extends BaseTestCase
             $this->setUpOptions();
         }
 
-        if (isset($uses[Concerns\InteractsWithErrors::class])) {
-            $this->setUpErrors();
-        }
-
 		if (isset($uses[Concerns\InteractsWithLanguage::class])) {
 			$this->setUpLanguage();
 		}
