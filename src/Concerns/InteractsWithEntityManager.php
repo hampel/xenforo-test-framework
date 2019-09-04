@@ -1,5 +1,6 @@
 <?php namespace Hampel\Testing\Concerns;
 
+use Mockery;
 use Closure;
 use XF\Container;
 use Hampel\Testing\XF\Mvc\Entity\Manager;
@@ -13,6 +14,13 @@ trait InteractsWithEntityManager
 		});
 	}
 
+	/**
+	 * @param $identifier string
+	 * @param Closure|null $mock
+	 *
+	 * @return Mockery\MockInterface
+	 * @throws \Exception
+	 */
 	protected function mockRepository($identifier, Closure $mock = null)
 	{
 		$em = $this->app()->em();
@@ -26,6 +34,13 @@ trait InteractsWithEntityManager
 		}
 	}
 
+	/**
+	 * @param $shortName string
+	 * @param Closure|null $mock
+	 *
+	 * @return Mockery\MockInterface
+	 * @throws \Exception
+	 */
 	protected function mockFinder($shortName, Closure $mock = null)
 	{
 		$em = $this->app()->em();
@@ -39,6 +54,14 @@ trait InteractsWithEntityManager
 		}
 	}
 
+	/**
+	 * @param $shortName string
+	 * @param bool $inherit - set to true (default) to inherit from the mocked entity, or false to mock a standalone class
+	 * @param Closure|null $mock
+	 *
+	 * @return Mockery\MockInterface
+	 * @throws \Exception
+	 */
 	protected function mockEntity($shortName, $inherit = true, Closure $mock = null)
 	{
 		$em = $this->app()->em();

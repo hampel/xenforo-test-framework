@@ -13,9 +13,10 @@ class Manager extends BaseManager
 	protected $mockedEntities = [];
 
 	/**
-	 * @param string $identifier
+	 * @param $identifier string
+	 * @param Closure|null $mock
 	 *
-	 * @return Repository
+	 * @return Mockery\MockInterface
 	 */
 	public function mockRepository($identifier, Closure $mock = null)
 	{
@@ -38,7 +39,7 @@ class Manager extends BaseManager
 	 * @param string $shortName
 	 * @param bool $includeDefaultWith
 	 *
-	 * @return Finder
+	 * @return \XF\Mvc\Entity\Finder
 	 */
 	public function getFinder($shortName, $includeDefaultWith = true)
 	{
@@ -51,9 +52,10 @@ class Manager extends BaseManager
 	}
 
 	/**
-	 * @param $shortName
+	 * @param $shortName string
+	 * @param Closure|null $mock
 	 *
-	 * @return XF\Mvc\Entity\Finder
+	 * @return mixed|Mockery\MockInterface
 	 */
 	public function mockFinder($shortName, Closure $mock = null)
 	{
@@ -86,7 +88,7 @@ class Manager extends BaseManager
 	 * @param array $relations
 	 * @param int $options Bit field of the INSTANTIATE_* options
 	 *
-	 * @return null|Entity
+	 * @return \XF\Mvc\Entity\Entity
 	 *
 	 * @throws \LogicException
 	 */
@@ -101,9 +103,11 @@ class Manager extends BaseManager
 	}
 
 	/**
-	 * @param $shortName
+	 * @param $shortName string
+	 * @param bool $inherit - set to true (default) to inherit from the mocked entity, or false to mock a standalone class
+	 * @param Closure|null $mock
 	 *
-	 * @return XF\Mvc\Entity\Entity
+	 * @return Mockery\MockInterface
 	 */
 	public function mockEntity($shortName, $inherit = true, Closure $mock = null)
 	{
