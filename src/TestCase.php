@@ -13,6 +13,7 @@ abstract class TestCase extends BaseTestCase
 		Concerns\InteractsWithErrors,
 		Concerns\InteractsWithLanguage,
 		Concerns\InteractsWithOptions,
+		Concerns\InteractsWithRequest,
 		Concerns\UsesReflection;
 
 	/**
