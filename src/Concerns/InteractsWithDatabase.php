@@ -7,6 +7,6 @@ trait InteractsWithDatabase
 {
 	protected function mockDatabase(Closure $mock = null)
 	{
-		$this->mock('db', AbstractAdapter::class, $mock);
+		return $this->mock('db', AbstractAdapter::class, $mock);
 	}
 }
