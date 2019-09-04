@@ -16,7 +16,7 @@ class Manager extends BaseManager
 	 *
 	 * @return Repository
 	 */
-	public function mockRepository($identifier)
+	public function mockRepository($identifier, Closure $mock = null)
 	{
 		$repositoryClass = \XF::stringToClass($identifier, '%s\Repository\%s');
 		$repositoryClass = $this->extension->extendClass($repositoryClass, '\XF\Mvc\Entity\Repository');
@@ -25,7 +25,9 @@ class Manager extends BaseManager
 			throw new \LogicException("Could not find repository '$repositoryClass' for '$identifier'");
 		}
 
-		$repository = Mockery::mock($repositoryClass);
+		$args = [$repositoryClass, $mock];
+
+		$repository = Mockery::mock(...array_filter($args));
 		$this->repositories[$identifier] = $repository;
 
 		return $repository;
@@ -52,7 +54,7 @@ class Manager extends BaseManager
 	 *
 	 * @return XF\Mvc\Entity\Finder
 	 */
-	public function mockFinder($shortName)
+	public function mockFinder($shortName, Closure $mock = null)
 	{
 		if ($shortName && isset($this->mockedFinders[$shortName]))
 		{
@@ -66,7 +68,9 @@ class Manager extends BaseManager
 			$finderClass = '\XF\Mvc\Entity\Finder';
 		}
 
-		$finder = Mockery::mock($finderClass);
+		$args = [$finderClass, $mock];
+
+		$finder = Mockery::mock(...array_filter($args));
 
 		$this->mockedFinders[$shortName] = $finder;
 
@@ -100,7 +104,7 @@ class Manager extends BaseManager
 	 *
 	 * @return XF\Mvc\Entity\Entity
 	 */
-	public function mockEntity($shortName, $inherit = true)
+	public function mockEntity($shortName, $inherit = true, Closure $mock = null)
 	{
 		if ($inherit)
 		{
@@ -113,7 +117,9 @@ class Manager extends BaseManager
 			$className = array_pop($parts);
 		}
 
-		$entity = Mockery::mock($className);
+		$args = [$className, $mock];
+
+		$entity = Mockery::mock(...array_filter($args));
 
 		$this->mockedEntities[$shortName] = $entity;
 

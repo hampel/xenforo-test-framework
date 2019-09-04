@@ -12,12 +12,12 @@ trait InteractsWithEntityManager
 		});
 	}
 
-	protected function mockRepository($identifier)
+	protected function mockRepository($identifier, Closure $mock = null)
 	{
 		$em = $this->app()->em();
 		if ($em instanceof Manager)
 		{
-			return $em->mockRepository($identifier);
+			return $em->mockRepository($identifier, $mock);
 		}
 		else
 		{
@@ -25,12 +25,12 @@ trait InteractsWithEntityManager
 		}
 	}
 
-	protected function mockFinder($shortName)
+	protected function mockFinder($shortName, Closure $mock = null)
 	{
 		$em = $this->app()->em();
 		if ($em instanceof Manager)
 		{
-			return $em->mockFinder($shortName);
+			return $em->mockFinder($shortName, $mock);
 		}
 		else
 		{
@@ -38,12 +38,12 @@ trait InteractsWithEntityManager
 		}
 	}
 
-	protected function mockEntity($shortName, $inherit = true)
+	protected function mockEntity($shortName, $inherit = true, Closure $mock = null)
 	{
 		$em = $this->app()->em();
 		if ($em instanceof Manager)
 		{
-			return $em->mockEntity($shortName, $inherit);
+			return $em->mockEntity($shortName, $inherit, $mock);
 		}
 		else
 		{
