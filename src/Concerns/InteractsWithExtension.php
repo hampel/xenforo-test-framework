@@ -4,7 +4,7 @@ trait InteractsWithExtension
 {
 	protected function setUpExtension()
 	{
- 		$this->swap('extension', function (Container $c) {
+ 		$this->swap('extension', function (\XF\Container $c) {
 			$config = $c['config'];
 			if (!$config['enableListeners'])
 			{
