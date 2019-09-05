@@ -2,8 +2,19 @@
 
 class Extension extends \XF\Extension
 {
+	protected static $globalExtensionMap = [];
+
 	public function extendClass($class, $fakeBaseClass = null)
 	{
-		return parent::extendClass($class, $fakeBaseClass);
+		if (array_key_exists($class, self::$globalExtensionMap))
+		{
+			return self::$globalExtensionMap[$class];
+		}
+
+		$extended = parent::extendClass($class, $fakeBaseClass);
+
+		self::$globalExtensionMap[$class] = $extended;
+
+		return $extended;
 	}
 }

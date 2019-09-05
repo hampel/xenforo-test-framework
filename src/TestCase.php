@@ -112,6 +112,10 @@ abstract class TestCase extends BaseTestCase
             $this->setUpEntityManager();
         }
 
+		if (isset($uses[Concerns\InteractsWithExtension::class])) {
+			$this->setUpExtension();
+		}
+
 		if (isset($uses[Concerns\InteractsWithLanguage::class])) {
 			$this->setUpLanguage();
 		}
