@@ -7,7 +7,8 @@ use PHPUnit\Framework\TestCase as BaseTestCase;
 
 abstract class TestCase extends BaseTestCase
 {
-	use Concerns\InteractsWithContainer,
+	use Concerns\InteractsWithBbCode,
+		Concerns\InteractsWithContainer,
 		Concerns\InteractsWithDatabase,
 		Concerns\InteractsWithEntityManager,
 		Concerns\InteractsWithErrors,
