@@ -1,6 +1,8 @@
-<?php namespace Hampel\Testing\XF;
+<?php namespace Hampel\Testing;
 
-class Extension extends \XF\Extension
+use XF\Extension as BaseExtension;
+
+class Extension extends BaseExtension
 {
 	protected static $globalExtensionMap = [];
 

@@ -16,6 +16,6 @@ trait CreatesApplication
 
 		\XF::start($this->rootDir);
 
-		return \XF::setupApp('Hampel\Testing\XF\App');
+		return \XF::setupApp('Hampel\Testing\App');
     }
 }

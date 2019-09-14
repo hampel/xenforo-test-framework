@@ -3,7 +3,7 @@
 use Mockery;
 use Closure;
 use XF\Container;
-use Hampel\Testing\XF\Mvc\Entity\Manager;
+use Hampel\Testing\Mvc\Entity\Manager;
 
 trait InteractsWithEntityManager
 {

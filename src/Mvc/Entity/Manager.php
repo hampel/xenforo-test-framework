@@ -1,4 +1,4 @@
-<?php namespace Hampel\Testing\XF\Mvc\Entity;
+<?php namespace Hampel\Testing\Mvc\Entity;
 
 use Closure;
 use Mockery;

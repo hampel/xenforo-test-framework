@@ -23,7 +23,7 @@ trait InteractsWithExtension
 				$classExtensions = [];
 			}
 
-			return new \Hampel\Testing\XF\Extension($listeners, $classExtensions);
+			return new \Hampel\Testing\Extension($listeners, $classExtensions);
 		});
 	}
 }

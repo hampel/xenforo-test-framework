@@ -1,8 +1,9 @@
-<?php namespace Hampel\Testing\XF;
+<?php namespace Hampel\Testing;
 
+use XF\App as BaseApp;
 use XF\Container;
 
-class App extends \XF\App
+class App extends BaseApp
 {
 	public function initializeExtra()
 	{
