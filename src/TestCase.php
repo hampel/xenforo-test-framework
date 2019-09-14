@@ -14,6 +14,7 @@ abstract class TestCase extends BaseTestCase
 		Concerns\InteractsWithErrors,
 		Concerns\InteractsWithExtension,
 		Concerns\InteractsWithLanguage,
+		Concerns\InteractsWithMail,
 		Concerns\InteractsWithOptions,
 		Concerns\InteractsWithRequest,
 		Concerns\UsesReflection;
@@ -102,7 +103,7 @@ abstract class TestCase extends BaseTestCase
         echo $outputBuffer; // output our previously stored buffer contents
     }
 
-    /**
+	/**
 	 * Turn off the auto job runner
 	 */
     protected function disableAutoJobRunner()
