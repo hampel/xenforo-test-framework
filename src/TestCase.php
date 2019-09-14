@@ -67,6 +67,8 @@ abstract class TestCase extends BaseTestCase
             $this->refreshApplication();
         }
 
+        $this->disableAutoJobRunner();
+
     	$this->setUpTraits();
 
         foreach ($this->afterApplicationCreatedCallbacks as $callback) {
@@ -98,6 +100,14 @@ abstract class TestCase extends BaseTestCase
         $this->app = $this->createApplication();
         \ob_start(); // restart our output buffer
         echo $outputBuffer; // output our previously stored buffer contents
+    }
+
+    /**
+	 * Turn off the auto job runner
+	 */
+    protected function disableAutoJobRunner()
+    {
+    	$this->app['job.runTime'] = false;
     }
 
     /**
