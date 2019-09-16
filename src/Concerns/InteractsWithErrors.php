@@ -1,6 +1,7 @@
 <?php namespace Hampel\Testing\Concerns;
 
 use Hampel\Testing\Error;
+use PHPUnit\Framework\Assert as PHPUnit;
 use XF\Container;
 
 trait InteractsWithErrors
