@@ -1,0 +1,171 @@
+<?php namespace Hampel\Testing\Concerns;
+
+use Hampel\Testing\Job\Manager;
+use PHPUnit\Framework\Assert as PHPUnit;
+use XF\Container;
+
+trait InteractsWithJobs
+{
+	protected function fakesJobs()
+	{
+		$this->swap('job.manager', function (Container $c) {
+			return new Manager($this->app);
+		});
+	}
+
+	/**
+	 * @return Manager
+	 * @throws \Exception
+	 */
+	protected function getJobManager()
+	{
+		$manager = $this->app['job.manager'];
+		if (!($manager instanceof Manager))
+		{
+			throw new \Exception("Test job manager not set up - call fakesJobs() first");
+		}
+		return $manager;
+	}
+
+	/**
+	 * Return an array of all queued jobs
+	 *
+	 * @return array
+	 * @throws \Exception
+	 */
+	public function getQueuedJobs()
+	{
+		return $this->getJobManager()->getQueuedJobs();
+	}
+
+    /**
+     * Assert if job was queued based on a truth-test callback.
+     *
+     * @param string $jobClass
+     * @param  callable|int|null  $callback
+     * @return void
+     *
+     * @throws \Exception
+     */
+    public function assertJobQueued($jobClass, $callback = null)
+    {
+        if (is_numeric($callback)) {
+            return $this->assertJobsQueuedTimes($callback);
+        }
+
+	    $queuedJobs = $this->queuedJobs($jobClass, $callback);
+
+        PHPUnit::assertTrue(
+            count($queuedJobs) > 0,
+            "The expected [{$jobClass}] job was not queued."
+        );
+    }
+
+	/**
+	 * Assert that a job was queued a number of times.
+	 *
+	 * @param string $jobClass
+	 * @param int $times
+	 * @return void
+	 *
+	 * @throws \Exception
+	 */
+    protected function assertJobQueuedTimes($jobClass, $times = 1)
+    {
+    	$queuedJobs = $this->queuedJobs($jobClass);
+
+        PHPUnit::assertTrue(
+            ($count = count($queuedJobs)) === $times,
+            "The expected [{$jobClass}] job was queued {$count} times instead of {$times} times."
+        );
+    }
+
+    /**
+     * Determine if job was not queued based on a truth-test callback.
+     *
+     * @param string $jobClass
+     * @param  callable|null  $callback
+     * @return void
+     *
+     * @throws \Exception
+     */
+    public function assertJobNotQueued($jobClass, $callback = null)
+    {
+	    $queuedJobs = $this->queuedJobs($jobClass, $callback);
+
+        PHPUnit::assertTrue(
+            count($queuedJobs) === 0,
+            "Unexpected [{$jobClass}] job was queued."
+        );
+    }
+
+    /**
+     * Assert that no jobs were queued.
+     *
+     * @return void
+     *
+     * @throws \Exception
+     */
+    public function assertNothingQueued()
+    {
+    	$queuedJobs = $this->getQueuedJobs();
+
+        PHPUnit::assertEmpty($queuedJobs, 'Jobs was queued unexpectedly.');
+    }
+
+    /**
+     * Get all of the queued jobs matching a truth-test callback.
+     *
+     * @param string $jobClass
+     * @param  callable|null  $callback
+     * @return \Swift_Mime_Message[]
+     *
+     * @throws \Exception
+     */
+    public function queuedJobs($jobClass, $callback = null)
+    {
+        if (! $this->hasQueuedJob($jobClass)) {
+            return [];
+        }
+
+        $callback = $callback ?: function () {
+            return true;
+        };
+
+        $queuedJobs = $this->jobsOf($jobClass);
+
+        return array_filter($queuedJobs, function ($job) use ($callback) {
+            return $callback($job);
+        });
+    }
+
+    /**
+     * Determine if the given job has been queued.
+     *
+     * @param  string  $jobClass
+     * @return bool
+     * @throws \Exception
+     */
+    public function hasQueuedJob($jobClass)
+    {
+    	$jobs = $this->jobsOf($jobClass);
+
+        return count($jobs) > 0;
+    }
+
+    /**
+     * Get all of the queued jobs for a given type.
+     *
+     * @param  string  $type
+     * @return array
+     * @throws \Exception
+     */
+    protected function jobsOf($type)
+    {
+    	$queuedJobs = $this->getQueuedJobs();
+
+        return array_filter($queuedJobs, function ($job) use ($type) {
+            return $job instanceof $type;
+        });
+    }
+}
