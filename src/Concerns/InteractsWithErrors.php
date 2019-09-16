@@ -46,7 +46,7 @@ trait InteractsWithErrors
      *
      * @throws \Exception
      */
-    public function assertJobQueued($class, $callback = null)
+    public function assertExceptionLogged($class, $callback = null)
     {
         if (is_numeric($callback)) {
             return $this->assertExceptionLoggedTimes($callback);
@@ -69,7 +69,7 @@ trait InteractsWithErrors
 	 *
 	 * @throws \Exception
 	 */
-    protected function assertJobQueuedTimes($class, $times = 1)
+    protected function assertExceptionLoggedTimes($class, $times = 1)
     {
     	$loggedExceptions = $this->loggedExceptions($class);
 
@@ -133,8 +133,8 @@ trait InteractsWithErrors
 
         $loggedExceptions = $this->exceptionsOf($class);
 
-        return array_filter($loggedExceptions, function ($job) use ($callback) {
-            return $callback($job);
+        return array_filter($loggedExceptions, function ($exception) use ($callback) {
+            return $callback($exception);
         });
     }
 
