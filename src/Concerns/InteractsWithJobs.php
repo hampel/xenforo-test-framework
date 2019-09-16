@@ -156,16 +156,19 @@ trait InteractsWithJobs
     /**
      * Get all of the queued jobs for a given type.
      *
-     * @param  string  $type
+     * @param  string  $shortName
      * @return array
      * @throws \Exception
      */
-    protected function jobsOf($type)
+    protected function jobsOf($shortName)
     {
     	$queuedJobs = $this->getQueuedJobs();
 
-        return array_filter($queuedJobs, function ($job) use ($type) {
-            return $job instanceof $type;
+        return array_filter($queuedJobs, function ($job) use ($shortName) {
+			$class = \XF::stringToClass($shortName, '\%s\Job\%s');
+			$class = $this->app()->extendClass($class);
+
+            return $job instanceof $class;
         });
     }
 }
