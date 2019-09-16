@@ -115,7 +115,7 @@ trait InteractsWithMail
      *
      * @throws \Exception
      */
-    public function assertNothingSent()
+    public function assertNoMailSent()
     {
     	$sentMail = $this->getSentMail();
 
@@ -231,7 +231,7 @@ trait InteractsWithMail
      *
      * @throws \Exception
      */
-    public function assertNothingQueued()
+    public function assertNoMailQueued()
     {
     	$queuedMail = $this->getQueuedMail();
 

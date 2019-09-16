@@ -106,7 +106,7 @@ trait InteractsWithJobs
      *
      * @throws \Exception
      */
-    public function assertNothingQueued()
+    public function assertNoJobsQueued()
     {
     	$queuedJobs = $this->getQueuedJobs();
 
