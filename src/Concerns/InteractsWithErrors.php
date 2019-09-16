@@ -222,7 +222,7 @@ trait InteractsWithErrors
         $loggedErrors = $this->getErrors();
 
         return array_filter($loggedErrors, function ($exception) use ($message) {
-            return $exception['message'] = $message;
+            return $exception['message'] === strval($message);
         });
     }
 
