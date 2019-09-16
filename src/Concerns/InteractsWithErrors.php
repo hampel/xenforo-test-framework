@@ -1,7 +1,7 @@
 <?php namespace Hampel\Testing\Concerns;
 
-use Closure;
 use Hampel\Testing\Error;
+use XF\Container;
 
 trait InteractsWithErrors
 {
