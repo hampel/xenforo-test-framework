@@ -41,61 +41,61 @@ trait InteractsWithJobs
     /**
      * Assert if job was queued based on a truth-test callback.
      *
-     * @param string $jobClass
+     * @param string $shortName
      * @param  callable|int|null  $callback
      * @return void
      *
      * @throws \Exception
      */
-    public function assertJobQueued($jobClass, $callback = null)
+    public function assertJobQueued($shortName, $callback = null)
     {
         if (is_numeric($callback)) {
             return $this->assertJobsQueuedTimes($callback);
         }
 
-	    $queuedJobs = $this->queuedJobs($jobClass, $callback);
+	    $queuedJobs = $this->queuedJobs($shortName, $callback);
 
         PHPUnit::assertTrue(
             count($queuedJobs) > 0,
-            "The expected [{$jobClass}] job was not queued."
+            "The expected [{$shortName}] job was not queued."
         );
     }
 
 	/**
 	 * Assert that a job was queued a number of times.
 	 *
-	 * @param string $jobClass
+	 * @param string $shortName
 	 * @param int $times
 	 * @return void
 	 *
 	 * @throws \Exception
 	 */
-    protected function assertJobQueuedTimes($jobClass, $times = 1)
+    protected function assertJobQueuedTimes($shortName, $times = 1)
     {
-    	$queuedJobs = $this->queuedJobs($jobClass);
+    	$queuedJobs = $this->queuedJobs($shortName);
 
         PHPUnit::assertTrue(
             ($count = count($queuedJobs)) === $times,
-            "The expected [{$jobClass}] job was queued {$count} times instead of {$times} times."
+            "The expected [{$shortName}] job was queued {$count} times instead of {$times} times."
         );
     }
 
     /**
      * Determine if job was not queued based on a truth-test callback.
      *
-     * @param string $jobClass
+     * @param string $shortName
      * @param  callable|null  $callback
      * @return void
      *
      * @throws \Exception
      */
-    public function assertJobNotQueued($jobClass, $callback = null)
+    public function assertJobNotQueued($shortName, $callback = null)
     {
-	    $queuedJobs = $this->queuedJobs($jobClass, $callback);
+	    $queuedJobs = $this->queuedJobs($shortName, $callback);
 
         PHPUnit::assertTrue(
             count($queuedJobs) === 0,
-            "Unexpected [{$jobClass}] job was queued."
+            "Unexpected [{$shortName}] job was queued."
         );
     }
 
@@ -116,15 +116,15 @@ trait InteractsWithJobs
     /**
      * Get all of the queued jobs matching a truth-test callback.
      *
-     * @param string $jobClass
+     * @param string $shortName
      * @param  callable|null  $callback
      * @return \Swift_Mime_Message[]
      *
      * @throws \Exception
      */
-    public function queuedJobs($jobClass, $callback = null)
+    public function queuedJobs($shortName, $callback = null)
     {
-        if (! $this->hasQueuedJob($jobClass)) {
+        if (! $this->hasQueuedJob($shortName)) {
             return [];
         }
 
@@ -132,7 +132,7 @@ trait InteractsWithJobs
             return true;
         };
 
-        $queuedJobs = $this->jobsOf($jobClass);
+        $queuedJobs = $this->jobsOf($shortName);
 
         return array_filter($queuedJobs, function ($job) use ($callback) {
             return $callback($job);
@@ -142,13 +142,13 @@ trait InteractsWithJobs
     /**
      * Determine if the given job has been queued.
      *
-     * @param  string  $jobClass
+     * @param  string  $shortName
      * @return bool
      * @throws \Exception
      */
-    public function hasQueuedJob($jobClass)
+    public function hasQueuedJob($shortName)
     {
-    	$jobs = $this->jobsOf($jobClass);
+    	$jobs = $this->jobsOf($shortName);
 
         return count($jobs) > 0;
     }
