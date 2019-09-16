@@ -29,12 +29,25 @@ trait InteractsWithErrors
 	/**
 	 * Return an array of all exceptions
 	 *
+	 * Note that errors are stored as exceptions of type \ErrorException
+	 *
 	 * @return array
 	 * @throws \Exception
 	 */
 	public function getExceptions()
 	{
 		return $this->getErrorFake()->getExceptions();
+	}
+
+	/**
+	 * Return an array of all errors
+	 *
+	 * @return array
+	 * @throws \Exception
+	 */
+	public function getErrors()
+	{
+		return $this->exceptionsOf(\ErrorException::class);
 	}
 
     /**
@@ -57,6 +70,24 @@ trait InteractsWithErrors
         PHPUnit::assertTrue(
             count($loggedExceptions) > 0,
             "The expected [{$class}] exception was not logged."
+        );
+    }
+
+    /**
+     * Assert an error was logged matching the supplied message.
+     *
+     * @param string $message
+     * @return void
+     *
+     * @throws \Exception
+     */
+    public function assertErrorLogged($message)
+    {
+	    $loggedErrors = $this->loggedErrors($message);
+
+        PHPUnit::assertTrue(
+            count($loggedErrors) > 0,
+            "The expected error was not logged."
         );
     }
 
@@ -98,6 +129,24 @@ trait InteractsWithErrors
         );
     }
 
+     /**
+     * Determine if error matching message was not logged
+     *
+     * @param string $message
+     * @return void
+     *
+     * @throws \Exception
+     */
+    public function assertErrorNotLogged($message)
+    {
+    	$loggedErrors = $this->loggedErrors($message);
+
+        PHPUnit::assertTrue(
+            count($loggedErrors) === 0,
+            "Unexpected error was logged."
+        );
+    }
+
     /**
      * Assert that no exceptions were logged.
      *
@@ -113,11 +162,28 @@ trait InteractsWithErrors
     }
 
     /**
+     * Assert that no errors were logged
+     *
+     * @return void
+     *
+     * @throws \Exception
+     */
+    public function assertNoErrorsLogged()
+    {
+	    $loggedErrors = $this->getErrors();
+
+        PHPUnit::assertTrue(
+            count($loggedErrors) === 0,
+            "Unexpected error was logged."
+        );
+    }
+
+    /**
      * Get all of the logged exceptions matching a truth-test callback.
      *
      * @param string $class
      * @param  callable|null  $callback
-     * @return \Swift_Mime_Message[]
+     * @return array
      *
      * @throws \Exception
      */
@@ -139,6 +205,27 @@ trait InteractsWithErrors
     }
 
     /**
+     * Get all of the logged errors matching the supplied message.
+     *
+     * @param string $message
+     * @return array
+     *
+     * @throws \Exception
+     */
+    public function loggedErrors($message)
+    {
+        if (! $this->hasLoggedErrors()) {
+            return [];
+        }
+
+        $loggedErrors = $this->getErrors();
+
+        return array_filter($loggedErrors, function ($exception) use ($message) {
+            return $exception['message'] = $message;
+        });
+    }
+
+    /**
      * Determine if the given exception has been logged.
      *
      * @param  string  $class
@@ -150,6 +237,19 @@ trait InteractsWithErrors
     	$exceptions = $this->exceptionsOf($class);
 
         return count($exceptions) > 0;
+    }
+
+    /**
+     * Determine if the given exception has been logged.
+     *
+     * @return bool
+     * @throws \Exception
+     */
+    public function hasLoggedErrors()
+    {
+    	$errors = $this->getErrors();
+
+        return count($errors) > 0;
     }
 
     /**
