@@ -110,7 +110,7 @@ trait InteractsWithJobs
     {
     	$queuedJobs = $this->getQueuedJobs();
 
-        PHPUnit::assertEmpty($queuedJobs, 'Jobs was queued unexpectedly.');
+        PHPUnit::assertEmpty($queuedJobs, 'Jobs were queued unexpectedly.');
     }
 
     /**
@@ -118,7 +118,7 @@ trait InteractsWithJobs
      *
      * @param string $shortName
      * @param  callable|null  $callback
-     * @return \Swift_Mime_Message[]
+     * @return array
      *
      * @throws \Exception
      */
