@@ -165,10 +165,7 @@ trait InteractsWithJobs
     	$queuedJobs = $this->getQueuedJobs();
 
         return array_filter($queuedJobs, function ($job) use ($shortName) {
-			$class = \XF::stringToClass($shortName, '\%s\Job\%s');
-			$class = $this->app()->extendClass($class);
-
-            return $job instanceof $class;
+			return $job['execute_class'] == $shortName;
         });
     }
 }
