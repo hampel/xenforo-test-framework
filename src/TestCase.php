@@ -15,6 +15,7 @@ abstract class TestCase extends BaseTestCase
 		Concerns\InteractsWithExtension,
 		Concerns\InteractsWithJobs,
 		Concerns\InteractsWithLanguage,
+		Concerns\InteractsWithLogger,
 		Concerns\InteractsWithMail,
 		Concerns\InteractsWithOptions,
 		Concerns\InteractsWithRequest,
