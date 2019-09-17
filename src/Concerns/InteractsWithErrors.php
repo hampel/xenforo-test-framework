@@ -241,7 +241,7 @@ trait InteractsWithErrors
     }
 
     /**
-     * Determine if the given exception has been logged.
+     * Determine if the given error has been logged.
      *
      * @return bool
      * @throws \Exception
