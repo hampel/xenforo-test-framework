@@ -19,6 +19,7 @@ abstract class TestCase extends BaseTestCase
 		Concerns\InteractsWithMail,
 		Concerns\InteractsWithOptions,
 		Concerns\InteractsWithRequest,
+		Concerns\InteractsWithTime,
 		Concerns\UsesReflection;
 
 	/**
@@ -136,6 +137,10 @@ abstract class TestCase extends BaseTestCase
 
         if (isset($uses[Concerns\InteractsWithOptions::class])) {
             $this->setUpOptions();
+        }
+
+        if (isset($uses[Concerns\InteractsWithTime::class])) {
+            $this->setUpTime();
         }
 
         return $uses;
