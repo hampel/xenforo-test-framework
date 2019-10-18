@@ -19,6 +19,7 @@ abstract class TestCase extends BaseTestCase
 		Concerns\InteractsWithMail,
 		Concerns\InteractsWithOptions,
 		Concerns\InteractsWithRequest,
+		Concerns\InteractsWithSimpleCache,
 		Concerns\InteractsWithTime,
 		Concerns\UsesReflection;
 
