@@ -335,15 +335,20 @@ We also have fake systems which log interactions with the subsystem and then all
 Finally, we have some special helper functions for specific purposes:
 - `assertBbCode` lets you test the expected output of some BbCode, useful for testing custom codes.
 - `expectPhrase` mocks the phrase rendering process and allows us to return arbitrary strings for phrases.
-- `setOption` & `setOptions` allow us to directly set the values we want for our options so we don't have to mock the options repository. It restores options after each test is executed - keeping to our goal of no side-effects.
-- `setTestTime` lets us set the application execution time (`\XF::$time`) to a known specific time (optionally using the Carbon library), so that we can test functions that rely on time intervals or comparisons.
+- `setOption` & `setOptions` allow us to directly set the values we want for our options so we don't have to mock the 
+options repository. It restores options after each test is executed - keeping to our goal of no side-effects.
+- `setTestTime` lets us set the application execution time (`\XF::$time`) to a known specific time (optionally using the
+Carbon library), so that we can test functions that rely on time intervals or comparisons.
 
 ## 8. Installing the Framework
 
-The unit testing framework is structured as a Composer package - you'll need to have Composer installed on your dev 
-server before you can use it. We use the `require-dev` directive to load the testing framework only in our development 
-environment. We will later show the commands required to strip our test code from our addon during the build process - 
-we don't want or need to deploy our unit tests to our production servers.
+The unit testing framework is structured as a Composer package `hampel/xenforo-test-framework` - you'll need to have 
+Composer installed on your dev server before you can use it. We use the `require-dev` directive to load the testing 
+framework only in our development environment. We will later show the commands required to strip our test code from our 
+addon during the build process - we don't want or need to deploy our unit tests to our production servers.
+
+You can view the source code for the package here: 
+[XenForo Test Framework](https://bitbucket.org/hampel/xenforo-test-framework)
 
 If you need more guidance on using Composer packages in your XenForo addons - refer to my tutorial: [Using Composer 
 Packages in XenForo 2.1+ Addons Tutorial](https://xenforo.com/community/resources/using-composer-packages-in-xenforo-2-1-addons-tutorial.7432/)
@@ -1068,7 +1073,9 @@ We cannot override the return value of the PHP function `time()` with an arbitra
 problematic.
 
 Using `Carbon::now()` as a replacement for `time()` would solve this problem for us - since the Carbon library has the
-ability to set arbitrary return values for testing. 
+ability to set arbitrary return values for testing. However, we cannot control external libraries and the XenForo core 
+- if functions they use rely on `time()` and we need to call them and can't mock the entire class, then we could have 
+difficulty testing in some circumstances.
 
 ### UI changes & template modifications
 
@@ -1215,6 +1222,38 @@ or that you need to stop causing side effects.
 
 This is especially true of utility functions from the core framework - there's no need to mock them unless they cause 
 side-effects.
+
+### Don't mock `XF\App`
+
+You're doing it wrong. Use the helper functions provided by my XenForo Testing Framework.
+
+### Don't mock anything to try and set or get options
+
+Use `setOption()` or `setOptions()` instead.
+
+### Don't mock `XF\Error`
+
+Use `fakesErrors()` instead.
+
+### Don't mock `XF\Job\Manager`
+
+Use `fakesJobs()` instead.
+
+### Don't mock `XF\Logger`
+
+Use `fakesLogger()` instead.
+
+### Don't mock `XF\Mail\Transport` or `XF\Mail\Queue`
+
+Use `fakesMail()` instead.
+
+### Don't mock `XF\SimpleCache`
+
+Use `fakesSimpleCache()` instead.
+
+### Don't mock `XF\Language` or `XF\Phrase`
+
+When dealing with phrases, use `expectPhrase()` instead.
 
 ### If you aren't asserting, you aren't testing
 
