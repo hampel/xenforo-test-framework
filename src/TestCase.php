@@ -13,6 +13,7 @@ abstract class TestCase extends BaseTestCase
 		Concerns\InteractsWithEntityManager,
 		Concerns\InteractsWithErrors,
 		Concerns\InteractsWithExtension,
+		Concerns\InteractsWithFilesystem,
 		Concerns\InteractsWithJobs,
 		Concerns\InteractsWithLanguage,
 		Concerns\InteractsWithLogger,
