@@ -33,7 +33,7 @@ trait InteractsWithLogger
 	 * @return array
 	 * @throws \Exception
 	 */
-	public function getActions()
+	protected function getActions()
 	{
 		return $this->getLoggerFake()->getActions();
 	}
@@ -44,7 +44,7 @@ trait InteractsWithLogger
 	 * @return array
 	 * @throws \Exception
 	 */
-	public function getChanges()
+	protected function getChanges()
 	{
 		return $this->getLoggerFake()->getChanges();
 	}
@@ -59,7 +59,7 @@ trait InteractsWithLogger
      *
      * @throws \Exception
      */
-    public function assertActionLogged($type, $callback = null)
+    protected function assertActionLogged($type, $callback = null)
     {
         if (is_numeric($callback)) {
             return $this->assertActionLoggedTimes($callback);
@@ -83,7 +83,7 @@ trait InteractsWithLogger
      *
      * @throws \Exception
      */
-    public function assertChangeLogged($type, $callback = null)
+    protected function assertChangeLogged($type, $callback = null)
     {
         if (is_numeric($callback)) {
             return $this->assertChangeLoggedTimes($callback);
@@ -147,7 +147,7 @@ trait InteractsWithLogger
      *
      * @throws \Exception
      */
-    public function assertActionNotLogged($type, $callback = null)
+    protected function assertActionNotLogged($type, $callback = null)
     {
 	    $loggedActions = $this->loggedActions($type, $callback);
 
@@ -167,7 +167,7 @@ trait InteractsWithLogger
      *
      * @throws \Exception
      */
-    public function assertChangeNotLogged($type, $callback = null)
+    protected function assertChangeNotLogged($type, $callback = null)
     {
 	    $loggedChanges = $this->loggedChanges($type, $callback);
 
@@ -184,7 +184,7 @@ trait InteractsWithLogger
      *
      * @throws \Exception
      */
-    public function assertNoActionsLogged()
+    protected function assertNoActionsLogged()
     {
     	$loggedActions = $this->getActions();
 
@@ -198,7 +198,7 @@ trait InteractsWithLogger
      *
      * @throws \Exception
      */
-    public function assertNoChangesLogged()
+    protected function assertNoChangesLogged()
     {
     	$loggedChanges = $this->getChanges();
 
@@ -215,7 +215,7 @@ trait InteractsWithLogger
      *
      * @throws \Exception
      */
-    public function loggedActions($type, $callback = null)
+    private function loggedActions($type, $callback = null)
     {
         if (! $this->hasLoggedAction($type)) {
             return [];
@@ -242,7 +242,7 @@ trait InteractsWithLogger
      *
      * @throws \Exception
      */
-    public function loggedChanges($type, $callback = null)
+    private function loggedChanges($type, $callback = null)
     {
         if (! $this->hasLoggedChange($type)) {
             return [];
@@ -267,7 +267,7 @@ trait InteractsWithLogger
      * @return bool
      * @throws \Exception
      */
-    public function hasLoggedAction($type)
+    protected function hasLoggedAction($type)
     {
     	$actions = $this->actionsOf($type);
 
@@ -282,7 +282,7 @@ trait InteractsWithLogger
      * @return bool
      * @throws \Exception
      */
-    public function hasLoggedChange($type)
+    protected function hasLoggedChange($type)
     {
     	$changes = $this->changesOf($type);
 
@@ -297,7 +297,7 @@ trait InteractsWithLogger
      * @return array
      * @throws \Exception
      */
-    protected function actionsOf($type)
+    private function actionsOf($type)
     {
     	$actions = $this->getActions();
 
@@ -314,7 +314,7 @@ trait InteractsWithLogger
      * @return array
      * @throws \Exception
      */
-    protected function changesOf($type)
+    private function changesOf($type)
     {
     	$changes = $this->getChanges();
 

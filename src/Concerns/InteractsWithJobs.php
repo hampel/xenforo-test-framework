@@ -33,7 +33,7 @@ trait InteractsWithJobs
 	 * @return array
 	 * @throws \Exception
 	 */
-	public function getQueuedJobs()
+	protected function getQueuedJobs()
 	{
 		return $this->getJobManager()->getQueuedJobs();
 	}
@@ -47,7 +47,7 @@ trait InteractsWithJobs
      *
      * @throws \Exception
      */
-    public function assertJobQueued($shortName, $callback = null)
+    protected function assertJobQueued($shortName, $callback = null)
     {
         if (is_numeric($callback)) {
             return $this->assertJobsQueuedTimes($callback);
@@ -89,7 +89,7 @@ trait InteractsWithJobs
      *
      * @throws \Exception
      */
-    public function assertJobNotQueued($shortName, $callback = null)
+    protected function assertJobNotQueued($shortName, $callback = null)
     {
 	    $queuedJobs = $this->queuedJobs($shortName, $callback);
 
@@ -106,7 +106,7 @@ trait InteractsWithJobs
      *
      * @throws \Exception
      */
-    public function assertNoJobsQueued()
+    protected function assertNoJobsQueued()
     {
     	$queuedJobs = $this->getQueuedJobs();
 
@@ -122,7 +122,7 @@ trait InteractsWithJobs
      *
      * @throws \Exception
      */
-    public function queuedJobs($shortName, $callback = null)
+    private function queuedJobs($shortName, $callback = null)
     {
         if (! $this->hasQueuedJob($shortName)) {
             return [];
@@ -146,7 +146,7 @@ trait InteractsWithJobs
      * @return bool
      * @throws \Exception
      */
-    public function hasQueuedJob($shortName)
+    protected function hasQueuedJob($shortName)
     {
     	$jobs = $this->jobsOf($shortName);
 
@@ -160,7 +160,7 @@ trait InteractsWithJobs
      * @return array
      * @throws \Exception
      */
-    protected function jobsOf($shortName)
+    private function jobsOf($shortName)
     {
     	$queuedJobs = $this->getQueuedJobs();
 

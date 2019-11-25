@@ -27,7 +27,7 @@ trait InteractsWithSimpleCache
 		return $simpleCache;
 	}
 
-	public function assertSimpleCacheHas($addOnId, $key)
+	protected function assertSimpleCacheHas($addOnId, $key)
 	{
 		PHPUnit::assertTrue(
             $this->getSimpleCache()->keyExists($addOnId, $key),
@@ -35,7 +35,7 @@ trait InteractsWithSimpleCache
         );
 	}
 
-	public function assertSimpleCacheEqual($expected, $addOnId, $key)
+	protected function assertSimpleCacheEqual($expected, $addOnId, $key)
 	{
 		PHPUnit::assertEquals(
 			$expected,
@@ -43,7 +43,7 @@ trait InteractsWithSimpleCache
         );
 	}
 
-	public function assertSimpleCacheNotEqual($expected, $addOnId, $key)
+	protected function assertSimpleCacheNotEqual($expected, $addOnId, $key)
 	{
 		PHPUnit::assertNotEquals(
 			$expected,

@@ -35,7 +35,7 @@ trait InteractsWithErrors
 	 * @return array
 	 * @throws \Exception
 	 */
-	public function getExceptions()
+	protected function getExceptions()
 	{
 		return $this->getErrorFake()->getExceptions();
 	}
@@ -46,7 +46,7 @@ trait InteractsWithErrors
 	 * @return array
 	 * @throws \Exception
 	 */
-	public function getErrors()
+	protected function getErrors()
 	{
 		return $this->exceptionsOf(\ErrorException::class);
 	}
@@ -60,7 +60,7 @@ trait InteractsWithErrors
      *
      * @throws \Exception
      */
-    public function assertExceptionLogged($class, $callback = null)
+    protected function assertExceptionLogged($class, $callback = null)
     {
         if (is_numeric($callback)) {
             return $this->assertExceptionLoggedTimes($callback);
@@ -82,7 +82,7 @@ trait InteractsWithErrors
      *
      * @throws \Exception
      */
-    public function assertErrorLogged($message)
+    protected function assertErrorLogged($message)
     {
 	    $loggedErrors = $this->loggedErrors($message);
 
@@ -120,7 +120,7 @@ trait InteractsWithErrors
      *
      * @throws \Exception
      */
-    public function assertExceptionNotLogged($class, $callback = null)
+    protected function assertExceptionNotLogged($class, $callback = null)
     {
 	    $loggedExceptions = $this->loggedExceptions($class, $callback);
 
@@ -138,7 +138,7 @@ trait InteractsWithErrors
      *
      * @throws \Exception
      */
-    public function assertErrorNotLogged($message)
+    protected function assertErrorNotLogged($message)
     {
     	$loggedErrors = $this->loggedErrors($message);
 
@@ -155,7 +155,7 @@ trait InteractsWithErrors
      *
      * @throws \Exception
      */
-    public function assertNoExceptionsLogged()
+    protected function assertNoExceptionsLogged()
     {
     	$loggedExceptions = $this->getExceptions();
 
@@ -169,7 +169,7 @@ trait InteractsWithErrors
      *
      * @throws \Exception
      */
-    public function assertNoErrorsLogged()
+    protected function assertNoErrorsLogged()
     {
 	    $loggedErrors = $this->getErrors();
 
@@ -188,7 +188,7 @@ trait InteractsWithErrors
      *
      * @throws \Exception
      */
-    public function loggedExceptions($class, $callback = null)
+    private function loggedExceptions($class, $callback = null)
     {
         if (! $this->hasLoggedException($class)) {
             return [];
@@ -213,7 +213,7 @@ trait InteractsWithErrors
      *
      * @throws \Exception
      */
-    public function loggedErrors($message)
+    private function loggedErrors($message)
     {
         if (! $this->hasLoggedErrors()) {
             return [];
@@ -233,7 +233,7 @@ trait InteractsWithErrors
      * @return bool
      * @throws \Exception
      */
-    public function hasLoggedException($class)
+    protected function hasLoggedException($class)
     {
     	$exceptions = $this->exceptionsOf($class);
 
@@ -246,7 +246,7 @@ trait InteractsWithErrors
      * @return bool
      * @throws \Exception
      */
-    public function hasLoggedErrors()
+    protected function hasLoggedErrors()
     {
     	$errors = $this->getErrors();
 
@@ -260,7 +260,7 @@ trait InteractsWithErrors
      * @return array
      * @throws \Exception
      */
-    protected function exceptionsOf($class)
+    private function exceptionsOf($class)
     {
     	$exceptions = $this->getExceptions();
 

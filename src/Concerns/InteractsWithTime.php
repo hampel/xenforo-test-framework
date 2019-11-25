@@ -37,7 +37,7 @@ trait InteractsWithTime
 		}
 	}
 
-	protected function restoreTime()
+	private function restoreTime()
 	{
 		if ($this->time)
 		{

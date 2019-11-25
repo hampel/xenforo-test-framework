@@ -37,7 +37,7 @@ trait InteractsWithMail
 	 * @return \Swift_Mime_Message[]
 	 * @throws \Exception
 	 */
-	public function getSentMail()
+	protected function getSentMail()
 	{
 		return $this->getMailTransport()->getSentEmails();
 	}
@@ -50,7 +50,7 @@ trait InteractsWithMail
      *
      * @throws \Exception
      */
-    public function assertMailSent($callback = null)
+    protected function assertMailSent($callback = null)
     {
         if (is_numeric($callback)) {
             return $this->assertMailSentTimes($callback);
@@ -98,7 +98,7 @@ trait InteractsWithMail
      *
      * @throws \Exception
      */
-    public function assertMailNotSent($callback = null)
+    protected function assertMailNotSent($callback = null)
     {
 	    $sentMail = $this->sentMail($callback);
 
@@ -115,7 +115,7 @@ trait InteractsWithMail
      *
      * @throws \Exception
      */
-    public function assertNoMailSent()
+    protected function assertNoMailSent()
     {
     	$sentMail = $this->getSentMail();
 
@@ -130,7 +130,7 @@ trait InteractsWithMail
      *
      * @throws \Exception
      */
-    public function sentMail($callback = null)
+    private function sentMail($callback = null)
     {
         $callback = $callback ?: function () {
             return true;
@@ -161,7 +161,7 @@ trait InteractsWithMail
 	 * @return \Swift_Mime_Message[]
 	 * @throws \Exception
 	 */
-	public function getQueuedMail()
+	protected function getQueuedMail()
 	{
 		return $this->getMailQueue()->getQueuedEmails();
 	}
@@ -174,7 +174,7 @@ trait InteractsWithMail
      *
      * @throws \Exception
      */
-    public function assertMailQueued($callback = null)
+    protected function assertMailQueued($callback = null)
     {
         if (is_numeric($callback)) {
             return $this->assertMailQueuedTimes($callback);
@@ -214,7 +214,7 @@ trait InteractsWithMail
      *
      * @throws \Exception
      */
-    public function assertMailNotQueued($callback = null)
+    protected function assertMailNotQueued($callback = null)
     {
 	    $queuedMail = $this->queuedMail($callback);
 
@@ -231,7 +231,7 @@ trait InteractsWithMail
      *
      * @throws \Exception
      */
-    public function assertNoMailQueued()
+    protected function assertNoMailQueued()
     {
     	$queuedMail = $this->getQueuedMail();
 
@@ -246,7 +246,7 @@ trait InteractsWithMail
      *
      * @throws \Exception
      */
-    public function queuedMail($callback = null)
+    private function queuedMail($callback = null)
     {
         $callback = $callback ?: function () {
             return true;

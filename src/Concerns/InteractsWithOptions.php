@@ -37,7 +37,7 @@ trait InteractsWithOptions
 		$options[$key] = $value;
 	}
 
-	protected function restoreOptions()
+	private function restoreOptions()
 	{
 		$app = $this->app();
 		$app['options'] = $this->originalOptions;

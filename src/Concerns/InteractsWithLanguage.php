@@ -36,7 +36,7 @@ trait InteractsWithLanguage
 		return $phrase;
 	}
 
-	protected function restoreLanguage()
+	private function restoreLanguage()
 	{
 		if ($this->languageMocked)
 		{
