@@ -24,6 +24,11 @@ class App extends BaseApp
 		parent::setup($options);
 	}
 
+	public function preLoadData(array $typeSpecific = [])
+	{
+		parent::preLoadData($typeSpecific);
+	}
+
 	public function start($allowShortCircuit = false)
 	{
 		parent::start($allowShortCircuit);
