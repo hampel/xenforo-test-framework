@@ -21,7 +21,7 @@ class App extends BaseApp
 
 	public function setup(array $options = [])
 	{
-		parent::setup();
+		parent::setup($options);
 	}
 
 	public function start($allowShortCircuit = false)
