@@ -2,6 +2,8 @@
 
 trait InteractsWithExtension
 {
+	private $addonIsolated = false;
+
 	protected function setUpExtension()
 	{
  		$this->swap('extension', function (\XF\Container $c) {
@@ -25,6 +27,10 @@ trait InteractsWithExtension
 
 			return new \Hampel\Testing\Extension($listeners, $classExtensions);
 		});
+
+        $this->beforeApplicationDestroyed(function () {
+            $this->restoreExtensions();
+        });
 	}
 
 	protected function isolateAddon($addon)
@@ -36,6 +42,8 @@ trait InteractsWithExtension
 
 		$listeners = $this->getListenerCacheData($addon);
 		$this->app()->extension()->setListeners($listeners);
+
+		$this->addonIsolated = true;
 	}
 
 	private function getExtensionCacheData($addon)
@@ -75,5 +83,14 @@ trait InteractsWithExtension
 		}
 
 		return $cache;
+	}
+
+	private function restoreExtensions()
+	{
+		if ($this->addonIsolated)
+		{
+			$this->app()->extension()->setClassExtensions($this->app()->get('extension.classExtensions'));
+			$this->app()->extension()->setListeners($this->app()->get('extension.listeners'));
+		}
 	}
 }
