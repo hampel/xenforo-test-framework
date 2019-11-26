@@ -2,7 +2,7 @@
 
 trait InteractsWithOptions
 {
-	protected $originalOptions = [];
+	private $originalOptions = [];
 
 	protected function setUpOptions()
 	{

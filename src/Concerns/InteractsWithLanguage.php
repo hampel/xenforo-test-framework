@@ -6,7 +6,7 @@ use XF\Language;
 
 trait InteractsWithLanguage
 {
-	protected $languageMocked = false;
+	private $languageMocked = false;
 
 	protected function setUpLanguage()
 	{

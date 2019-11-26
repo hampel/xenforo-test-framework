@@ -4,9 +4,9 @@ use Carbon\Carbon;
 
 trait InteractsWithTime
 {
-	protected $time;
+	private $time;
 
-	protected $containerTime;
+	private $containerTime;
 
 	protected function setUpTime()
 	{
