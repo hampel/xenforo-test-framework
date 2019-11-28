@@ -872,6 +872,11 @@ side-effects when writing to the filesystem.
 
 * `fs` - the name of the filesystem to swap (eg `data`, `internal-data`, `code-cache`)
 
+##### Assertions available
+
+* `assertFsHas`
+* `assertFsHasNot`
+
 ##### Example:
 
 ```php
@@ -888,8 +893,6 @@ class SwapFsTest extends TestCase
 		
 		// execute some test code which writes to internal data - changes will not be persisted once test completes
 		$this->app()->fs()->copy('internal-data://temp/filea.txt', 'internal-data://temp/fileb.txt');
-		
-		// TODO: implement assertFsHas ???
 		
 		$this->assertFsHas('internal-data://temp/fileb.txt');
 	}
@@ -1236,6 +1239,7 @@ None
 ##### Assertions available:
 
 * `assertSimpleCacheHas`
+* `assertSimpleCacheHasNot`
 * `assertSimpleCacheEqual`
 * `assertSimpleCacheNotEqual`
 
