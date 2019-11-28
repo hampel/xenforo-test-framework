@@ -23,6 +23,22 @@ trait InteractsWithFilesystem
 		$this->swap('config', $config);
 	}
 
+	protected function assertFsHas($file)
+	{
+		PHPUnit::assertTrue(
+            $this->app()->fs()->has($file),
+            "The expected [{$file}] file does not exist."
+        );
+	}
+
+	protected function assertFsHasNot($file)
+	{
+		PHPUnit::assertFalse(
+            $this->app()->fs()->has($file),
+            "The [{$file}] file exists."
+        );
+	}
+
 	/**
 	 * Allow us to mock the local filesystem to assert that certain operations have taken place without any changes
 	 * being made
