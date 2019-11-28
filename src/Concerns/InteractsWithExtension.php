@@ -89,8 +89,10 @@ trait InteractsWithExtension
 	{
 		if ($this->addonIsolated)
 		{
-			$this->app()->extension()->setClassExtensions($this->app()->get('extension.classExtensions'));
-			$this->app()->extension()->setListeners($this->app()->get('extension.listeners'));
+			$app = $this->app();
+
+			$app->extension()->setClassExtensions($app['extension.classExtensions']);
+			$app->extension()->setListeners($app['extension.listeners']);
 		}
 	}
 }
