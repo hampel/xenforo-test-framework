@@ -319,6 +319,7 @@ expecting our code to call `XF\Http\Request::getIp(true);` once, at which point 
 address `10.0.0.1`.
 
 We have helpers to mock many of the key subsystems:
+
 * `mockDatabase`
 * `mockRepository`
 * `mockFinder`
@@ -327,6 +328,7 @@ We have helpers to mock many of the key subsystems:
 * `mockFs`
 
 We also have fake systems which log interactions with the subsystem and then allow us to query that after the fact:
+
 * `fakesErrors`
 * `fakesJobs`
 * `fakesLogger`
@@ -335,6 +337,7 @@ We also have fake systems which log interactions with the subsystem and then all
 * `fakesRegistry`
 
 Finally, we have some special helper functions for specific purposes:
+
 * `assertBbCode` lets you test the expected output of some BbCode, useful for testing custom codes.
 * `expectPhrase` mocks the phrase rendering process and allows us to return arbitrary strings for phrases.
 * `setOption` & `setOptions` allow us to directly set the values we want for our options so we don't have to mock the 
@@ -400,6 +403,7 @@ $ cp vendor/hampel/xenforo-test-framework/tests .
 ```
 
 Inside the tests directory, you'll find the following directories and files:
+
 * `/tests/Feature` this is a placeholder for future support for feature testing
 * `/tests/Unit` this is where all of your unit tests should go
 * `/tests/Unit/ExampleTest.php` this is a simple example test - edit or copy it as the basis for your own test classes
