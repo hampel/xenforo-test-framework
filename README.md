@@ -175,7 +175,7 @@ In unit tests, mock objects simulate the behaviour of real objects. They can beh
 being passed to function calls that declare type expectations and providing concrete implementations of interfaces, 
 without needing to provide any implementation details.
 
-Mockery is a simple PHP mock object framework for use in unit testing with PHPUnit. Mockery is designed as a drop in 
+[Mockery](http://docs.mockery.io/) is a simple PHP mock object framework for use in unit testing with PHPUnit. Mockery is designed as a drop in 
 alternative to PHPUnit's own mock objects library. We utilise Mockery heavily in our unit testing framework.
 
 ## 6. XenForo Unit Test Framework
