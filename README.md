@@ -319,31 +319,31 @@ expecting our code to call `XF\Http\Request::getIp(true);` once, at which point 
 address `10.0.0.1`.
 
 We have helpers to mock many of the key subsystems:
-- `mockDatabase`
-- `mockRepository`
-- `mockFinder`
-- `mockEntity`
-- `mockRequest`
-- `mockFs`
+* `mockDatabase`
+* `mockRepository`
+* `mockFinder`
+* `mockEntity`
+* `mockRequest`
+* `mockFs`
 
 We also have fake systems which log interactions with the subsystem and then allow us to query that after the fact:
-- `fakesErrors`
-- `fakesJobs`
-- `fakesLogger`
-- `fakesMail`
-- `fakesSimpleCache`
-- `fakesRegistry`
+* `fakesErrors`
+* `fakesJobs`
+* `fakesLogger`
+* `fakesMail`
+* `fakesSimpleCache`
+* `fakesRegistry`
 
 Finally, we have some special helper functions for specific purposes:
-- `assertBbCode` lets you test the expected output of some BbCode, useful for testing custom codes.
-- `expectPhrase` mocks the phrase rendering process and allows us to return arbitrary strings for phrases.
-- `setOption` & `setOptions` allow us to directly set the values we want for our options so we don't have to mock the 
+* `assertBbCode` lets you test the expected output of some BbCode, useful for testing custom codes.
+* `expectPhrase` mocks the phrase rendering process and allows us to return arbitrary strings for phrases.
+* `setOption` & `setOptions` allow us to directly set the values we want for our options so we don't have to mock the 
 options repository. It restores options after each test is executed - keeping to our goal of no side-effects.
-- `setTestTime` lets us set the application execution time (`\XF::$time`) to a known specific time (optionally using the
+* `setTestTime` lets us set the application execution time (`\XF::$time`) to a known specific time (optionally using the
 Carbon library), so that we can test functions that rely on time intervals or comparisons.
-- `swapFs` lets us swap the filesystem from _local_ to _memory_ so that we can make non-persistent changes to the 
+* `swapFs` lets us swap the filesystem from _local_ to _memory_ so that we can make non-persistent changes to the 
 filesystem and avoid side effects
-- `isolateAddon` lets us force XenForo to only load class extensions and code event listeners for our addon, thus 
+* `isolateAddon` lets us force XenForo to only load class extensions and code event listeners for our addon, thus 
 avoiding potential conflicts or unexpected code paths from other addons installed on our dev server
 
 ## 8. Installing the Framework
@@ -400,11 +400,11 @@ $ cp vendor/hampel/xenforo-test-framework/tests .
 ```
 
 Inside the tests directory, you'll find the following directories and files:
-- `/tests/Feature` this is a placeholder for future support for feature testing
-- `/tests/Unit` this is where all of your unit tests should go
-- `/tests/Unit/ExampleTest.php` this is a simple example test - edit or copy it as the basis for your own test classes
-- `/tests/CreatesApplication.php` this is the trait that boots our XenForo test framework. If you need to adjust the way we boot things, you can change this - but for most cases you should leave it as is
-- `/tests/TestCase.php` this is our base test class (`Tests\TestCase`) that all unit test classes should inherit from if you want to boot the XenForo application framework for use in your tests
+* `/tests/Feature` this is a placeholder for future support for feature testing
+* `/tests/Unit` this is where all of your unit tests should go
+* `/tests/Unit/ExampleTest.php` this is a simple example test - edit or copy it as the basis for your own test classes
+* `/tests/CreatesApplication.php` this is the trait that boots our XenForo test framework. If you need to adjust the way we boot things, you can change this - but for most cases you should leave it as is
+* `/tests/TestCase.php` this is our base test class (`Tests\TestCase`) that all unit test classes should inherit from if you want to boot the XenForo application framework for use in your tests
 
 Third step is to copy the `phpunit.xml` file from `{addon_root}/vendor/hampel/xenforo-test-framework/phpunit.xml` into the root of your addon:
 
