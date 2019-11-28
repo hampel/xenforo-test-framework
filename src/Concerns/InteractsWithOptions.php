@@ -31,6 +31,12 @@ trait InteractsWithOptions
 		return $options;
 	}
 
+	/**
+	 * Set a single option
+	 *
+	 * @param $key
+	 * @param $value
+	 */
 	protected function setOption($key, $value)
 	{
 		$options = $this->app()->options();

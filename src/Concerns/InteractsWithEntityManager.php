@@ -15,8 +15,8 @@ trait InteractsWithEntityManager
 	}
 
 	/**
-	 * @param $identifier string
-	 * @param Closure|null $mock
+	 * @param $identifier string - shortname for repository class being mocked
+	 * @param Closure|null $mock - (optional) mock closure to set expectations on
 	 *
 	 * @return Mockery\MockInterface
 	 * @throws \Exception
@@ -35,8 +35,8 @@ trait InteractsWithEntityManager
 	}
 
 	/**
-	 * @param $shortName string
-	 * @param Closure|null $mock
+	 * @param $shortName string - shortname for finder class being mocked
+	 * @param Closure|null $mock - (optional) mock closure to set expectations on
 	 *
 	 * @return Mockery\MockInterface
 	 * @throws \Exception
@@ -55,7 +55,7 @@ trait InteractsWithEntityManager
 	}
 
 	/**
-	 * @param $shortName string
+	 * @param $shortName string - shortname for finder class being mocked
 	 * @param bool $inherit - set to true (default) to inherit from the mocked entity, or false to mock a standalone class
 	 * @param Closure|null $mock
 	 *

@@ -5,6 +5,13 @@ use \XF\Db\AbstractAdapter;
 
 trait InteractsWithDatabase
 {
+	/**
+	 * Mock the database class
+	 *
+	 * @param Closure|null $mock
+	 *
+	 * @return mixed
+	 */
 	protected function mockDatabase(Closure $mock = null)
 	{
 		$db = $this->mock('db', AbstractAdapter::class, $mock);

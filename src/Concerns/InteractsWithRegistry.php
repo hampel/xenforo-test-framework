@@ -5,6 +5,12 @@ use \XF\Db\AbstractAdapter;
 
 trait InteractsWithRegistry
 {
+	/**
+	 * Disables database and cache updates for registry changes - all updates are written to memory only, so no
+	 * side-effects when writing to the registry.
+	 *
+	 * @param bool $preLoadData - set to false to disable pre-loading of registry data
+	 */
 	protected function fakesRegistry($preLoadData = true)
 	{
 		$this->swap('registry', function ($c) {

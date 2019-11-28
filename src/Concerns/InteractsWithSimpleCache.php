@@ -6,6 +6,10 @@ use XF\Container;
 
 trait InteractsWithSimpleCache
 {
+	/**
+	 * Allow us to assert that keys/value exist (or do not exist) in the SimpleCache as a result of executing our test
+	 * code, without side-effects (ie no changes are actually made to the cache).
+	 */
 	protected function fakesSimpleCache()
 	{
 		$this->swap('simpleCache', function () {

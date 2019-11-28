@@ -6,6 +6,10 @@ use XF\Container;
 
 trait InteractsWithErrors
 {
+	/**
+	 * Allow us to assert that certain errors were (or were not) thrown as a result of executing our test code, without
+	 * side-effects (ie no logs written to database).
+	 */
 	protected function fakesErrors()
 	{
 		$this->swap('error', function (Container $c) {

@@ -7,6 +7,10 @@ use XF\Container;
 
 trait InteractsWithMail
 {
+	/**
+	 * Allow us to assert that emails were (or were not) sent or queued as a result of executing our test code,
+	 * without side-effects (ie no emails actually get sent).
+	 */
 	protected function fakesMail()
 	{
 		$this->swap('mailer.transport', function (Container $c) {

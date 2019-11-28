@@ -15,6 +15,15 @@ trait InteractsWithTime
         });
 	}
 
+	/**
+	 * Allow us to set an arbitrary execution time for `\XF::$time`, with no side effects - time is reset after each
+	 * individual test is run.
+	 *
+	 * This is especially useful when dealing with time intervals based on the script execution time. It becomes even
+	 * more useful when combined with the Carbon library, since time intervals become very easy to manipulate.
+	 *
+	 * @param $time - timestamp to set
+	 */
 	protected function setTestTime($time)
 	{
 		$this->time = \XF::$time;

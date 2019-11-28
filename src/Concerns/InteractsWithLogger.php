@@ -6,6 +6,10 @@ use XF\Container;
 
 trait InteractsWithLogger
 {
+	/**
+	 * Allow us to assert that certain moderator actions were (or were not) logged as a result of executing our test
+	 * code, without side-effects (ie no logs written to database).
+	 */
 	protected function fakesLogger()
 	{
 		$this->swap('logger', function (Container $c) {

@@ -518,7 +518,22 @@ Helper function for testing custom BBCode functions. Simply pass it some BBCode,
 want it parsed and then you can pass the expected HTML output to validate that your BBCode is being converted as
 expected.
 
-For example:
+##### Parameters:
+
+* `$expectedHtml` - the output you expect to receive
+* `$bbCode` - the bbcode to be rendered
+* `$type` - optional - the type of rendering to apply - see type options below
+* `$context` - optional - the context for rendering
+* `$content` - optional - the content being rendered, typically an entity
+
+Type options:
+*  `bbCodeClean` - renders a cleaned version of the BBCode itself
+*  `editorHtml` - a blended HTML and BBCode version for display in the editor
+*  `emailHtml` - a simplified HTML suitable for display in emails
+*  `html` - the default fully rendered HTML output for browsers
+*  `simpleHtml` - a simplified HTML suitable for display in signatures and so on
+
+##### Example:
 
 ```php
 <?php namespace Tests\Unit;
@@ -540,7 +555,12 @@ class BbCodeTest extends TestCase
 ### swap
 Register an instance of an object in the container.
 
-Example:
+##### Parameters:
+
+* `key` - the container key to be swapped
+* `instance` - the object or closure to swap in
+
+##### Example:
 
 ```php
 <?php namespace Tests\Unit;
@@ -574,7 +594,13 @@ class SwapTest extends TestCase
 ### mock
 Mock an instance of an object in the container
 
-Example:
+##### Parameters:
+
+* `key` - the container key to be swapped with a mock
+* `abstract` - the base class or interface to use for the mock
+* `mock` - optional - the mock closure to define expectations on
+
+##### Example:
 
 ```php
 <?php namespace Tests\Unit;
@@ -603,10 +629,20 @@ class MockTest extends TestCase
 ### mockFactory
 Mock a factory builder in the container.
 
+##### Parameters
+
+* `key` - the container key to be swapped with a mock
+* `abstract` - the base class or interface to use for the mock
+* `mock` - optional - the mock closure to define expectations on
+
 ### mockDatabase
 Mock the database adapter.
 
-Example: 
+##### Parameters
+
+* `mock` - optional - the mock closure to define expectations on
+
+##### Example: 
 
 ```php
 <?php namespace Tests\Unit;
@@ -634,7 +670,12 @@ class DbTest extends TestCase
 ### mockRepository
 Mock a repository.
 
-Example: 
+##### Parameters
+
+* `identifier` - the short class name for the repository 
+* `mock` - optional - the mock closure to define expectations on
+
+##### Example: 
 
 ```php
 <?php namespace Tests\Unit;
@@ -663,7 +704,12 @@ class RepoTest extends TestCase
 ### mockFinder
 Mock a Finder.
 
-Example: 
+##### Parameters
+
+* `identifier` - the short class name for the finder 
+* `mock` - optional - the mock closure to define expectations on
+
+##### Example:
 
 ```php
 <?php namespace Tests\Unit;
@@ -697,7 +743,13 @@ class FinderTest extends TestCase
 ### mockEntity
 Mock an Entity.
 
-Example: 
+##### Parameters
+
+* `identifier` - the short class name for the repository 
+* `inherit` - optional - set to false to disable inheritance, thus bypassing the `final function save()` issue
+* `mock` - optional - the mock closure to define expectations on
+
+##### Example:
 
 ```php
 <?php namespace Tests\Unit;
@@ -724,16 +776,32 @@ class EntityTest extends TestCase
 
 _Warning:_ while we can mock an entity, we cannot stop it from interacting with the database because the `save()` method
 on the base Entity class is marked `final` - meaning that our mocks can't actually stop that method from executing by 
-overriding it.
-
-Basically, you cannot unit test code which calls `save()` on an entity - running your unit tests will cause side effects
+overriding it. Basically, you cannot unit test code which calls `save()` on an entity - running your unit tests will cause side effects
 from database updates.
+
+_Solution:_ provided that we don't set type expectations for our entities, we can bypass this issue by creating a fake
+mock class that does not inherit from our base entity class - thus avoiding the final save method. The 2nd parameter to
+`mockEntity` can be set to `false` to disable inheritance.
 
 ### fakesErrors
 Allow us to assert that certain errors were (or were not) thrown as a result of executing our test code, without
 side-effects (ie no logs written to database).
 
-Example: 
+##### Parameters:
+
+none
+
+##### Assertions available:
+
+* `assertExceptionLogged`
+* `assertExceptionLoggedTimes`
+* `assertExceptionNotLogged`
+* `assertNoExceptionsLogged`
+* `assertErrorLogged`
+* `assertErrorNotLogged`
+* `assertNoErrorsLogged`
+
+##### Example: 
 
 ```php
 <?php namespace Tests\Unit;
@@ -768,7 +836,11 @@ side effects and unexpected code-paths.
 
 This should be run in the `setup()` function for the test class - it will affect all tests in that class.
 
-Example:
+##### Parameters:
+
+* `addon` - the `addon_id` of the addon which should be permitted to load listeners / extensions
+
+##### Example:
 
 ```php
 <?php namespace Tests\Unit;
@@ -796,9 +868,11 @@ class IsolationTest extends TestCase
 Allow us to swap out the local filesystem with a memory based filesystem which is non-persistent. Ideal for avoiding
 side-effects when writing to the filesystem.
 
+##### Parameters
 
+* `fs` - the name of the filesystem to swap (eg `data`, `internal-data`, `code-cache`)
 
-Example:
+##### Example:
 
 ```php
 <?php namespace Tests\Unit;
@@ -825,7 +899,12 @@ class SwapFsTest extends TestCase
 ### mockFs
 Allow us to mock the local filesystem to assert that certain operations have taken place without any changes being made
 
-Example:
+##### Parameters:
+
+* `fs` - the name of the filesystem to mock (eg `data`, `internal-data`, `code-cache`)
+* `mock` - optional - the mock closure to set expectations on
+
+##### Example:
 
 ```php
 <?php namespace Tests\Unit;
@@ -851,7 +930,18 @@ class MockFsTest extends TestCase
 Allow us to assert that certain jobs were (or were not) queued as a result of executing our test code, without
 side-effects (ie no jobs written to database or executed).
 
-Example: 
+##### Parameters:
+
+none
+
+##### Assertions available:
+
+* `assertJobQueued`
+* `assertJobQueuedTimes`
+* `assertJobNotQueued`
+* `assertNoJobsQueued`
+
+##### Example: 
 
 ```php
 <?php namespace Tests\Unit;
@@ -890,7 +980,13 @@ functions.
 Allow us to easily mock the phrase/language system to avoid database lookups and rendering phrases. This is especially
 useful when dealing with error messages which include phrases that may be variable.
 
-Example: 
+##### Parameters:
+
+* `key` - the phrase_id
+* `parameters` - optional - parameters that are expected to be passed to the phrase
+* `response` - optional - the response that should be returned
+	 
+##### Example: 
 
 ```php
 <?php namespace Tests\Unit;
@@ -926,7 +1022,22 @@ class PhraseTest extends TestCase
 Allow us to assert that certain moderator actions were (or were not) logged as a result of executing our test code, 
 without side-effects (ie no logs written to database).
 
-Example: 
+##### Parameters:
+
+none
+
+##### Assertions available:
+
+* `assertActionLogged`
+* `assertChangeLogged`
+* `assertActionLoggedTimes`
+* `assertChangeLoggedTimes`
+* `assertActionNotLogged`
+* `assertChangeNotLogged`
+* `assertNoActionsLogged`
+* `assertNoChangesLogged`
+
+##### Example: 
 
 ```php
 <?php namespace Tests\Unit;
@@ -965,7 +1076,22 @@ functions.
 Allow us to assert that emails were (or were not) sent or queued as a result of executing our test code, 
 without side-effects (ie no emails actually get sent).
 
-Example: 
+##### Parameters:
+
+none
+
+##### Assertions available:
+
+* `assertMailSent`
+* `assertMailSentTimes`
+* `assertMailNotSent`
+* `assertNoMailSent`
+* `assertMailQueued`
+* `assertMailQueuedTimes`
+* `assertMailNotQueued`
+* `assertNoMailQueued`
+
+##### Example: 
 
 ```php
 <?php namespace Tests\Unit;
@@ -1007,7 +1133,16 @@ functions.
 Allow us to set arbitrary options to be returned when the application requests an option key, with no side effects - 
 options are reset after each individual test is run.
 
-Example: 
+##### Parameters:
+
+setOptions:
+* `newOptions` - array of options key=>value pairs
+
+setOption:
+* `key`
+* `value`
+
+##### Example: 
 
 ```php
 <?php namespace Tests\Unit;
@@ -1031,10 +1166,12 @@ class OptionTest extends TestCase
 Disables database and cache updates for registry changes - all updates are written to memory only, so no side-effects
 when writing to the registry.
 
-`$preLoadData` parameter specifies whether the faked registry should have data from the database preLoaded in, or leave
-it blank (data will still be read from database when accessed). Defaults to true. 
+##### Parameters:
 
-Example: 
+* `$preLoadData` set to false to disable pre-loading of registry data (data will still be read from database when 
+accessed) 
+
+##### Example:  
 
 ```php
 <?php namespace Tests\Unit;
@@ -1049,7 +1186,7 @@ class RegistryTest extends TestCase
 		$this->fakesRegistry();
 		
 		// execute some test code which interacts with the registry:
-		
+		...
 	}
 }	
 ```
@@ -1058,7 +1195,11 @@ class RegistryTest extends TestCase
 Mock the request - given there are no HTTP requests created from the console, this is useful if we need to simulate 
 certain attributes on a request.
 
-Example: 
+##### Parameters:
+
+* `mock` - optional - mock closure to set expectations
+
+##### Example: 
 
 ```php
 <?php namespace Tests\Unit;
@@ -1088,7 +1229,17 @@ class RequestTest extends TestCase
 Allow us to assert that keys/value exist (or do not exist) in the SimpleCache as a result of executing our test code, 
 without side-effects (ie no changes are actually made to the cache).
 
-Example: 
+##### Parameters:
+
+None
+
+##### Assertions available:
+
+* `assertSimpleCacheHas`
+* `assertSimpleCacheEqual`
+* `assertSimpleCacheNotEqual`
+
+##### Example: 
 
 ```php
 <?php namespace Tests\Unit;
@@ -1124,7 +1275,11 @@ individual test is run.
 This is especially useful when dealing with time intervals based on the script execution time. It becomes even more 
 useful when combined with the Carbon library, since time intervals become very easy to manipulate.
 
-Example: 
+##### Parameters:
+
+* `time` - timestamp to set XF time to
+
+##### Example: 
 
 ```php
 <?php namespace Tests\Unit;

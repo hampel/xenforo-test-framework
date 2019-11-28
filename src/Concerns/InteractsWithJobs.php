@@ -6,6 +6,10 @@ use XF\Container;
 
 trait InteractsWithJobs
 {
+	/**
+	 * Allow us to assert that certain jobs were (or were not) queued as a result of executing our test code, without
+	 * side-effects (ie no jobs written to database or executed).
+	 */
 	protected function fakesJobs()
 	{
 		$this->swap('job.manager', function (Container $c) {

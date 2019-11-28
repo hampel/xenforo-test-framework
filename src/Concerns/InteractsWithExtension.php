@@ -33,6 +33,11 @@ trait InteractsWithExtension
         });
 	}
 
+	/**
+	 * Prevent code event listeners and class extensions from loading except for the specified addon
+	 *
+	 * @param $addon - addon_id of the addon that should be allowed to have listeners / extensions loaded
+	 */
 	protected function isolateAddon($addon)
 	{
 		if (empty($addon)) return;
