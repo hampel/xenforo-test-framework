@@ -324,6 +324,7 @@ We have helpers to mock many of the key subsystems:
 - `mockFinder`
 - `mockEntity`
 - `mockRequest`
+- `mockFs`
 
 We also have fake systems which log interactions with the subsystem and then allow us to query that after the fact:
 - `fakesErrors`
@@ -331,6 +332,7 @@ We also have fake systems which log interactions with the subsystem and then all
 - `fakesLogger`
 - `fakesMail`
 - `fakesSimpleCache`
+- `fakesRegistry`
 
 Finally, we have some special helper functions for specific purposes:
 - `assertBbCode` lets you test the expected output of some BbCode, useful for testing custom codes.
@@ -339,6 +341,10 @@ Finally, we have some special helper functions for specific purposes:
 options repository. It restores options after each test is executed - keeping to our goal of no side-effects.
 - `setTestTime` lets us set the application execution time (`\XF::$time`) to a known specific time (optionally using the
 Carbon library), so that we can test functions that rely on time intervals or comparisons.
+- `swapFs` lets us swap the filesystem from _local_ to _memory_ so that we can make non-persistent changes to the 
+filesystem and avoid side effects
+- `isolateAddon` lets us force XenForo to only load class extensions and code event listeners for our addon, thus 
+avoiding potential conflicts or unexpected code paths from other addons installed on our dev server
 
 ## 8. Installing the Framework
 
@@ -756,6 +762,91 @@ class ErrorTest extends TestCase
 Refer to the `Hampel\Testing\Concerns\InteractsWithErrors` trait for full details of available error validation 
 functions.
 
+### isolateAddon
+Allow us to prevent class extensions and code event listeners from other addons from being loaded during tests to avoid
+side effects and unexpected code-paths.
+
+This should be run in the `setup()` function for the test class - it will affect all tests in that class.
+
+Example:
+
+```php
+<?php namespace Tests\Unit;
+
+use Tests\TestCase;
+
+class IsolationTest extends TestCase
+{
+	protected function setUp() : void
+	{
+		parent::setUp();
+
+		// isolate our addon so only our class extensions and code event listeners get loaded
+		$this->isolateAddon('MyVendor/MyAddon');
+	}	
+	
+	public function test_isolation()
+	{		
+		// execute some test code 	
+	}
+}	
+```
+
+### swapFs
+Allow us to swap out the local filesystem with a memory based filesystem which is non-persistent. Ideal for avoiding
+side-effects when writing to the filesystem.
+
+
+
+Example:
+
+```php
+<?php namespace Tests\Unit;
+
+use Tests\TestCase;
+
+class SwapFsTest extends TestCase
+{
+	public function test_swapfs()
+	{	
+		// replace local filesystem for internal-data with a memory-based filesystem 
+		$this->swapFs('internal-data');
+		
+		// execute some test code which writes to internal data - changes will not be persisted once test completes
+		$this->app()->fs()->copy('internal-data://temp/filea.txt', 'internal-data://temp/fileb.txt');
+		
+		// TODO: implement assertFsHas ???
+		
+		$this->assertFsHas('internal-data://temp/fileb.txt');
+	}
+}	
+```
+
+### mockFs
+Allow us to mock the local filesystem to assert that certain operations have taken place without any changes being made
+
+Example:
+
+```php
+<?php namespace Tests\Unit;
+
+use Tests\TestCase;
+
+class MockFsTest extends TestCase
+{
+	public function test_mockfs()
+	{	
+		// replace local filesystem for internal-data with a memory-based filesystem 
+		$this->mockFs('internal-data', function ($mock) {
+			$mock->expects()->has('foo')->andReturns(true);
+		});
+		
+		// execute some test code which access internal data
+		$this->app()->fs()->has('internal-data://foo');
+	}
+}	
+```
+
 ### fakesJobs
 Allow us to assert that certain jobs were (or were not) queued as a result of executing our test code, without
 side-effects (ie no jobs written to database or executed).
@@ -932,6 +1023,33 @@ class OptionTest extends TestCase
 		
 		// or set a number of options at the same time
 		$this->setOptions(['boardTitle' => 'foo', 'boardDescription' => 'bar']);
+	}
+}	
+```
+
+### fakesRegistry
+Disables database and cache updates for registry changes - all updates are written to memory only, so no side-effects
+when writing to the registry.
+
+`$preLoadData` parameter specifies whether the faked registry should have data from the database preLoaded in, or leave
+it blank (data will still be read from database when accessed). Defaults to true. 
+
+Example: 
+
+```php
+<?php namespace Tests\Unit;
+
+use Tests\TestCase;
+
+class RegistryTest extends TestCase
+{
+	public function test_registry()
+	{		
+		// initialise the Mail fake system
+		$this->fakesRegistry();
+		
+		// execute some test code which interacts with the registry:
+		
 	}
 }	
 ```
