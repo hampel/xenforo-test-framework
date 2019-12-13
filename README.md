@@ -328,6 +328,7 @@ We have helpers to mock many of the key subsystems:
 * `mockService`
 * `mockRequest`
 * `mockFs`
+* `mockHttp`
 
 We also have fake systems which log interactions with the subsystem and then allow us to query that after the fact:
 
