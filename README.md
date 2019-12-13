@@ -324,6 +324,8 @@ We have helpers to mock many of the key subsystems:
 * `mockRepository`
 * `mockFinder`
 * `mockEntity`
+* `mockFactory`
+* `mockService`
 * `mockRequest`
 * `mockFs`
 
@@ -730,6 +732,10 @@ Use `fakesMail()` instead.
 ### Don't mock `XF\SimpleCache`
 
 Use `fakesSimpleCache()` instead.
+
+### Don't mock `XF\DataRegistry`
+
+Use `fakesRegistry()` instead.
 
 ### Don't mock `XF\Language` or `XF\Phrase`
 
