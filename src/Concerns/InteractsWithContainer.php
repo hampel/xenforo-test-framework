@@ -62,6 +62,21 @@ trait InteractsWithContainer
 	    });
     }
 
+	/**
+	 * Mock a Service class
+	 *
+	 * @param string $shortName - shortname for the class in Addon_Id:Class format
+	 * @param \Closure|null $mock - (optional) the mock closure to define expectations on
+	 *
+	 * @return object
+	 */
+    protected function mockService($shortName, Closure $mock = null)
+    {
+		$class = \XF::stringToClass($shortName, '\%s\Service\%s');
+
+    	return $this->mockFactory('service', $class, $mock);
+    }
+
     /**
      * Spy an instance of an object in the container.
      *
