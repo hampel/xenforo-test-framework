@@ -126,6 +126,62 @@ Mock a factory builder in the container.
 * `abstract` - the base class or interface to use for the mock
 * `mock` - optional - the mock closure to define expectations on
 
+#### Example:
+
+```php
+<?php namespace Tests\Unit;
+
+use Tests\TestCase;
+use XF\Http\Request;
+
+class FactoryTest extends TestCase
+{
+	public function test_data()
+	{		
+		// mock our factory
+		$this->mockFactory('data', \XF\Data\Currency::class, function ($mock) {
+			$mock->expects()->getCurrencySymbol('AUD')->once();
+		});
+		
+		// execute some test code which causes the mocked code to be executed, for example
+		$currency = $this->app()->data('XF:Currency');
+		$currency->getCurrencySumbol('AUD');
+	}
+}	
+```
+
+### mockService
+Mock a service factory builder in the container.
+
+##### Parameters
+
+* `shortName` - the short name of the service class to be mocked
+* `mock` - optional - the mock closure to define expectations on
+
+#### Example:
+
+```php
+<?php namespace Tests\Unit;
+
+use Tests\TestCase;
+use XF\Http\Request;
+
+class ServiceTest extends TestCase
+{
+	public function test_service()
+	{		
+		// mock our service class
+		$this->mockService('XF:User\EmailStop', function ($mock) {
+			$mock->expects()->stop('list')->once();
+		});
+		
+		// execute some test code which causes the mocked code to be executed, for example
+		$emailStop = $this->app()->service('XF:User\EmailStop');
+		$emailStop->stop('list');
+	}
+}	
+```
+
 ### mockDatabase
 Mock the database adapter.
 
