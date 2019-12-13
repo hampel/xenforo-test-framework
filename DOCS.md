@@ -476,6 +476,45 @@ class MockFsTest extends TestCase
 }	
 ```
 
+### mockHttp
+Allow us to mock HTTP responses without actually hitting the URL being requested.
+
+Refer to the Guzzle documentation [Testing Guzzle Clients](http://docs.guzzlephp.org/en/stable/testing.html) for more
+information on how the Mock Handler works. 
+
+##### Parameters:
+
+* `array responseStack` - an array of Psr7 Responses or Request Exceptions to return - one for each request made
+
+##### Example:
+
+```php
+<?php namespace Tests\Unit;
+
+use GuzzleHttp\Psr7\Response;
+use GuzzleHttp\Exception\RequestException;
+use Tests\TestCase;
+
+class HttpTest extends TestCase
+{
+	public function test_http()
+	{	
+		// tell Guzzle not to send requests, but to instead return our mock responses, one for each
+		// request that we make 
+		$this->mockHttp([
+			new Response(200, ['X-Foo' => 'Bar'], 'Hello, World'),
+			new Response(202, ['Content-Length' => 0]),
+			new RequestException('Error Communicating with Server', new Request('GET', 'test'))
+		]);
+
+		// execute some code which sends an Http request
+		$this->app()->http()->client()->get('/');
+		$this->app()->http()->client()->get('/foo');
+		$this->app()->http()->client()->get('/bar');
+	}
+}	
+```
+
 ### fakesJobs
 Allow us to assert that certain jobs were (or were not) queued as a result of executing our test code, without
 side-effects (ie no jobs written to database or executed).
