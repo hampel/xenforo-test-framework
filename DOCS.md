@@ -476,15 +476,26 @@ class MockFsTest extends TestCase
 }	
 ```
 
-### mockHttp
-Allow us to mock HTTP responses without actually hitting the URL being requested.
+### fakesHttp
+Allow us to assert that certain HTTP requests were (or were not) sent as a result of executing our test code, and to 
+supply mock HTTP responses without side-effects (ie no requests actually sent).
+
+This function relies on the Mock Handler and History Middleware provided by the Guzzle HTTP library used by XenForo.
 
 Refer to the Guzzle documentation [Testing Guzzle Clients](http://docs.guzzlephp.org/en/stable/testing.html) for more
-information on how the Mock Handler works. 
+information on how the Mock Handler and History Middleware works. 
 
 ##### Parameters:
 
 * `array responseStack` - an array of Psr7 Responses or Request Exceptions to return - one for each request made
+* `bool untrusted` - set to true when using the untrusted client in XenForo
+
+##### Assertions available:
+
+* `assertHttpRequestSent`
+* `assertHttpRequestSentTimes`
+* `assertHttpRequestNotSent`
+* `assertNoHttpRequestSent`
 
 ##### Example:
 
@@ -501,16 +512,24 @@ class HttpTest extends TestCase
 	{	
 		// tell Guzzle not to send requests, but to instead return our mock responses, one for each
 		// request that we make 
-		$this->mockHttp([
+		$this->fakesHttp([
 			new Response(200, ['X-Foo' => 'Bar'], 'Hello, World'),
 			new Response(202, ['Content-Length' => 0]),
 			new RequestException('Error Communicating with Server', new Request('GET', 'test'))
 		]);
 
 		// execute some code which sends an Http request
-		$this->app()->http()->client()->get('/');
-		$this->app()->http()->client()->get('/foo');
-		$this->app()->http()->client()->get('/bar');
+		$response1 = $this->app()->http()->client()->get('/');
+		$response2 = $this->app()->http()->client()->get('/foo');
+		$response3 = $this->app()->http()->client()->get('/bar');
+		
+		// assert something about the requests that were sent
+		$this->assertHttpRequestSent(function ($request) {
+			return strval($request->getUri()) == '/' OR strval($request->getUri()) == '/foo';
+		});
+		
+		// assert something about our responses
+		...		
 	}
 }	
 ```
