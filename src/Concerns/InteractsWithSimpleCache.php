@@ -47,7 +47,7 @@ trait InteractsWithSimpleCache
         );
 	}
 
-	protected function assertSimpleCacheEqual($expected, $addOnId, $key)
+	protected function assertSimpleCacheEquals($expected, $addOnId, $key)
 	{
 		PHPUnit::assertEquals(
 			$expected,
@@ -55,11 +55,23 @@ trait InteractsWithSimpleCache
         );
 	}
 
-	protected function assertSimpleCacheNotEqual($expected, $addOnId, $key)
+	// backwards compatibility for spelling error!
+	protected function assertSimpleCacheEqual($expected, $addOnId, $key)
+	{
+		$this->assertSimpleCacheEquals($expected, $addOnId, $key);
+	}
+
+	protected function assertSimpleCacheNotEquals($expected, $addOnId, $key)
 	{
 		PHPUnit::assertNotEquals(
 			$expected,
             $this->getSimpleCache()->getValue($addOnId, $key)
         );
+	}
+
+	// backwards compatibility for spelling error!
+	protected function assertSimpleCacheNotEqual($expected, $addOnId, $key)
+	{
+		$this->assertSimpleCacheNotEquals($expected, $addOnId, $key);
 	}
 }
