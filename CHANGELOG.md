@@ -1,6 +1,13 @@
 CHANGELOG
 =========
 
+1.2.1 (2020-07-25)
+------------------
+
+* fixed typo in function name: `Hampel\Testing\Concerns\InteractsWithSimpleCache::assertSimpleCacheEqual()` => 
+`assertSimpleCacheEquals()` and `assertSimpleCacheNotEqual()` => `assertSimpleCacheNotEquals()`
+* close the database connection on tearDown to avoid connection limit issues (unless it's been mocked)
+
 1.2.0 (2019-12-13)
 ------------------
 
