@@ -1,9 +1,11 @@
 <?php namespace Hampel\Testing;
 
-use Mockery;
 use Carbon\Carbon;
 use Carbon\CarbonImmutable;
+use Mockery;
+use Mockery\MockInterface;
 use PHPUnit\Framework\TestCase as BaseTestCase;
+use XF\Db\AbstractAdapter;
 
 abstract class TestCase extends BaseTestCase
 {
@@ -161,6 +163,13 @@ abstract class TestCase extends BaseTestCase
             foreach ($this->beforeApplicationDestroyedCallbacks as $callback) {
                 call_user_func($callback);
             }
+
+            // close the database connection to avoid connection limit issues (unless it's been mocked)
+        	$db = $this->app->db();
+        	if ($db instanceof AbstractAdapter && !($db instanceof MockInterface))
+	        {
+		        $this->app()->db()->closeConnection();
+	        }
 
             $this->destroyProperty(\XF::class, 'app');
         }
