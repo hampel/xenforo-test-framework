@@ -3,6 +3,7 @@
 use Closure;
 use League\Flysystem\AdapterInterface;
 use League\Flysystem\Memory\MemoryAdapter;
+use PHPUnit\Framework\Assert as PHPUnit;
 use Mockery;
 
 trait InteractsWithFilesystem
