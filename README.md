@@ -2,6 +2,12 @@
 
 Unit testing framework for XenForo
 
+## Compatibilty
+
+For XenForo v2.1 addons, you should use Unit Test Framework v1.x
+
+For XenForo v2.2 addons, you should use Unit Test Framework v2.x 
+
 ## 1. Introduction
 
 Unit testing is a process by which individual components (units) of your software are tested. The objective is to 
