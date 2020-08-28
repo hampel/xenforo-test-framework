@@ -21,7 +21,7 @@
 		"MIT"
 	],
 	"require": {
-		"php": ">=5.5.0",
+		"php": ">=7.0.0",
 		"phpunit/phpunit": "^8",
 		"mockery/mockery": "^1"
 	},
