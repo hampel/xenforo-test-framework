@@ -11,14 +11,14 @@ class Queue extends BaseQueue
 	{
 	}
 
-	public function queue(\Swift_Mime_Message $message)
+	public function queue(\Swift_Mime_SimpleMessage $message)
 	{
 		$this->queuedEmails[] = $message;
 
 		return true;
 	}
 
-	public function queueForRetry(\Swift_Mime_Message $message, $queueEntry)
+	public function queueForRetry(\Swift_Mime_SimpleMessage $message, $queueEntry)
 	{
 	}
 

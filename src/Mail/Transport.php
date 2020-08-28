@@ -44,8 +44,16 @@ class Transport implements \Swift_Transport
 	public function stop()
 	{
 	}
+
+	/**
+	 * Not used
+	 */
+	public function ping()
+	{
+
+	}
 	
-	public function send(\Swift_Mime_Message $message, &$failedRecipients = null)
+	public function send(\Swift_Mime_SimpleMessage $message, &$failedRecipients = null)
 	{
 		$failedRecipients = (array) $failedRecipients;
 
