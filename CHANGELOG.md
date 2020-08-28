@@ -1,6 +1,11 @@
 CHANGELOG
 =========
 
+2.0.0 (2020-08-28)
+------------------
+
+* XFv2.2 implements Swiftmailer v6 which changes some method/interface signatures
+
 1.2.2 (2020-08-04)
 ------------------
 
