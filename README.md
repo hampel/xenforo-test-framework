@@ -1,5 +1,10 @@
 # XenForo Addon Unit Test Framework
 
+[![Latest Version on Packagist](https://img.shields.io/packagist/v/hampel/xenforo-test-framework.svg?style=flat-square)](https://packagist.org/packages/hampel/xenforo-test-framework)
+[![Total Downloads](https://img.shields.io/packagist/dt/hampel/xenforo-test-framework.svg?style=flat-square)](https://packagist.org/packages/hampel/xenforo-test-framework)
+[![Open Issues](https://img.shields.io/bitbucket/issues/hampel/xenforo-test-framework.svg?style=flat-square)](https://bitbucket.org/hampel/xenforo-test-framework/issues)
+[![License](https://img.shields.io/packagist/l/hampel/xenforo-test-framework.svg?style=flat-square)](https://packagist.org/packages/hampel/xenforo-test-framework)
+
 Unit testing framework for XenForo
 
 ## Compatibilty
