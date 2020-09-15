@@ -93,7 +93,7 @@ class Manager extends BaseManager
 
 	public function getUniqueJob($key)
 	{
-		return $this->uniqueEnqueued[$key] ?? null;
+		return isset($this->uniqueEnqueued[$key]) ? $this->getJob($this->uniqueEnqueued[$key]) : null;
 	}
 
 	public function getFirstAutomaticTime()
@@ -148,7 +148,7 @@ class Manager extends BaseManager
 
 		$job = [
 			'execute_class' => $jobClass,
-			'execute_data' => serialize($params),
+			'execute_data' => $params,
 			'unique_key' => $uniqueId,
 			'manual_execute' => $manual ? 1 : 0,
 			'trigger_date' => $runTime
