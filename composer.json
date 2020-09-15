@@ -1,5 +1,6 @@
 {
 	"name": "hampel/xenforo-test-framework",
+	"type": "library",
 	"description": "Unit testing framework for XenForo",
 	"authors": [{
 		"name": "Simon Hampel",
