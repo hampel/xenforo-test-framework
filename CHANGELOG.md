@@ -1,6 +1,12 @@
 CHANGELOG
 =========
 
+2.0.1 (2020-09-15)
+------------------
+
+* Job Manager - getUniqueJob wasn't returning the job
+* don't serialize job paramaters
+
 2.0.0 (2020-08-28)
 ------------------
 
