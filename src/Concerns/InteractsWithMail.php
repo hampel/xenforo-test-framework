@@ -13,7 +13,7 @@ trait InteractsWithMail
 	 */
 	protected function fakesMail()
 	{
-		$this->swap('mailer.transport', function (Container $c) {
+		return $this->swap('mailer.transport', function (Container $c) {
 			return new Transport(
 				\Swift_DependencyContainer::getInstance()->lookup('transport.eventdispatcher')
 			);

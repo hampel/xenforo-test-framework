@@ -12,7 +12,7 @@ trait InteractsWithLogger
 	 */
 	protected function fakesLogger()
 	{
-		$this->swap('logger', function (Container $c) {
+		return $this->swap('logger', function (Container $c) {
 			return new Logger($this->app);
 		});
 	}

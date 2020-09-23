@@ -13,6 +13,8 @@ trait InteractsWithFilesystem
 	 * side effects
 	 *
 	 * @param $fs - the name of the filesystem to swap (eg `data`, `internal-data`, `code-cache`)
+	 *
+	 * @return MemoryAdapter;
 	 */
 	protected function swapFs($fs)
 	{
@@ -21,7 +23,7 @@ trait InteractsWithFilesystem
 		{
 			return new MemoryAdapter();
 		};
-		$this->swap('config', $config);
+		return $this->swap('config', $config);
 	}
 
 	protected function assertFsHas($file)

@@ -12,7 +12,7 @@ trait InteractsWithJobs
 	 */
 	protected function fakesJobs()
 	{
-		$this->swap('job.manager', function (Container $c) {
+		return $this->swap('job.manager', function (Container $c) {
 			return new Manager($this->app);
 		});
 	}

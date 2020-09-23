@@ -9,7 +9,7 @@ trait InteractsWithEntityManager
 {
 	protected function setUpEntityManager()
 	{
-		$this->swap('em', function (Container $c) {
+		return $this->swap('em', function (Container $c) {
 			return new Manager($c['db'], $c['em.valueFormatter'], $c['extension']);
 		});
 	}

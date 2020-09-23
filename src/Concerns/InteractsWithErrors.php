@@ -12,7 +12,7 @@ trait InteractsWithErrors
 	 */
 	protected function fakesErrors()
 	{
-		$this->swap('error', function (Container $c) {
+		return $this->swap('error', function (Container $c) {
 			return new Error($this->app);
 		});
 	}

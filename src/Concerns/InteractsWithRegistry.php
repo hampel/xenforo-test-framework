@@ -10,10 +10,12 @@ trait InteractsWithRegistry
 	 * side-effects when writing to the registry.
 	 *
 	 * @param bool $preLoadData - set to false to disable pre-loading of registry data
+	 *
+	 * @return DataRegistry
 	 */
 	protected function fakesRegistry($preLoadData = true)
 	{
-		$this->swap('registry', function ($c) {
+		$registry = $this->swap('registry', function ($c) {
 			// turn off registry data caching when testing!
 			$registry = new DataRegistry($c['db'], null);
 			$registry->setFakeMode();
@@ -24,5 +26,7 @@ trait InteractsWithRegistry
 		{
 			$this->app()->preLoadData();
 		}
+
+		return $registry;
 	}
 }

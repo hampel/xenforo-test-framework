@@ -12,7 +12,7 @@ trait InteractsWithSimpleCache
 	 */
 	protected function fakesSimpleCache()
 	{
-		$this->swap('simpleCache', function () {
+		return $this->swap('simpleCache', function () {
 			return new SimpleCache([]);
 		});
 	}
