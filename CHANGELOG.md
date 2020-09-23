@@ -1,6 +1,11 @@
 CHANGELOG
 =========
 
+2.0.2 (2020-09-23)
+------------------
+
+* should be returning the instance we created when swapping or faking classes
+
 2.0.1 (2020-09-15)
 ------------------
 
