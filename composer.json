@@ -8,8 +8,8 @@
 		"role": "Developer"
 	}],
 	"support": {
-		"issues": "https://bitbucket.org/hampel/xenforo-test-framework/issues",
-		"source": "https://bitbucket.org/hampel/xenforo-test-framework/src"
+		"issues": "https://github.com/hampel/xenforo-test-framework/issues",
+		"source": "https://github.com/hampel/xenforo-test-framework"
 	},
 	"keywords": [
 		"xenforo",
@@ -17,7 +17,7 @@
 		"unit testing",
 		"testing"
 	],
-	"homepage": "https://bitbucket.org/hampel/xenforo-test-framework",
+	"homepage": "https://xenforo.com/community/resources/unit-testing-xenforo-addons-tutorial.7508/",
 	"license": [
 		"MIT"
 	],
