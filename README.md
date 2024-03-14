@@ -13,6 +13,25 @@ For XenForo v2.1 addons, you should use Unit Test Framework v1.x
 
 For XenForo v2.2 addons, you should use Unit Test Framework v2.x 
 
+## Upgrading
+
+**v2.1**
+
+The `TestCase.php` and `CreatesApplication.php` files have been updated in v2.1 and you should edit these files in your
+addon unit test directory to merge in these changes.
+
+Specifically, there is a new variable in `TestCase.php`:
+
+```php
+protected $addonsToLoad = [];
+```
+
+... and some new code in `CreatesApplication.php` which should be copied across to your own version of this file:
+
+```php
+$options['xf-addons'] = $this->addonsToLoad ?: [];
+```
+
 ## 1. Introduction
 
 Unit testing is a process by which individual components (units) of your software are tested. The objective is to 
@@ -219,7 +238,9 @@ abstract class TestCase extends BaseTestCase
 {
     use CreatesApplication;
 
-    /*
+    /**
+     * @var string $rootDir path to your XenForo root directory, relative to the addon path
+     *
      * Set $rootDir to '../../../..' if you use a vendor in your addon id (ie <Vendor/AddonId>)
      * Otherwise, set this to '../../..' for no vendor
      *
@@ -227,6 +248,25 @@ abstract class TestCase extends BaseTestCase
      */
     protected $rootDir = '../../../..';
 
+    /**
+     * @var array $addonsToLoad an array of XenForo addon ids to load
+     *
+     * Specifying an array of addon ids will cause only those addons to be loaded - useful for isolating your addon for
+     * testing purposes
+     *
+     * Leave empty to load all addons
+     */
+    protected $addonsToLoad = [];
+
+    /**
+     * Helper function to load mock data from a file (eg json)
+     * To use, create a "mock" folder relative to the tests folder, eg:
+     * 'src/addons/MyVendor/MyAddon/tests/mock'
+     *
+     * @param $file
+     *
+     * @return false|string
+     */
     protected function getMockData($file)
     {
         return file_get_contents(__DIR__ . '/mock/' . $file);
@@ -256,7 +296,9 @@ trait CreatesApplication
 
         \XF::start($this->rootDir);
 
-        return \XF::setupApp('Hampel\Testing\App');
+        $options['xf-addons'] = $this->addonsToLoad ?: [];
+
+        return \XF::setupApp('Hampel\Testing\App', $options);
     }
 }
 ```
@@ -387,8 +429,8 @@ use Composer, you can simply create a `composer.json` file with the following in
 ```json
 {
     "require-dev": {
-        "hampel/xenforo-test-framework": "^1.0",
-        "nesbot/carbon": "^2.25"
+        "hampel/xenforo-test-framework": "^2.1",
+        "nesbot/carbon": "^3.0"
     },
     "autoload-dev": {
         "psr-4": {
@@ -502,7 +544,46 @@ For example, one of my addons which uses Composer for both dev and non-dev purpo
 }
 ```
 
-## 9. Running Unit Tests
+## 9. Configuring the Framework
+
+There are two options you may need to configure, both in `TestCase.php` which will be in the `tests` directory.
+
+**Root Directory Path**
+
+The `$rootDir` variable specifies the path to your forum root, relative to the addon directory.
+
+```php
+protected $rootDir = '../../../..';
+```
+
+Typically, addons will use the `Vendor/AddonId` structure, which makes the addon directory 
+`<forum-root>/src/addons/Vendor/AddonId` - and thus we need to go back 4 levels to reach the forum root.
+
+However, if you haven't used a Vendor in your addon id, you'll need to adjust this variable. If your addon directory is:
+`<forum-root>/src/addons/AddonId`, then you'll need to change it to: `$rootDir = '../../..'`
+
+**Addon Isolation**
+
+The other option is the addon isolation system - allowing us to instruct the XenForo framework to only load addons we
+need for testing, thus minimising any side effects or unintended interactions that may occur from other addons we have
+installed in our development forum.
+
+Simply list the full addon ids of each addon you want to be loaded when the unit tests run, as an array.
+
+For example:
+
+```php
+protected $addonsToLoad = ['Vendor/AddonId', 'XFMG'];
+```
+
+Generally, you would simply list the addon id of the addon you are developing, thus preventing all other addons from
+being loaded when unit tests execute. Note that this also restricts Composer autoloading, which is a good way of 
+checking that you've specified all requirements in `composer.json` correctly and aren't picking up packages from other 
+addons.
+
+Leaving the array empty will load all addons as normal.
+
+## 10. Running Unit Tests
 
 Composer installed the PHPUnit executable at `{addon_root}/vendor/bin/phpunit`. To run our tests, we go to our addon 
 root in the console and simply execute PHPUnit. The `phpunit.xml` file (which should also be in our addon root) tells 
@@ -529,11 +610,11 @@ alias u="./vendor/bin/phpunit"
 
 ... so all I need to do is change directory to my addon root and then just run the `u` command to execute my unit tests.
 
-## 10. Framework Documentation
+## 11. Framework Documentation
 
 See the file DOCS.md
 
-## 11. Limitations
+## 12. Limitations
 
 There are quite a few things we can't effectively test, or which are problematic to test:
 
@@ -597,7 +678,7 @@ If we can't swap out a class with our own instance, because it relies on static 
 much more difficult or impossible to test. This is a general limitation on unit testing rather than something specific 
 to XenForo.
 
-## 12. Writing testable code and other unit testing tips
+## 13. Writing testable code and other unit testing tips
 
 One of the main issues people face when trying to test their code is that they get all caught up trying to work around
 the structure of their code as it stands. You end up trying to jump through hoops unnecessarily when you try to test 

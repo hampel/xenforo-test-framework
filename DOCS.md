@@ -4,6 +4,18 @@ Unit testing framework for XenForo
 
 ## Framework Documentation
 
+### Unit Test Configuration
+
+Note the instructions in README.md under the title "Configuring the Framework".
+
+There are two variables in `TestCase.php` that you may need to edit:
+
+```php
+protected $rootDir = '../../../..';
+
+protected $addonsToLoad = [];
+```
+
 ### assertBbCode
 Helper function for testing custom BBCode functions. Simply pass it some BBCode, tell it how you
 want it parsed and then you can pass the expected HTML output to validate that your BBCode is being converted as
@@ -51,7 +63,12 @@ Register an instance of an object in the container.
 * `key` - the container key to be swapped
 * `instance` - the object or closure to swap in
 
-##### Example:
+##### Alternative parameters - subcontainers:
+
+* `key (array)` - array containing the container key or instance to be swapped and the subcontainer key to be swapped 
+* `instance` - the object or closure to swap in
+
+##### Examples:
 
 ```php
 <?php namespace Tests\Unit;
@@ -78,6 +95,24 @@ class SwapTest extends TestCase
 			$simpleCache()->keyExists('MyAddon', 'foo'),
 			"The expected [foo] key does not exist."
 		);
+	}
+	
+	public function test_subcontainer_swap()
+	{
+	    // replace the 'userChecker' key from the 'spam' subcontainer
+	    $this->swap(['spam', 'userChecker'], function () {
+	        return new MyImplementationOrMock();
+	    });
+	    
+	    // retrieve the userChecker from the app container
+	    $checker = $this->app()->spam()->userChecker();
+	    
+	    // now you can interact with your replaced userChecker
+	    
+	    // alternative syntax - specify the actual subcontainer object as the first array entry
+	    $this->swap([$this->app()->spam(), 'userChecker'], function () {
+	        return new MyImplementationOrMock();
+	    });	    
 	}
 }	
 ```
@@ -377,7 +412,10 @@ class ErrorTest extends TestCase
 Refer to the `Hampel\Testing\Concerns\InteractsWithErrors` trait for full details of available error validation 
 functions.
 
-### isolateAddon
+### ~~isolateAddon~~
+
+_Removed in v2.1.0 - see notes on addon isolation near the start of this document_
+
 Allow us to prevent class extensions and code event listeners from other addons from being loaded during tests to avoid
 side effects and unexpected code-paths.
 
