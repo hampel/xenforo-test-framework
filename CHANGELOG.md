@@ -1,6 +1,19 @@
 CHANGELOG
 =========
 
+2.1.0 (2024-03-14)
+------------------
+
+* allow swapping subcontainer keys using either a class or a string to define the app container key
+* new option in TestCase - $addonsToLoad
+* new implementation of addon isolation limiting composer autoload and extension/listener loading based on which addons 
+  are specified in TestCase
+
+**Breaking changes:**
+* isolateAddon function has been removed and replaced by an option in `TestCase.php`
+* both `TestCase.php` and `CreatesApplication.php` will need to be updated in addons based on the new versions in this 
+  package
+
 2.0.2 (2020-09-23)
 ------------------
 
