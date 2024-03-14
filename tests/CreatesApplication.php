@@ -12,10 +12,12 @@ trait CreatesApplication
      */
     public function createApplication()
     {
-		require_once("{$this->rootDir}/src/XF.php");
+        require_once("{$this->rootDir}/src/XF.php");
 
-		\XF::start($this->rootDir);
+        \XF::start($this->rootDir);
 
-		return \XF::setupApp('Hampel\Testing\App');
+        $options['xf-addons'] = $this->addonsToLoad ?: [];
+
+        return \XF::setupApp('Hampel\Testing\App', $options);
     }
 }
