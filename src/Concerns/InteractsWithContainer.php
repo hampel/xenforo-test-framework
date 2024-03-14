@@ -2,6 +2,7 @@
 
 use Closure;
 use Mockery;
+use XF\SubContainer\AbstractSubContainer;
 
 trait InteractsWithContainer
 {
@@ -13,20 +14,30 @@ trait InteractsWithContainer
      *
      * @return object - the instance or closure that was swapped in
      */
-	protected function swap($key, $instance)
-	{
-    	if (is_array($key))
-	    {
-	    	// [$subcontainer, $key]
-		    $key[0][$key[1]] = $instance;
-	    }
-    	else
-	    {
-		    $this->app()->container()->set($key, $instance);
-	    }
+    protected function swap($key, $instance)
+    {
+        if (is_array($key))
+        {
+            if (is_subclass_of($key[0], AbstractSubContainer::class))
+            {
+                // [$subcontainer (object), $key (string)]
+                $subContainer = $key[0];
+            }
+            else
+            {
+                // [$subcontainer (string), $key (string)]
+                $subContainer = $this->app()->container($key[0]);
+            }
+
+            $subContainer->container()->set($key[1], $instance);
+        }
+        else
+        {
+            $this->app()->container()->set($key, $instance);
+        }
 
         return $instance;
-	}
+    }
 
     /**
      * Mock an instance of an object in the container.
@@ -38,10 +49,10 @@ trait InteractsWithContainer
      */
     protected function mock($key, $abstract, Closure $mock = null)
     {
-	    $args = func_get_args();
-	    array_shift($args);
+        $args = func_get_args();
+        array_shift($args);
 
-    	return $this->swap($key, Mockery::mock(...array_filter($args)));
+        return $this->swap($key, Mockery::mock(...array_filter($args)));
     }
 
     /**
@@ -54,27 +65,27 @@ trait InteractsWithContainer
      */
     protected function mockFactory($key, $abstract, Closure $mock = null)
     {
-    	return $this->app()->container()->factory($key, function() use ($abstract, $mock)
-	    {
-	    	$args = [$abstract, $mock];
+        return $this->app()->container()->factory($key, function() use ($abstract, $mock)
+        {
+            $args = [$abstract, $mock];
 
-	    	return Mockery::mock(...array_filter($args));
-	    });
+            return Mockery::mock(...array_filter($args));
+        });
     }
 
-	/**
-	 * Mock a Service class
-	 *
-	 * @param string $shortName - shortname for the class in Addon_Id:Class format
-	 * @param \Closure|null $mock - (optional) the mock closure to define expectations on
-	 *
-	 * @return object
-	 */
+    /**
+     * Mock a Service class
+     *
+     * @param string $shortName - shortname for the class in Addon_Id:Class format
+     * @param \Closure|null $mock - (optional) the mock closure to define expectations on
+     *
+     * @return object
+     */
     protected function mockService($shortName, Closure $mock = null)
     {
-		$class = \XF::stringToClass($shortName, '\%s\Service\%s');
+        $class = \XF::stringToClass($shortName, '\%s\Service\%s');
 
-    	return $this->mockFactory('service', $class, $mock);
+        return $this->mockFactory('service', $class, $mock);
     }
 
     /**
@@ -87,9 +98,9 @@ trait InteractsWithContainer
      */
     protected function spy($key, $abstract, Closure $mock = null)
     {
-	    $args = func_get_args();
-	    array_shift($args);
+        $args = func_get_args();
+        array_shift($args);
 
-    	return $this->swap($key, Mockery::spy(...array_filter($args)));
+        return $this->swap($key, Mockery::spy(...array_filter($args)));
     }
 }
