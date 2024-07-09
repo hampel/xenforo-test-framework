@@ -46,8 +46,7 @@ trait UsesReflection
 
     protected function destroyProperty($class, $property)
     {
-		$reflectionProperty = new \ReflectionProperty($class, $property);
-		$reflectionProperty->setAccessible(true);
-		$reflectionProperty->setValue(null);
+        $reflectionClass = new \ReflectionClass($class);
+        $reflectionClass->setStaticPropertyValue($property, null);
     }
 }
