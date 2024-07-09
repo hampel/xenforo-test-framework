@@ -1,6 +1,14 @@
 CHANGELOG
 =========
 
+2.2.0 (2024-07-10)
+------------------
+
+* php 8.3 compatibility fix - ReflectionProperty::setValue with a single parameter is now deprecated; but as of php 8.1 
+  we can simply use ReflectionClass::setStaticValue without needing to explicitly set private or protected properties 
+  as accessible
+* we now need to use a minimum of php 8.1
+
 2.1.0 (2024-03-14)
 ------------------
 
