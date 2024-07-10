@@ -8,6 +8,7 @@ CHANGELOG
   we can simply use ReflectionClass::setStaticValue without needing to explicitly set private or protected properties 
   as accessible
 * we now need to use a minimum of php 8.1
+* upgrade to PHPUnit v10.x
 
 2.1.0 (2024-03-14)
 ------------------
