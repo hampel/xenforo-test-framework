@@ -9,16 +9,21 @@ Unit testing framework for XenForo
 
 ## Compatibilty
 
-For XenForo v2.1 addons, you should use Unit Test Framework v1.x
+The test framework is specific to the version of XenForo being run. Given this is a development tool, simply install the
+appropriate version of the test framework in your addon based on what version of XenForo you are developing on.
 
-For XenForo v2.2 addons, you should use Unit Test Framework v2.x 
+|XenForo|Unit Test Framework|
+|-------|-------------------|
+|v2.1   |v1.x               |
+|v2.2   |v2.x               |
+|v2.3   |v3.x               |
 
 ## Upgrading
 
-**v2.1**
+**Unit Test Framework v2.1**
 
-The `TestCase.php` and `CreatesApplication.php` files have been updated in v2.1 and you should edit these files in your
-addon unit test directory to merge in these changes.
+The `TestCase.php` and `CreatesApplication.php` files have been updated in v2.1 of the unit test framework and you 
+should edit these files in your addon unit test directory to merge in these changes.
 
 Specifically, there is a new variable in `TestCase.php`:
 
