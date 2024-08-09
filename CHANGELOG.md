@@ -1,6 +1,15 @@
 CHANGELOG
 =========
 
+3.0.0 (2024-08-10)
+------------------
+
+* compatibilty with XenForo v2.3
+* Hampel\Testing\Job\Manager updated to match changes in XF\Job\Manager, particularly XF\Job\JobParams
+* Hampel\Testing\Mail\Transport replaced with Hampel\Testing\Mail\TestTransport which implements Symfony mail transport
+* Hampel\Testing\Mail\Queue removed - we now simply disable queueing which results in all mails being sent via the test
+  transport
+
 2.2.0 (2024-07-10)
 ------------------
 
