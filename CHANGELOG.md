@@ -1,6 +1,11 @@
 CHANGELOG
 =========
 
+3.0.2 (2024-08-11)
+------------------
+
+* new expanded extension class - use global static maps to keep track of extensions and aliases between test runs
+
 3.0.1 (2024-08-10)
 ------------------
 
