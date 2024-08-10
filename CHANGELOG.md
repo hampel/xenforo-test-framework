@@ -1,6 +1,11 @@
 CHANGELOG
 =========
 
+3.0.1 (2024-08-10)
+------------------
+
+* for some reason our extension class wasn't working correctly - we'll just remove it
+
 3.0.0 (2024-08-10)
 ------------------
 
