@@ -1,6 +1,5 @@
 <?php namespace Hampel\Testing\Concerns;
 
-use Hampel\Testing\Extension;
 use XF\Container;
 
 trait InteractsWithExtension
@@ -35,7 +34,7 @@ trait InteractsWithExtension
                 $classExtensions = [];
             }
 
-            return new Extension($listeners, $classExtensions);
+            return new \XF\Extension($listeners, $classExtensions);
         });
     }
 
