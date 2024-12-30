@@ -1,6 +1,11 @@
 CHANGELOG
 =========
 
+3.0.3 (2024-12-30)
+------------------
+
+* bugfix: some code related to mail queueing has been removed since we no longer use it 
+
 3.0.2 (2024-08-11)
 ------------------
 
