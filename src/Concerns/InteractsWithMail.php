@@ -57,12 +57,6 @@ trait InteractsWithMail
 
         $message = "The expected mail was not sent.";
 
-        $queuedMail = $this->getQueuedMail();
-
-        if (count($queuedMail) > 0) {
-            $message .= ' Did you mean to use assertMailQueued() instead?';
-        }
-
 	    $sentMail = $this->sentMail($callback);
 
         PHPUnit::assertTrue(
