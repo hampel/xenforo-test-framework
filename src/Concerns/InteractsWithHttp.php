@@ -6,7 +6,9 @@ use GuzzleHttp\Client;
 use GuzzleHttp\Handler\MockHandler;
 use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Middleware;
+use GuzzleHttp\Promise\Create;
 use PHPUnit\Framework\Assert as PHPUnit;
+use Psr\Http\Message\RequestInterface;
 
 trait InteractsWithHttp
 {
@@ -23,6 +25,69 @@ trait InteractsWithHttp
 	protected function fakesHttp(array $responseStack, $untrusted = false)
 	{
 		$handlerStack = HandlerStack::create(new MockHandler($responseStack));
+		$handlerStack->push(Middleware::history($this->history));
+		$http = $this->app()->http();
+
+		$key = $untrusted ? 'clientUntrusted' : 'client';
+
+		$this->swap([$http, $key], function ($c) use ($http, $handlerStack)
+		{
+			return $http->createClient(['handler' => $handlerStack]);
+		});
+
+		return $http->container()[$key];
+	}
+
+	/**
+	 * Mock the Http client, choosing the response by URL rather than by call order.
+	 *
+	 * fakesHttp() hands out responses from a queue, so a test breaks when the code under test
+	 * changes the order it makes requests in, or makes one more than expected. This matches on
+	 * the request URL instead.
+	 *
+	 * Patterns are fnmatch() patterns tried in order, so `*` on its own is a catch-all and
+	 * should come last. A request matching nothing is an error rather than a silent null: a
+	 * test should say which calls it expects.
+	 *
+	 * @param array $responseMap - pattern => Guzzle Psr7 Response, exception, or callable
+	 *                             receiving the request
+	 * @param bool $untrusted - set to true when using the untrusted client
+	 *
+	 * @return Client
+	 */
+	protected function fakesHttpByUrl(array $responseMap, $untrusted = false)
+	{
+		$handler = function (RequestInterface $request, array $options) use ($responseMap)
+		{
+			$url = (string) $request->getUri();
+
+			foreach ($responseMap AS $pattern => $response)
+			{
+				if ($pattern !== '*' && !fnmatch($pattern, $url))
+				{
+					continue;
+				}
+
+				if (is_callable($response))
+				{
+					$response = $response($request);
+				}
+
+				if ($response instanceof \Throwable)
+				{
+					return Create::rejectionFor($response);
+				}
+
+				return Create::promiseFor($response);
+			}
+
+			throw new \RuntimeException(
+				"No fake HTTP response matches [{$url}] - add a pattern for it, or '*' to catch "
+					. 'anything unmatched.'
+			);
+		};
+
+		$handlerStack = HandlerStack::create($handler);
 		$handlerStack->push(Middleware::history($this->history));
 		$http = $this->app()->http();
 

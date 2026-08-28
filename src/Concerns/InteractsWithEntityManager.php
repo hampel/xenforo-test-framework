@@ -6,6 +6,7 @@ use Closure;
 use Hampel\Testing\Mvc\Entity\Manager;
 use Mockery;
 use XF\Container;
+use XF\Mvc\Entity\Entity;
 
 trait InteractsWithEntityManager
 {
@@ -76,5 +77,47 @@ trait InteractsWithEntityManager
 		{
 			throw new \Exception('Unable to mock entity. Extended entity manager not set up.');
 		}
+	}
+
+	/**
+	 * Build an entity without saving it.
+	 *
+	 * Useful for handing a populated entity to code under test without needing a database at
+	 * all - the entity exists only in memory.
+	 *
+	 * @param string $shortName - eg 'XF:User'
+	 * @param array $values - column => value
+	 *
+	 * @return Entity
+	 */
+	protected function makeEntity($shortName, array $values = [])
+	{
+		$entity = $this->app()->em()->create($shortName);
+
+		if ($values)
+		{
+			$entity->bulkSet($values);
+		}
+
+		return $entity;
+	}
+
+	/**
+	 * Build an entity and save it.
+	 *
+	 * This writes to the database, so use it with UsesDatabaseTransactions unless you want the
+	 * row to outlive the test.
+	 *
+	 * @param string $shortName
+	 * @param array $values
+	 *
+	 * @return Entity
+	 */
+	protected function createEntity($shortName, array $values = [])
+	{
+		$entity = $this->makeEntity($shortName, $values);
+		$entity->save();
+
+		return $entity;
 	}
 }

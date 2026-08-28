@@ -4,6 +4,8 @@ CHANGELOG
 4.0.0 (unreleased)
 ------------------
 
+* new makeEntity() and createEntity() helpers for building entities with given values
+* new fakesHttpByUrl() - chooses the http response by request URL rather than by call order
 * new fakesEvents() - records code events and stops them reaching listeners, with
   assertEventFired(), assertEventFiredTimes(), assertEventNotFired() and assertNoEventsFired()
 * new actingAs(), actingAsMember() and actingAsGuest() helpers - run a test as a given user,

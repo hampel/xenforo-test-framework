@@ -457,6 +457,46 @@ class RepoTest extends TestCase
 }	
 ```
 
+### makeEntity / createEntity
+Build an entity with the given values. `makeEntity` leaves it unsaved and touches no database;
+`createEntity` saves it.
+
+`createEntity` writes real rows, so use it with `UsesDatabaseTransactions` unless you want them to
+outlive the test.
+
+##### Parameters:
+
+* `shortName` - eg `XF:User`, or `MyVendor\MyAddon:Thing`
+* `values` - column => value
+
+##### Example:
+
+```php
+<?php namespace Tests\Unit;
+
+use Hampel\Testing\Concerns\UsesDatabaseTransactions;
+use Tests\TestCase;
+
+class ThingTest extends TestCase
+{
+	use UsesDatabaseTransactions;
+
+	public function test_something()
+	{
+		// in memory only - nothing is written
+		$unsaved = $this->makeEntity('XF:User', ['username' => 'Alice']);
+
+		// a real row, removed again when the test finishes
+		$user = $this->createEntity('XF:User', [
+			'username' => 'Bob',
+			'email' => 'bob@example.com',
+		]);
+
+		$this->assertDatabaseHas('xf_user', ['username' => 'Bob']);
+	}
+}
+```
+
 ### mockFinder
 Mock a Finder.
 
@@ -805,6 +845,43 @@ class HttpTest extends TestCase
 		...		
 	}
 }	
+```
+
+### fakesHttpByUrl
+Mock the Http client, choosing the response by URL rather than by call order.
+
+`fakesHttp` hands out responses from a queue, so a test breaks when the code under test changes
+the order it makes requests in, or makes one more than expected. This matches on the request URL
+instead.
+
+##### Parameters:
+
+* `responseMap` - pattern => response. Patterns are `fnmatch()` patterns, tried in order, so `*`
+  on its own is a catch-all and belongs last. A value may be a Guzzle Psr7 Response, an exception
+  to throw, or a callable receiving the request and returning a response
+* `untrusted` - optional - set to true when using the untrusted client
+
+A request matching no pattern throws, rather than returning nothing: a test should say which calls
+it expects.
+
+The same assertions as `fakesHttp` apply - `assertHttpRequestSent`, `assertHttpRequestSentTimes`,
+`assertHttpRequestNotSent`, `assertNoHttpRequestSent`.
+
+##### Example:
+
+```php
+$this->fakesHttpByUrl([
+	'*/api/users/*' => new Response(200, [], '{"ok":true}'),
+	'*/api/status' => function ($request)
+	{
+		return new Response(200, [], $request->getMethod());
+	},
+	'*' => new Response(404),
+]);
+
+// ... execute code which makes http requests, in any order
+
+$this->assertHttpRequestSentTimes(2);
 ```
 
 ### fakesJobs
