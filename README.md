@@ -634,7 +634,9 @@ See the file DOCS.md
 
 ## 12. Limitations
 
-There are quite a few things we can't effectively test, or which are problematic to test:
+There are still things we can't effectively test, or which are problematic to test. Note that the database
+limitations which used to be listed here have largely gone away in v4.0 - see `UsesDatabaseTransactions` and the
+`assertDatabaseHas` family in DOCS.md.
 
 ### Controllers
 
@@ -650,14 +652,23 @@ responses, we could use feature tests - but we don't have that yet.
 While we can mock the database adapter or entities and finders, for anything more than simple queries it quickly becomes
 cumbersome to unit test code which makes complex queries.
 
+These days you often don't have to. Using the `UsesDatabaseTransactions` trait, you can run the real query against the
+real database and assert on what it did with `assertDatabaseHas()` - the transaction is rolled back when the test
+finishes, so nothing is left behind. That tests the query you actually wrote rather than your mock of it.
+
 ### Entity saving
 
 While we can mock an entity, we cannot stop it from interacting with the database because the `save()` method on the
 base Entity class is marked `final` - meaning that our mocks can't actually stop that method from executing by 
 overriding it.
 
-Basically, you cannot unit test code which calls `save()` on an entity - running your unit tests will cause side effects
-from database updates.
+That used to mean you couldn't test code which calls `save()` at all, because running your tests would cause side
+effects from database updates. As of v4.0 you can: add the `UsesDatabaseTransactions` trait to your test class and every
+write the test makes is rolled back when it finishes. The `save()` still runs and still hits the database - we just take
+it all away again afterwards.
+
+The entity is still `final` where it counts, so this is not a way to *avoid* the database. It is a way to use it without
+leaving a mess behind.
 
 ### Functions which use `time()` rather than `\XF::$time`
 
@@ -678,23 +689,33 @@ more of a feature test level operation rather than unit testing anyway.
 ### Data in the database
 
 Any code which relies on certain data being present in the database at a given point in time is problematic, since that
-data could change from external sources - thus breaking our unit tests in future runs. 
+data could change from external sources - thus breaking our unit tests in future runs.
 
-This includes any code which wants to create and save entities to the database so it can then later manipulate them -
-unless we have a way to clean up that data after each test executes and restore the database to the state it was prior
-to the test being run, then we have side effects.
+Creating and saving your own data is no longer part of that problem. `UsesDatabaseTransactions` wraps each test in a
+database transaction and rolls it back afterwards, so anything the test writes is gone by the time the next one runs.
+XenForo's own transactions nest inside it safely - the adapter issues a `SAVEPOINT` rather than a second `BEGIN` - so
+code under test can run its own transaction, and commit it, without escaping the wrapper.
 
-The ideal way around this would be to build a new database adapter which uses a system such as SQLite which offers an
-in-memory database that can be seeded and then destroyed very quickly as each test is run. Unfortunately, this will not
-be a trivial exercise - there are many MySQL-specific functions built into XenForo. Then there is the question of how to
-effectively seed a newly created database quickly with all of the data required to have a functioning XenForo instance 
-ready for testing. 
+Two things it can't take back, both of them MySQL behaviour rather than anything XenForo does. DDL implicitly commits,
+so a test which alters the schema - running a `Setup.php` step, for instance - escapes the transaction and has to clean
+up after itself. And only the connection inside the transaction can see the uncommitted rows, so code which reads
+through a second connection won't see what your test wrote.
+
+What is still missing is **seeding**. Relying on data that happens to exist in your development forum makes for fragile
+tests, and there is currently no good way to build up a known set of data for a test to work against. An in-memory
+database such as SQLite would help here, and XenForo may support it in future - though there are many MySQL-specific
+functions built into XenForo, so it will not be a trivial exercise. Even then, the question of how to quickly seed a
+newly created database with everything a functioning XenForo instance needs remains an open one.
 
 ### Static classes
 
 If we can't swap out a class with our own instance, because it relies on static variables or functions - then it will be
 much more difficult or impossible to test. This is a general limitation on unit testing rather than something specific 
 to XenForo.
+
+Some of XenForo's own statics are handled for you, where it was worth the effort - `\XF::$time` via `setTestTime()`, and
+`\XF::visitor()` via `actingAs()`, which also puts the previous visitor back afterwards so it doesn't leak into the next
+test. Statics in your own code are still yours to deal with, and are usually a sign the code wants restructuring.
 
 ## 13. Writing testable code and other unit testing tips
 
@@ -746,8 +767,12 @@ We're unit testing. That is a different exercise to feature or integration testi
 If you're calling an external system such as an API, you should be mocking the responses (Guzzle has functions to 
 help you do this for API calls).
 
-Don't cause database updates. Don't send emails. Don't write to the filesystem. We should be testing our code in 
-isolation in a repeatable and consistent manner.
+Don't send emails. Don't write to the filesystem. Don't leave anything behind that the next test can trip over. We
+should be testing our code in isolation in a repeatable and consistent manner.
+
+Database writes are the one exception worth naming, because v4.0 changed the answer. With the
+`UsesDatabaseTransactions` trait the write happens and is then rolled back, so it causes no side effect that outlives
+the test - which is what the rule was always really about. Without that trait, the old advice stands: don't.
 
 Feature and integration tests are important too - but right now we are focused on unit testing.
 
@@ -801,8 +826,11 @@ Avoid mocking the database if possible - it will very quickly become cumbersome 
 for code which interacts with the database, you can then test the repository in isolation and mock that repository when 
 testing other code.
 
-You'll probably have to mock the database when testing the repository - but you can do that in isolation to the rest 
-of your program logic.
+That leaves the question of how you test the repository itself. You can mock the database for it, in isolation to the
+rest of your program logic - but as of v4.0 you usually shouldn't have to. Use `UsesDatabaseTransactions` and let the
+repository run its real queries against the real database, then assert on the result with `assertDatabaseHas()`. A test
+against a mocked adapter only proves your code sends the query you expected; a test against the database proves the
+query does what you think it does.
 
 ### Don't mock everything
 
@@ -836,9 +864,10 @@ Use `fakesJobs()` instead.
 
 Use `fakesLogger()` instead.
 
-### Don't mock `XF\Mail\Transport` or `XF\Mail\Queue`
+### Don't mock `XF\Mail\Transport`
 
-Use `fakesMail()` instead.
+Use `fakesMail()` instead. Note that mail queueing no longer exists as of v3.0 - `fakesMail()` disables it and everything
+goes via the test transport.
 
 ### Don't mock `XF\SimpleCache`
 
@@ -851,6 +880,26 @@ Use `fakesRegistry()` instead.
 ### Don't mock `XF\Language` or `XF\Phrase`
 
 When dealing with phrases, use `expectPhrase()` instead.
+
+### Don't mock the http client
+
+Use `fakesHttp()` to hand back a queue of responses, or `fakesHttpByUrl()` to choose them by request URL. The second is
+usually the better bet - a queue makes your test depend on the order your code happens to make its requests in.
+
+### Don't mock the filesystem
+
+Use `swapFs()` to swap in a memory-based filesystem, or `mockFs()` if you need to set expectations on it.
+
+### Don't mock `XF\Entity\User` to fake the visitor
+
+Use `actingAs()`, `actingAsMember()` or `actingAsGuest()` instead. They build a user in memory - no database row is
+created - and restore the previous visitor when the test finishes. Grant permissions by passing them in, rather than
+mocking `hasPermission()`, so you are testing against the real permission logic.
+
+### Don't mock `XF\Extension` to check code events
+
+Use `fakesEvents()` instead. It records what was fired and stops listeners running, so you can assert your code fired an
+event without triggering whatever is listening for it.
 
 ### If you aren't asserting, you aren't testing
 
