@@ -25,11 +25,14 @@ CHANGELOG
 * the tests/Feature directory is included, which PHPUnit requires in order to run
 * the fakes* helpers and swapFs() now return the object they document, rather than the
   closure the container had not yet resolved
+* code style is now XenForo's own, applied with xenforo-ltd/xf-cs-fixer
 * league/flysystem-memory 2.0 and above are rejected - XenForo 2.3 ships Flysystem 1.x
 
 **Breaking changes:**
 * minimum PHP version is now 8.3
 * phpunit.xml has been updated and should be re-copied into your addon
+* the files in tests/ have been restyled, so a diff against your own copies will show
+  formatting changes as well as the changes described above
 
 3.0.3 (2024-12-30)
 ------------------

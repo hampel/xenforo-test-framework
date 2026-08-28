@@ -1,8 +1,9 @@
-<?php namespace Hampel\Testing\Concerns;
+<?php
 
-use Mockery;
-use XF\Phrase;
+namespace Hampel\Testing\Concerns;
+
 use XF\Language;
+use XF\Phrase;
 
 trait InteractsWithLanguage
 {
@@ -10,9 +11,10 @@ trait InteractsWithLanguage
 
 	protected function setUpLanguage()
 	{
-        $this->beforeApplicationDestroyed(function () {
-            $this->restoreLanguage();
-        });
+		$this->beforeApplicationDestroyed(function ()
+		{
+			$this->restoreLanguage();
+		});
 	}
 
 	/**
@@ -29,18 +31,18 @@ trait InteractsWithLanguage
 	{
 		if (!$this->languageMocked)
 		{
-			\XF::setLanguage(Mockery::mock(Language::class));
-	        $this->languageMocked = true;
+			\XF::setLanguage(\Mockery::mock(Language::class));
+			$this->languageMocked = true;
 		}
 
-		$phrase = Mockery::mock(Phrase::class);
+		$phrase = \Mockery::mock(Phrase::class);
 		$phrase->shouldReceive('__toString')->andReturn($response ?? $key);
 		$phrase->shouldReceive('render')->andReturn($response ?? $key);
 
 		\XF::language()
 		   ->shouldReceive('phrase')
 		   ->once()
-		   ->with($key, $parameters ?? Mockery::any(), Mockery::any(), Mockery::any())
+		   ->with($key, $parameters ?? \Mockery::any(), \Mockery::any(), \Mockery::any())
 		   ->andReturn($phrase);
 
 		return $phrase;

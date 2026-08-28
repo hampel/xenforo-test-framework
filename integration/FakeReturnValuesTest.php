@@ -1,12 +1,14 @@
-<?php namespace Hampel\Testing\Integration;
+<?php
 
+namespace Hampel\Testing\Integration;
+
+use GuzzleHttp\Client;
 use Hampel\Testing\DataRegistry;
 use Hampel\Testing\Error;
-use Hampel\Testing\Logger;
-use Hampel\Testing\SimpleCache;
 use Hampel\Testing\Job\Manager as JobManager;
+use Hampel\Testing\Logger;
 use Hampel\Testing\Mail\TestTransport;
-use GuzzleHttp\Client;
+use Hampel\Testing\SimpleCache;
 use League\Flysystem\Memory\MemoryAdapter;
 
 /**

@@ -1,6 +1,9 @@
-<?php namespace Hampel\Testing;
+<?php
+
+namespace Hampel\Testing;
 
 use XF\Logger as BaseLogger;
+use XF\Mvc\Entity\Entity;
 
 class Logger extends BaseLogger
 {
@@ -17,7 +20,7 @@ class Logger extends BaseLogger
 		$this->changes[] = compact('type', 'content', 'field');
 	}
 
-	public function logModeratorChanges($type, \XF\Mvc\Entity\Entity $content, $throw = true)
+	public function logModeratorChanges($type, Entity $content, $throw = true)
 	{
 		$field = null;
 		$this->changes[] = compact('type', 'content', 'field');

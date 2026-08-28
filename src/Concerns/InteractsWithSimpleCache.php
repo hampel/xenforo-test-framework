@@ -1,8 +1,9 @@
-<?php namespace Hampel\Testing\Concerns;
+<?php
+
+namespace Hampel\Testing\Concerns;
 
 use Hampel\Testing\SimpleCache;
 use PHPUnit\Framework\Assert as PHPUnit;
-use XF\Container;
 
 trait InteractsWithSimpleCache
 {
@@ -12,7 +13,8 @@ trait InteractsWithSimpleCache
 	 */
 	protected function fakesSimpleCache()
 	{
-		$this->swap('simpleCache', function () {
+		$this->swap('simpleCache', function ()
+		{
 			return new SimpleCache([]);
 		});
 
@@ -36,25 +38,25 @@ trait InteractsWithSimpleCache
 	protected function assertSimpleCacheHas($addOnId, $key)
 	{
 		PHPUnit::assertTrue(
-            $this->getSimpleCache()->keyExists($addOnId, $key),
-            "The expected [{$key}] key does not exist."
-        );
+			$this->getSimpleCache()->keyExists($addOnId, $key),
+			"The expected [{$key}] key does not exist."
+		);
 	}
 
 	protected function assertSimpleCacheHasNot($addOnId, $key)
 	{
 		PHPUnit::assertFalse(
-            $this->getSimpleCache()->keyExists($addOnId, $key),
-            "The [{$key}] key exists."
-        );
+			$this->getSimpleCache()->keyExists($addOnId, $key),
+			"The [{$key}] key exists."
+		);
 	}
 
 	protected function assertSimpleCacheEquals($expected, $addOnId, $key)
 	{
 		PHPUnit::assertEquals(
 			$expected,
-            $this->getSimpleCache()->getValue($addOnId, $key)
-        );
+			$this->getSimpleCache()->getValue($addOnId, $key)
+		);
 	}
 
 	// backwards compatibility for spelling error!
@@ -67,8 +69,8 @@ trait InteractsWithSimpleCache
 	{
 		PHPUnit::assertNotEquals(
 			$expected,
-            $this->getSimpleCache()->getValue($addOnId, $key)
-        );
+			$this->getSimpleCache()->getValue($addOnId, $key)
+		);
 	}
 
 	// backwards compatibility for spelling error!

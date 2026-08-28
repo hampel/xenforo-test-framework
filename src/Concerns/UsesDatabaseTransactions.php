@@ -1,4 +1,6 @@
-<?php namespace Hampel\Testing\Concerns;
+<?php
+
+namespace Hampel\Testing\Concerns;
 
 use Mockery\MockInterface;
 use XF\Db\AbstractAdapter;

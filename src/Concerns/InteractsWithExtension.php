@@ -1,47 +1,51 @@
-<?php namespace Hampel\Testing\Concerns;
+<?php
+
+namespace Hampel\Testing\Concerns;
 
 use Hampel\Testing\Extension;
 use XF\Container;
+use XF\Db\Exception;
 
 trait InteractsWithExtension
 {
-    protected function setUpExtension()
-    {
-        $this->swap('extension', function (Container $c) {
-            $config = $c['config'];
-            if (!$config['enableListeners'])
-            {
-                // disable
-                return new \XF\Extension();
-            }
+	protected function setUpExtension()
+	{
+		$this->swap('extension', function (Container $c)
+		{
+			$config = $c['config'];
+			if (!$config['enableListeners'])
+			{
+				// disable
+				return new \XF\Extension();
+			}
 
-            try
-            {
-                if (!empty($this->addonsToLoad))
-                {
-                    // set these directly based on database queries - bypass the container since that only uses cached data
-                    $listeners = $this->getListenerData($this->addonsToLoad);
-                    $classExtensions = $this->getExtensionData($this->addonsToLoad);
-                }
-                else
-                {
-                    $listeners = $c['extension.listeners'];
-                    $classExtensions = $c['extension.classExtensions'];
-                }
-            }
-            catch (\XF\Db\Exception $e)
-            {
-                $listeners = [];
-                $classExtensions = [];
-            }
+			try
+			{
+				if (!empty($this->addonsToLoad))
+				{
+					// set these directly based on database queries - bypass the container since that only uses cached data
+					$listeners = $this->getListenerData($this->addonsToLoad);
+					$classExtensions = $this->getExtensionData($this->addonsToLoad);
+				}
+				else
+				{
+					$listeners = $c['extension.listeners'];
+					$classExtensions = $c['extension.classExtensions'];
+				}
+			}
+			catch (Exception $e)
+			{
+				$listeners = [];
+				$classExtensions = [];
+			}
 
-            return new Extension($listeners, $classExtensions);
-        });
-    }
+			return new Extension($listeners, $classExtensions);
+		});
+	}
 
-    private function getListenerData(array $addons)
-    {
-        $listeners = $this->app()->db()->fetchAll("
+	private function getListenerData(array $addons)
+	{
+		$listeners = $this->app()->db()->fetchAll("
             SELECT * FROM xf_code_event_listener AS listener
             LEFT JOIN xf_addon AS addon ON (listener.addon_id = addon.addon_id)
             WHERE listener.active = 1
@@ -51,25 +55,25 @@ trait InteractsWithExtension
             ORDER BY listener.event_id, listener.execute_order, addon.addon_id
         ");
 
-        $cache = [];
+		$cache = [];
 
-        foreach ($listeners AS $listener)
-        {
-            $hint = $listener['hint'] !== '' ? $listener['hint'] : '_';
-            $cache[$listener['event_id']][$hint][] = [
-                $listener['callback_class'],
-                $listener['callback_method']
-            ];
-        }
+		foreach ($listeners AS $listener)
+		{
+			$hint = $listener['hint'] !== '' ? $listener['hint'] : '_';
+			$cache[$listener['event_id']][$hint][] = [
+				$listener['callback_class'],
+				$listener['callback_method'],
+			];
+		}
 
-        return $cache;
-    }
+		return $cache;
+	}
 
-    private function getExtensionData(array $addons)
-    {
-        // don't use finder - use db queries directly because finder needs to be extended and we haven't yet created
-        // the extension class!
-        $extensions = $this->app()->db()->fetchAll("
+	private function getExtensionData(array $addons)
+	{
+		// don't use finder - use db queries directly because finder needs to be extended and we haven't yet created
+		// the extension class!
+		$extensions = $this->app()->db()->fetchAll("
             SELECT * FROM xf_class_extension AS extension
             LEFT JOIN xf_addon AS addon ON (extension.addon_id = addon.addon_id)
             WHERE extension.active = 1
@@ -79,13 +83,13 @@ trait InteractsWithExtension
             ORDER BY extension.execute_order, extension.to_class
         ");
 
-        $cache = [];
+		$cache = [];
 
-        foreach ($extensions AS $extension)
-        {
-            $cache[$extension['from_class']][] = $extension['to_class'];
-        }
+		foreach ($extensions AS $extension)
+		{
+			$cache[$extension['from_class']][] = $extension['to_class'];
+		}
 
-        return $cache;
-    }
+		return $cache;
+	}
 }

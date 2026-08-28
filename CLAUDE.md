@@ -158,6 +158,18 @@ in the same change**, and removed helpers stay listed struck-through with the re
 
 ## Style
 
-Match the surrounding code rather than reformatting: `<?php namespace Foo;` on line one, Allman
-braces, tabs in most `src/` files (some older files use spaces — follow the file), docblocks on
-public helpers describing what side effect is being avoided.
+Style is not a judgement call here — **`xenforo-ltd/xf-cs-fixer` decides it**, which is XenForo's
+own PHP-CS-Fixer configuration (PER-CS plus their house rules). Run it before committing:
+
+```bash
+composer format          # apply
+composer format:check    # report, changing nothing
+```
+
+That means tabs, Allman braces, and `<?php` on its own line with `namespace` below it. The whole
+tree was converted in 4.0.0, including the `tests/` scaffold — the code previously used the
+one-line `<?php namespace Foo;` form, which is what XenForo itself used before 2.3.
+
+Do not hand-tune formatting or add rule overrides to preserve an older idiom: the point of using
+their config is to stop making these decisions independently, and every override is one more thing
+to re-check when XenForo updates it.

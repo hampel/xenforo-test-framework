@@ -1,4 +1,6 @@
-<?php namespace Hampel\Testing\Concerns;
+<?php
+
+namespace Hampel\Testing\Concerns;
 
 use GuzzleHttp\Client;
 use GuzzleHttp\Handler\MockHandler;
@@ -26,7 +28,8 @@ trait InteractsWithHttp
 
 		$key = $untrusted ? 'clientUntrusted' : 'client';
 
-		$this->swap([$http, $key], function ($c) use ($http, $handlerStack) {
+		$this->swap([$http, $key], function ($c) use ($http, $handlerStack)
+		{
 			return $http->createClient(['handler' => $handlerStack]);
 		});
 
@@ -50,33 +53,35 @@ trait InteractsWithHttp
 	 */
 	protected function getHttpRequests()
 	{
-		return array_map(function ($item) {
+		return array_map(function ($item)
+		{
 			return $item['request'] ?: null;
 		}, $this->getHttpHistory());
 	}
 
-    /**
-     * Assert if request was sent based on a truth-test callback.
-     *
-     * @param  callable|int|null  $callback
-     * @return void
-     *
-     * @throws \Exception
-     */
-    protected function assertHttpRequestSent($callback = null)
-    {
-        if (is_numeric($callback)) {
-            $this->assertHttpRequestSentTimes($callback);
-            return;
-        }
+	/**
+	 * Assert if request was sent based on a truth-test callback.
+	 *
+	 * @param  callable|int|null  $callback
+	 * @return void
+	 *
+	 * @throws \Exception
+	 */
+	protected function assertHttpRequestSent($callback = null)
+	{
+		if (is_numeric($callback))
+		{
+			$this->assertHttpRequestSentTimes($callback);
+			return;
+		}
 
-	    $sentRequests = $this->sentHttpRequests($callback);
+		$sentRequests = $this->sentHttpRequests($callback);
 
-        PHPUnit::assertTrue(
-            count($sentRequests) > 0,
-            "The expected request was not sent."
-        );
-    }
+		PHPUnit::assertTrue(
+			count($sentRequests) > 0,
+			"The expected request was not sent."
+		);
+	}
 
 	/**
 	 * Assert that a request was sent a number of times.
@@ -86,66 +91,68 @@ trait InteractsWithHttp
 	 *
 	 * @throws \Exception
 	 */
-    protected function assertHttpRequestSentTimes($times = 1)
-    {
-    	$sentRequests = $this->getHttpRequests();
+	protected function assertHttpRequestSentTimes($times = 1)
+	{
+		$sentRequests = $this->getHttpRequests();
 
-        PHPUnit::assertTrue(
-            ($count = count($sentRequests)) === $times,
-            "The expected request was sent {$count} times instead of {$times} times."
-        );
-    }
+		PHPUnit::assertTrue(
+			($count = count($sentRequests)) === $times,
+			"The expected request was sent {$count} times instead of {$times} times."
+		);
+	}
 
-    /**
-     * Determine if request was not sent based on a truth-test callback.
-     *
-     * @param  callable|null  $callback
-     * @return void
-     *
-     * @throws \Exception
-     */
-    protected function assertHttpRequestNotSent($callback = null)
-    {
-	    $sentRequests = $this->sentHttpRequests($callback);
+	/**
+	 * Determine if request was not sent based on a truth-test callback.
+	 *
+	 * @param  callable|null  $callback
+	 * @return void
+	 *
+	 * @throws \Exception
+	 */
+	protected function assertHttpRequestNotSent($callback = null)
+	{
+		$sentRequests = $this->sentHttpRequests($callback);
 
-        PHPUnit::assertTrue(
-            count($sentRequests) === 0,
-            "Unexpected request was sent."
-        );
-    }
+		PHPUnit::assertTrue(
+			count($sentRequests) === 0,
+			"Unexpected request was sent."
+		);
+	}
 
-    /**
-     * Assert that no requests were sent.
-     *
-     * @return void
-     *
-     * @throws \Exception
-     */
-    protected function assertNoHttpRequestSent()
-    {
-    	$sentRequests = $this->getHttpRequests();
+	/**
+	 * Assert that no requests were sent.
+	 *
+	 * @return void
+	 *
+	 * @throws \Exception
+	 */
+	protected function assertNoHttpRequestSent()
+	{
+		$sentRequests = $this->getHttpRequests();
 
-        PHPUnit::assertEmpty($sentRequests, 'Requests were sent unexpectedly.');
-    }
+		PHPUnit::assertEmpty($sentRequests, 'Requests were sent unexpectedly.');
+	}
 
-    /**
-     * Get all of the sent requests matching a truth-test callback.
-     *
-     * @param  callable|null  $callback
-     * @return array
-     *
-     * @throws \Exception
-     */
-    private function sentHttpRequests($callback = null)
-    {
-        $callback = $callback ?: function () {
-            return true;
-        };
+	/**
+	 * Get all of the sent requests matching a truth-test callback.
+	 *
+	 * @param  callable|null  $callback
+	 * @return array
+	 *
+	 * @throws \Exception
+	 */
+	private function sentHttpRequests($callback = null)
+	{
+		$callback = $callback ?: function ()
+		{
+			return true;
+		};
 
-        $sentRequests = $this->getHttpRequests();
+		$sentRequests = $this->getHttpRequests();
 
-        return array_filter($sentRequests, function ($request) use ($callback) {
-            return $callback($request);
-        });
-    }
+		return array_filter($sentRequests, function ($request) use ($callback)
+		{
+			return $callback($request);
+		});
+	}
 }

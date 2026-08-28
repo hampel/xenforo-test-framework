@@ -1,4 +1,6 @@
-<?php namespace Hampel\Testing\Concerns;
+<?php
+
+namespace Hampel\Testing\Concerns;
 
 use XF\Entity\User;
 
@@ -136,7 +138,7 @@ trait InteractsWithVisitor
 			{
 				return array_replace($data, $values);
 			}
-			: null;
+		: null;
 
 		return $this->app()->repository('XF:User')->getGuestUser($username, $manipulator);
 	}

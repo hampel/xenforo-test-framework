@@ -7,3 +7,4 @@ composer.lock
 .phpunit.cache/
 .phpunit.result.cache
 CLAUDE.local.md
+.php-cs-fixer.cache

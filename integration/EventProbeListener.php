@@ -1,4 +1,6 @@
-<?php namespace Hampel\Testing\Integration;
+<?php
+
+namespace Hampel\Testing\Integration;
 
 /**
  * A stand-in code event listener, used to prove that faking events stops listeners running

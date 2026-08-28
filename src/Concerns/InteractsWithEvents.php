@@ -1,4 +1,6 @@
-<?php namespace Hampel\Testing\Concerns;
+<?php
+
+namespace Hampel\Testing\Concerns;
 
 use Hampel\Testing\Extension;
 use PHPUnit\Framework\Assert as PHPUnit;

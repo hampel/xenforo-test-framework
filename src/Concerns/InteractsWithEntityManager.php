@@ -1,27 +1,30 @@
-<?php namespace Hampel\Testing\Concerns;
+<?php
 
-use Mockery;
+namespace Hampel\Testing\Concerns;
+
 use Closure;
-use XF\Container;
 use Hampel\Testing\Mvc\Entity\Manager;
+use Mockery;
+use XF\Container;
 
 trait InteractsWithEntityManager
 {
 	protected function setUpEntityManager()
 	{
-		return $this->swap('em', function (Container $c) {
+		return $this->swap('em', function (Container $c)
+		{
 			return new Manager($c['db'], $c['em.valueFormatter'], $c['extension']);
 		});
 	}
 
 	/**
 	 * @param $identifier string - shortname for repository class being mocked
-	 * @param Closure|null $mock - (optional) mock closure to set expectations on
+	 * @param \Closure|null $mock - (optional) mock closure to set expectations on
 	 *
 	 * @return Mockery\MockInterface
 	 * @throws \Exception
 	 */
-	protected function mockRepository($identifier, ?Closure $mock = null)
+	protected function mockRepository($identifier, ?\Closure $mock = null)
 	{
 		$em = $this->app()->em();
 		if ($em instanceof Manager)
@@ -36,12 +39,12 @@ trait InteractsWithEntityManager
 
 	/**
 	 * @param $shortName string - shortname for finder class being mocked
-	 * @param Closure|null $mock - (optional) mock closure to set expectations on
+	 * @param \Closure|null $mock - (optional) mock closure to set expectations on
 	 *
 	 * @return Mockery\MockInterface
 	 * @throws \Exception
 	 */
-	protected function mockFinder($shortName, ?Closure $mock = null)
+	protected function mockFinder($shortName, ?\Closure $mock = null)
 	{
 		$em = $this->app()->em();
 		if ($em instanceof Manager)
@@ -57,12 +60,12 @@ trait InteractsWithEntityManager
 	/**
 	 * @param $shortName string - shortname for finder class being mocked
 	 * @param bool $inherit - set to true (default) to inherit from the mocked entity, or false to mock a standalone class
-	 * @param Closure|null $mock
+	 * @param \Closure|null $mock
 	 *
 	 * @return Mockery\MockInterface
 	 * @throws \Exception
 	 */
-	protected function mockEntity($shortName, $inherit = true, ?Closure $mock = null)
+	protected function mockEntity($shortName, $inherit = true, ?\Closure $mock = null)
 	{
 		$em = $this->app()->em();
 		if ($em instanceof Manager)

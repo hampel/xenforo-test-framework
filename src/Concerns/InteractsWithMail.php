@@ -1,4 +1,6 @@
-<?php namespace Hampel\Testing\Concerns;
+<?php
+
+namespace Hampel\Testing\Concerns;
 
 use Hampel\Testing\Mail\TestTransport;
 use PHPUnit\Framework\Assert as PHPUnit;
@@ -15,10 +17,11 @@ trait InteractsWithMail
 	 */
 	protected function fakesMail()
 	{
-        // disable mail queueing
-        $this->setOption('enableMailQueue', false);
+		// disable mail queueing
+		$this->setOption('enableMailQueue', false);
 
-		$this->swap('mailer.transport', function (Container $c) {
+		$this->swap('mailer.transport', function (Container $c)
+		{
 			return new TestTransport();
 		});
 
@@ -46,30 +49,31 @@ trait InteractsWithMail
 		return $this->getMailTransport()->getSentEmails();
 	}
 
-    /**
-     * Assert if mail was sent based on a truth-test callback.
-     *
-     * @param  callable|int|null  $callback
-     * @return void
-     *
-     * @throws \Exception
-     */
-    protected function assertMailSent($callback = null)
-    {
-        if (is_numeric($callback)) {
-            $this->assertMailSentTimes($callback);
-            return;
-        }
+	/**
+	 * Assert if mail was sent based on a truth-test callback.
+	 *
+	 * @param  callable|int|null  $callback
+	 * @return void
+	 *
+	 * @throws \Exception
+	 */
+	protected function assertMailSent($callback = null)
+	{
+		if (is_numeric($callback))
+		{
+			$this->assertMailSentTimes($callback);
+			return;
+		}
 
-        $message = "The expected mail was not sent.";
+		$message = "The expected mail was not sent.";
 
-	    $sentMail = $this->sentMail($callback);
+		$sentMail = $this->sentMail($callback);
 
-        PHPUnit::assertTrue(
-            count($sentMail) > 0,
-            $message
-        );
-    }
+		PHPUnit::assertTrue(
+			count($sentMail) > 0,
+			$message
+		);
+	}
 
 	/**
 	 * Assert that email was sent a number of times.
@@ -79,66 +83,68 @@ trait InteractsWithMail
 	 *
 	 * @throws \Exception
 	 */
-    protected function assertMailSentTimes($times = 1)
-    {
-    	$sentMail = $this->getSentMail();
+	protected function assertMailSentTimes($times = 1)
+	{
+		$sentMail = $this->getSentMail();
 
-        PHPUnit::assertTrue(
-            ($count = count($sentMail)) === $times,
-            "Mail was sent {$count} times instead of {$times} times."
-        );
-    }
+		PHPUnit::assertTrue(
+			($count = count($sentMail)) === $times,
+			"Mail was sent {$count} times instead of {$times} times."
+		);
+	}
 
-    /**
-     * Determine if mail was not sent based on a truth-test callback.
-     *
-     * @param  callable|null  $callback
-     * @return void
-     *
-     * @throws \Exception
-     */
-    protected function assertMailNotSent($callback = null)
-    {
-	    $sentMail = $this->sentMail($callback);
+	/**
+	 * Determine if mail was not sent based on a truth-test callback.
+	 *
+	 * @param  callable|null  $callback
+	 * @return void
+	 *
+	 * @throws \Exception
+	 */
+	protected function assertMailNotSent($callback = null)
+	{
+		$sentMail = $this->sentMail($callback);
 
-        PHPUnit::assertTrue(
-            count($sentMail) === 0,
-            "Unexpected mail was sent."
-        );
-    }
+		PHPUnit::assertTrue(
+			count($sentMail) === 0,
+			"Unexpected mail was sent."
+		);
+	}
 
-    /**
-     * Assert that no mail was sent.
-     *
-     * @return void
-     *
-     * @throws \Exception
-     */
-    protected function assertNoMailSent()
-    {
-    	$sentMail = $this->getSentMail();
+	/**
+	 * Assert that no mail was sent.
+	 *
+	 * @return void
+	 *
+	 * @throws \Exception
+	 */
+	protected function assertNoMailSent()
+	{
+		$sentMail = $this->getSentMail();
 
-        PHPUnit::assertEmpty($sentMail, 'Mail was sent unexpectedly.');
-    }
+		PHPUnit::assertEmpty($sentMail, 'Mail was sent unexpectedly.');
+	}
 
-    /**
-     * Get all of the emails matching a truth-test callback.
-     *
-     * @param  callable|null  $callback
-     * @return array
-     *
-     * @throws \Exception
-     */
-    private function sentMail($callback = null)
-    {
-        $callback = $callback ?: function () {
-            return true;
-        };
+	/**
+	 * Get all of the emails matching a truth-test callback.
+	 *
+	 * @param  callable|null  $callback
+	 * @return array
+	 *
+	 * @throws \Exception
+	 */
+	private function sentMail($callback = null)
+	{
+		$callback = $callback ?: function ()
+		{
+			return true;
+		};
 
-        $sentEmail = $this->getSentMail();
+		$sentEmail = $this->getSentMail();
 
-        return array_filter($sentEmail, function ($mail) use ($callback) {
-            return $callback($mail);
-        });
-    }
+		return array_filter($sentEmail, function ($mail) use ($callback)
+		{
+			return $callback($mail);
+		});
+	}
 }

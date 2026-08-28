@@ -1,5 +1,6 @@
-<?php namespace Hampel\Testing\Concerns;
+<?php
 
+namespace Hampel\Testing\Concerns;
 
 trait InteractsWithBbCode
 {

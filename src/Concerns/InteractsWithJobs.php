@@ -1,4 +1,6 @@
-<?php namespace Hampel\Testing\Concerns;
+<?php
+
+namespace Hampel\Testing\Concerns;
 
 use Hampel\Testing\Job\Manager;
 use PHPUnit\Framework\Assert as PHPUnit;
@@ -12,7 +14,8 @@ trait InteractsWithJobs
 	 */
 	protected function fakesJobs()
 	{
-		$this->swap('job.manager', function (Container $c) {
+		$this->swap('job.manager', function (Container $c)
+		{
 			return new Manager($this->app);
 		});
 
@@ -44,29 +47,30 @@ trait InteractsWithJobs
 		return $this->getJobManager()->getQueuedJobs();
 	}
 
-    /**
-     * Assert if job was queued based on a truth-test callback.
-     *
-     * @param string $shortName
-     * @param  callable|int|null  $callback
-     * @return void
-     *
-     * @throws \Exception
-     */
-    protected function assertJobQueued($shortName, $callback = null)
-    {
-        if (is_numeric($callback)) {
-            $this->assertJobQueuedTimes($shortName, $callback);
-            return;
-        }
+	/**
+	 * Assert if job was queued based on a truth-test callback.
+	 *
+	 * @param string $shortName
+	 * @param  callable|int|null  $callback
+	 * @return void
+	 *
+	 * @throws \Exception
+	 */
+	protected function assertJobQueued($shortName, $callback = null)
+	{
+		if (is_numeric($callback))
+		{
+			$this->assertJobQueuedTimes($shortName, $callback);
+			return;
+		}
 
-	    $queuedJobs = $this->queuedJobs($shortName, $callback);
+		$queuedJobs = $this->queuedJobs($shortName, $callback);
 
-        PHPUnit::assertTrue(
-            count($queuedJobs) > 0,
-            "The expected [{$shortName}] job was not queued."
-        );
-    }
+		PHPUnit::assertTrue(
+			count($queuedJobs) > 0,
+			"The expected [{$shortName}] job was not queued."
+		);
+	}
 
 	/**
 	 * Assert that a job was queued a number of times.
@@ -77,102 +81,106 @@ trait InteractsWithJobs
 	 *
 	 * @throws \Exception
 	 */
-    protected function assertJobQueuedTimes($shortName, $times = 1)
-    {
-    	$queuedJobs = $this->queuedJobs($shortName);
+	protected function assertJobQueuedTimes($shortName, $times = 1)
+	{
+		$queuedJobs = $this->queuedJobs($shortName);
 
-        PHPUnit::assertTrue(
-            ($count = count($queuedJobs)) === $times,
-            "The expected [{$shortName}] job was queued {$count} times instead of {$times} times."
-        );
-    }
+		PHPUnit::assertTrue(
+			($count = count($queuedJobs)) === $times,
+			"The expected [{$shortName}] job was queued {$count} times instead of {$times} times."
+		);
+	}
 
-    /**
-     * Determine if job was not queued based on a truth-test callback.
-     *
-     * @param string $shortName
-     * @param  callable|null  $callback
-     * @return void
-     *
-     * @throws \Exception
-     */
-    protected function assertJobNotQueued($shortName, $callback = null)
-    {
-	    $queuedJobs = $this->queuedJobs($shortName, $callback);
+	/**
+	 * Determine if job was not queued based on a truth-test callback.
+	 *
+	 * @param string $shortName
+	 * @param  callable|null  $callback
+	 * @return void
+	 *
+	 * @throws \Exception
+	 */
+	protected function assertJobNotQueued($shortName, $callback = null)
+	{
+		$queuedJobs = $this->queuedJobs($shortName, $callback);
 
-        PHPUnit::assertTrue(
-            count($queuedJobs) === 0,
-            "Unexpected [{$shortName}] job was queued."
-        );
-    }
+		PHPUnit::assertTrue(
+			count($queuedJobs) === 0,
+			"Unexpected [{$shortName}] job was queued."
+		);
+	}
 
-    /**
-     * Assert that no jobs were queued.
-     *
-     * @return void
-     *
-     * @throws \Exception
-     */
-    protected function assertNoJobsQueued()
-    {
-    	$queuedJobs = $this->getQueuedJobs();
+	/**
+	 * Assert that no jobs were queued.
+	 *
+	 * @return void
+	 *
+	 * @throws \Exception
+	 */
+	protected function assertNoJobsQueued()
+	{
+		$queuedJobs = $this->getQueuedJobs();
 
-        PHPUnit::assertEmpty($queuedJobs, 'Jobs were queued unexpectedly.');
-    }
+		PHPUnit::assertEmpty($queuedJobs, 'Jobs were queued unexpectedly.');
+	}
 
-    /**
-     * Get all of the queued jobs matching a truth-test callback.
-     *
-     * @param string $shortName
-     * @param  callable|null  $callback
-     * @return array
-     *
-     * @throws \Exception
-     */
-    private function queuedJobs($shortName, $callback = null)
-    {
-        if (! $this->hasQueuedJob($shortName)) {
-            return [];
-        }
+	/**
+	 * Get all of the queued jobs matching a truth-test callback.
+	 *
+	 * @param string $shortName
+	 * @param  callable|null  $callback
+	 * @return array
+	 *
+	 * @throws \Exception
+	 */
+	private function queuedJobs($shortName, $callback = null)
+	{
+		if (! $this->hasQueuedJob($shortName))
+		{
+			return [];
+		}
 
-        $callback = $callback ?: function () {
-            return true;
-        };
+		$callback = $callback ?: function ()
+		{
+			return true;
+		};
 
-        $queuedJobs = $this->jobsOf($shortName);
+		$queuedJobs = $this->jobsOf($shortName);
 
-        return array_filter($queuedJobs, function ($job) use ($callback) {
-            return $callback($job);
-        });
-    }
+		return array_filter($queuedJobs, function ($job) use ($callback)
+		{
+			return $callback($job);
+		});
+	}
 
-    /**
-     * Determine if the given job has been queued.
-     *
-     * @param  string  $shortName
-     * @return bool
-     * @throws \Exception
-     */
-    protected function hasQueuedJob($shortName)
-    {
-    	$jobs = $this->jobsOf($shortName);
+	/**
+	 * Determine if the given job has been queued.
+	 *
+	 * @param  string  $shortName
+	 * @return bool
+	 * @throws \Exception
+	 */
+	protected function hasQueuedJob($shortName)
+	{
+		$jobs = $this->jobsOf($shortName);
 
-        return count($jobs) > 0;
-    }
+		return count($jobs) > 0;
+	}
 
-    /**
-     * Get all of the queued jobs for a given type.
-     *
-     * @param  string  $shortName
-     * @return array
-     * @throws \Exception
-     */
-    private function jobsOf($shortName)
-    {
-    	$queuedJobs = $this->getQueuedJobs();
+	/**
+	 * Get all of the queued jobs for a given type.
+	 *
+	 * @param  string  $shortName
+	 * @return array
+	 * @throws \Exception
+	 */
+	private function jobsOf($shortName)
+	{
+		$queuedJobs = $this->getQueuedJobs();
 
-        return array_filter($queuedJobs, function ($job) use ($shortName) {
+		return array_filter($queuedJobs, function ($job) use ($shortName)
+		{
 			return $job['execute_class'] == $shortName;
-        });
-    }
+		});
+	}
 }

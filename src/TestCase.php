@@ -1,259 +1,277 @@
-<?php namespace Hampel\Testing;
+<?php
+
+namespace Hampel\Testing;
 
 use Carbon\Carbon;
 use Carbon\CarbonImmutable;
-use Mockery;
 use Mockery\MockInterface;
 use PHPUnit\Framework\TestCase as BaseTestCase;
+use XF\App;
 use XF\Db\AbstractAdapter;
 
 abstract class TestCase extends BaseTestCase
 {
-	use Concerns\InteractsWithBbCode,
-		Concerns\InteractsWithContainer,
-		Concerns\InteractsWithDatabase,
-		Concerns\InteractsWithEntityManager,
-		Concerns\InteractsWithErrors,
-		Concerns\InteractsWithEvents,
-		Concerns\InteractsWithExtension,
-		Concerns\InteractsWithFilesystem,
-		Concerns\InteractsWithHttp,
-		Concerns\InteractsWithJobs,
-		Concerns\InteractsWithLanguage,
-		Concerns\InteractsWithLogger,
-		Concerns\InteractsWithMail,
-		Concerns\InteractsWithOptions,
-		Concerns\InteractsWithRegistry,
-		Concerns\InteractsWithRequest,
-		Concerns\InteractsWithSimpleCache,
-		Concerns\InteractsWithTime,
-		Concerns\InteractsWithVisitor,
-		Concerns\UsesReflection;
+	use Concerns\InteractsWithBbCode;
+	use Concerns\InteractsWithContainer;
+	use Concerns\InteractsWithDatabase;
+	use Concerns\InteractsWithEntityManager;
+	use Concerns\InteractsWithErrors;
+	use Concerns\InteractsWithEvents;
+	use Concerns\InteractsWithExtension;
+	use Concerns\InteractsWithFilesystem;
+	use Concerns\InteractsWithHttp;
+	use Concerns\InteractsWithJobs;
+	use Concerns\InteractsWithLanguage;
+	use Concerns\InteractsWithLogger;
+	use Concerns\InteractsWithMail;
+	use Concerns\InteractsWithOptions;
+	use Concerns\InteractsWithRegistry;
+	use Concerns\InteractsWithRequest;
+	use Concerns\InteractsWithSimpleCache;
+	use Concerns\InteractsWithTime;
+	use Concerns\InteractsWithVisitor;
+	use Concerns\UsesReflection;
 
 	/**
-     * The XenForo application instance.
-     *
-     * @var \XF\App
-     */
-    protected $app;
+	 * The XenForo application instance.
+	 *
+	 * @var App
+	 */
+	protected $app;
 
 	/**
-     * The callbacks that should be run after the application is created.
-     *
-     * @var array
-     */
-    protected $afterApplicationCreatedCallbacks = [];
+	 * The callbacks that should be run after the application is created.
+	 *
+	 * @var array
+	 */
+	protected $afterApplicationCreatedCallbacks = [];
 
-    /**
-     * The callbacks that should be run before the application is destroyed.
-     *
-     * @var array
-     */
-    protected $beforeApplicationDestroyedCallbacks = [];
+	/**
+	 * The callbacks that should be run before the application is destroyed.
+	 *
+	 * @var array
+	 */
+	protected $beforeApplicationDestroyedCallbacks = [];
 
 
-    /**
-     * Indicates if we have made it through the base setUp function.
-     *
-     * @var bool
-     */
-    protected $setUpHasRun = false;
+	/**
+	 * Indicates if we have made it through the base setUp function.
+	 *
+	 * @var bool
+	 */
+	protected $setUpHasRun = false;
 
-    /**
-     * Creates the application.
-     *
-     * Needs to be implemented by subclasses.
-     *
-     * @return \XF\App
-     */
-    abstract public function createApplication();
+	/**
+	 * Creates the application.
+	 *
+	 * Needs to be implemented by subclasses.
+	 *
+	 * @return App
+	 */
+	abstract public function createApplication();
 
-    /**
-     * Setup the test environment.
-     *
-     * @return void
-     */
-    protected function setUp(): void
-    {
-        if (! $this->app) {
-            $this->refreshApplication();
-        }
+	/**
+	 * Setup the test environment.
+	 *
+	 * @return void
+	 */
+	protected function setUp(): void
+	{
+		if (! $this->app)
+		{
+			$this->refreshApplication();
+		}
 
-        $this->disableAutoJobRunner();
+		$this->disableAutoJobRunner();
 
-    	$this->setUpTraits();
+		$this->setUpTraits();
 
-        foreach ($this->afterApplicationCreatedCallbacks as $callback) {
-            call_user_func($callback);
-        }
+		foreach ($this->afterApplicationCreatedCallbacks AS $callback)
+		{
+			call_user_func($callback);
+		}
 
-        $this->setUpHasRun = true;
-    }
+		$this->setUpHasRun = true;
+	}
 
 	/**
 	 * Return our application instance
 	 *
-	 * @return \XF\App
+	 * @return App
 	 */
-    public function app()
-    {
-    	return $this->app;
-    }
+	public function app()
+	{
+		return $this->app;
+	}
 
-    /**
-     * Refresh the application instance.
-     *
-     * @return void
-     */
-    protected function refreshApplication()
-    {
+	/**
+	 * Refresh the application instance.
+	 *
+	 * @return void
+	 */
+	protected function refreshApplication()
+	{
 		$outputBuffer = ob_get_contents(); // save the current contents of the output buffer
 		ob_end_clean(); // pre-emptively clean the output buffer
-        $this->app = $this->createApplication();
-        \ob_start(); // restart our output buffer
-        echo $outputBuffer; // output our previously stored buffer contents
-    }
+		$this->app = $this->createApplication();
+		\ob_start(); // restart our output buffer
+		echo $outputBuffer; // output our previously stored buffer contents
+	}
 
 	/**
 	 * Turn off the auto job runner
 	 */
-    protected function disableAutoJobRunner()
-    {
-    	$this->app['job.runTime'] = false;
-    }
+	protected function disableAutoJobRunner()
+	{
+		$this->app['job.runTime'] = false;
+	}
 
-    /**
-     * Boot the testing helper traits.
-     *
-     * @return array
-     */
-    protected function setUpTraits()
-    {
-        $uses = array_flip($this->classUsesRecursive(static::class));
+	/**
+	 * Boot the testing helper traits.
+	 *
+	 * @return array
+	 */
+	protected function setUpTraits()
+	{
+		$uses = array_flip($this->classUsesRecursive(static::class));
 
-        if (isset($uses[Concerns\InteractsWithEntityManager::class])) {
-            $this->setUpEntityManager();
-        }
+		if (isset($uses[Concerns\InteractsWithEntityManager::class]))
+		{
+			$this->setUpEntityManager();
+		}
 
-		if (isset($uses[Concerns\InteractsWithExtension::class])) {
+		if (isset($uses[Concerns\InteractsWithExtension::class]))
+		{
 			$this->setUpExtension();
 		}
 
-		if (isset($uses[Concerns\InteractsWithLanguage::class])) {
+		if (isset($uses[Concerns\InteractsWithLanguage::class]))
+		{
 			$this->setUpLanguage();
 		}
 
-        if (isset($uses[Concerns\InteractsWithOptions::class])) {
-            $this->setUpOptions();
-        }
+		if (isset($uses[Concerns\InteractsWithOptions::class]))
+		{
+			$this->setUpOptions();
+		}
 
-        if (isset($uses[Concerns\InteractsWithTime::class])) {
-            $this->setUpTime();
-        }
+		if (isset($uses[Concerns\InteractsWithTime::class]))
+		{
+			$this->setUpTime();
+		}
 
-        if (isset($uses[Concerns\InteractsWithVisitor::class])) {
-            $this->setUpVisitor();
-        }
+		if (isset($uses[Concerns\InteractsWithVisitor::class]))
+		{
+			$this->setUpVisitor();
+		}
 
-        // opt-in per test class - this trait is deliberately not composed in above, because it
-        // needs a real database connection and changes how the test behaves
-        if (isset($uses[Concerns\UsesDatabaseTransactions::class])
-            && method_exists($this, 'setUpDatabaseTransactions')
-        ) {
-            $this->setUpDatabaseTransactions();
-        }
+		// opt-in per test class - this trait is deliberately not composed in above, because it
+		// needs a real database connection and changes how the test behaves
+		if (isset($uses[Concerns\UsesDatabaseTransactions::class])
+			&& method_exists($this, 'setUpDatabaseTransactions')
+		)
+		{
+			$this->setUpDatabaseTransactions();
+		}
 
-        return $uses;
-    }
+		return $uses;
+	}
 
-    /**
-     * Clean up the testing environment before the next test.
-     *
-     * @return void
-     */
-    protected function tearDown(): void
-    {
-        if ($this->app) {
-            foreach ($this->beforeApplicationDestroyedCallbacks as $callback) {
-                call_user_func($callback);
-            }
+	/**
+	 * Clean up the testing environment before the next test.
+	 *
+	 * @return void
+	 */
+	protected function tearDown(): void
+	{
+		if ($this->app)
+		{
+			foreach ($this->beforeApplicationDestroyedCallbacks AS $callback)
+			{
+				call_user_func($callback);
+			}
 
-            // close the database connection to avoid connection limit issues (unless it's been mocked)
-        	$db = $this->app->db();
-        	if ($db instanceof AbstractAdapter && !($db instanceof MockInterface))
-	        {
-		        $this->app()->db()->closeConnection();
-	        }
+			// close the database connection to avoid connection limit issues (unless it's been mocked)
+			$db = $this->app->db();
+			if ($db instanceof AbstractAdapter && !($db instanceof MockInterface))
+			{
+				$this->app()->db()->closeConnection();
+			}
 
-            $this->destroyProperty(\XF::class, 'app');
-        }
+			$this->destroyProperty(\XF::class, 'app');
+		}
 
-        $this->setUpHasRun = false;
+		$this->setUpHasRun = false;
 
-        if (class_exists('Mockery')) {
-            if ($container = Mockery::getContainer()) {
-                $this->addToAssertionCount($container->mockery_getExpectationCount());
-            }
+		if (class_exists('Mockery'))
+		{
+			if ($container = \Mockery::getContainer())
+			{
+				$this->addToAssertionCount($container->mockery_getExpectationCount());
+			}
 
-            Mockery::close();
-        }
+			\Mockery::close();
+		}
 
-        if (class_exists(Carbon::class)) {
-            Carbon::setTestNow();
-        }
+		if (class_exists(Carbon::class))
+		{
+			Carbon::setTestNow();
+		}
 
-        if (class_exists(CarbonImmutable::class)) {
-            CarbonImmutable::setTestNow();
-        }
+		if (class_exists(CarbonImmutable::class))
+		{
+			CarbonImmutable::setTestNow();
+		}
 
-        $this->afterApplicationCreatedCallbacks = [];
-        $this->beforeApplicationDestroyedCallbacks = [];
-    }
+		$this->afterApplicationCreatedCallbacks = [];
+		$this->beforeApplicationDestroyedCallbacks = [];
+	}
 
-    /**
-     * Register a callback to be run after the application is created.
-     *
-     * @param  callable  $callback
-     * @return void
-     */
-    public function afterApplicationCreated(callable $callback)
-    {
-        $this->afterApplicationCreatedCallbacks[] = $callback;
+	/**
+	 * Register a callback to be run after the application is created.
+	 *
+	 * @param  callable  $callback
+	 * @return void
+	 */
+	public function afterApplicationCreated(callable $callback)
+	{
+		$this->afterApplicationCreatedCallbacks[] = $callback;
 
-        if ($this->setUpHasRun) {
-            call_user_func($callback);
-        }
-    }
+		if ($this->setUpHasRun)
+		{
+			call_user_func($callback);
+		}
+	}
 
-    /**
-     * Register a callback to be run before the application is destroyed.
-     *
-     * @param  callable  $callback
-     * @return void
-     */
-    protected function beforeApplicationDestroyed(callable $callback)
-    {
-        $this->beforeApplicationDestroyedCallbacks[] = $callback;
-    }
+	/**
+	 * Register a callback to be run before the application is destroyed.
+	 *
+	 * @param  callable  $callback
+	 * @return void
+	 */
+	protected function beforeApplicationDestroyed(callable $callback)
+	{
+		$this->beforeApplicationDestroyedCallbacks[] = $callback;
+	}
 
 	public static function trace()
 	{
 		$cwd = getcwd();
 
-	    $e = new \Exception();
-	    $trace = explode("\n", $e->getTraceAsString());
-	    // reverse array to make steps line up chronologically
-	    $trace = array_reverse($trace);
-	    array_shift($trace); // remove {main}
-	    array_pop($trace); // remove call to this method
-	    $length = count($trace);
-	    $result = array();
+		$e = new \Exception();
+		$trace = explode("\n", $e->getTraceAsString());
+		// reverse array to make steps line up chronologically
+		$trace = array_reverse($trace);
+		array_shift($trace); // remove {main}
+		array_pop($trace); // remove call to this method
+		$length = count($trace);
+		$result = [];
 
-	    for ($i = 0; $i < $length; $i++)
-	    {
-	        $result[] = ($i + 1)  . ')' . str_replace("{$cwd}/", '', substr($trace[$i], strpos($trace[$i], ' '))); // replace '#someNum' with '$i)', set the right ordering
-	    }
+		for ($i = 0; $i < $length; $i++)
+		{
+			$result[] = ($i + 1) . ')' . str_replace("{$cwd}/", '', substr($trace[$i], strpos($trace[$i], ' '))); // replace '#someNum' with '$i)', set the right ordering
+		}
 
-	    return "\t" . implode("\n\t", $result);
+		return "\t" . implode("\n\t", $result);
 	}
 }

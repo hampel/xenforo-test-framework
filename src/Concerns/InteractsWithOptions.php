@@ -1,4 +1,6 @@
-<?php namespace Hampel\Testing\Concerns;
+<?php
+
+namespace Hampel\Testing\Concerns;
 
 trait InteractsWithOptions
 {
@@ -8,22 +10,23 @@ trait InteractsWithOptions
 	{
 		$this->originalOptions = $this->app()->options();
 
-        $this->beforeApplicationDestroyed(function () {
-            $this->restoreOptions();
-        });
+		$this->beforeApplicationDestroyed(function ()
+		{
+			$this->restoreOptions();
+		});
 	}
 
-    /**
-     * Set an array of options key=>value pairs
-     *
-     * @param  array  $options
-     * @return array
-     */
+	/**
+	 * Set an array of options key=>value pairs
+	 *
+	 * @param  array  $options
+	 * @return array
+	 */
 	protected function setOptions(array $newOptions)
 	{
 		$options = $this->app()->options();
 
-		foreach ($newOptions as $key => $value)
+		foreach ($newOptions AS $key => $value)
 		{
 			$options[$key] = $value;
 		}

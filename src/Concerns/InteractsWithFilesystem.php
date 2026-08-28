@@ -1,10 +1,11 @@
-<?php namespace Hampel\Testing\Concerns;
+<?php
+
+namespace Hampel\Testing\Concerns;
 
 use Closure;
 use League\Flysystem\AdapterInterface;
 use League\Flysystem\Memory\MemoryAdapter;
 use PHPUnit\Framework\Assert as PHPUnit;
-use Mockery;
 
 trait InteractsWithFilesystem
 {
@@ -31,17 +32,17 @@ trait InteractsWithFilesystem
 	protected function assertFsHas($file)
 	{
 		PHPUnit::assertTrue(
-            $this->app()->fs()->has($file),
-            "The expected [{$file}] file does not exist."
-        );
+			$this->app()->fs()->has($file),
+			"The expected [{$file}] file does not exist."
+		);
 	}
 
 	protected function assertFsHasNot($file)
 	{
 		PHPUnit::assertFalse(
-            $this->app()->fs()->has($file),
-            "The [{$file}] file exists."
-        );
+			$this->app()->fs()->has($file),
+			"The [{$file}] file exists."
+		);
 	}
 
 	/**
@@ -49,11 +50,11 @@ trait InteractsWithFilesystem
 	 * being made
 	 *
 	 * @param $fs - the name of the filesystem to mock (eg `data`, `internal-data`, `code-cache`)
-	 * @param Closure|null $mock - the mock closure to set expectations on
+	 * @param \Closure|null $mock - the mock closure to set expectations on
 	 *
 	 * @return mixed
 	 */
-	protected function mockFs($fs, ?Closure $mock = null)
+	protected function mockFs($fs, ?\Closure $mock = null)
 	{
 		$args = func_get_args();
 		array_shift($args);
@@ -61,7 +62,7 @@ trait InteractsWithFilesystem
 		$config = $this->app()->config();
 		$config['fsAdapters'][$fs] = function () use ($args)
 		{
-			return Mockery::mock(AdapterInterface::class, ...array_filter($args));
+			return \Mockery::mock(AdapterInterface::class, ...array_filter($args));
 		};
 		$this->swap('config', $config);
 		return $this->app()->fs()->getFilesystem($fs)->getAdapter();

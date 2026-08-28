@@ -1,4 +1,6 @@
-<?php namespace Hampel\Testing;
+<?php
+
+namespace Hampel\Testing;
 
 use XF\SimpleCache as BaseSimpleCache;
 

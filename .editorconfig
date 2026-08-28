@@ -1,6 +1,5 @@
-# Tabs are the house style here. Some files carry four-space indentation from
-# the Laravel testing traits they were modelled on; this settles what new code
-# should do without reformatting those.
+# Indentation follows XenForo's own code style, applied with xenforo-ltd/xf-cs-fixer
+# (composer format). This file exists so an editor gets it right before the fixer runs.
 root = true
 
 [*]

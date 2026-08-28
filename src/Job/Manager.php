@@ -1,5 +1,8 @@
-<?php namespace Hampel\Testing\Job;
+<?php
 
+namespace Hampel\Testing\Job;
+
+use XF\App;
 use XF\Job\JobParams;
 use XF\Job\JobResult;
 use XF\Job\Manager as BaseManager;
@@ -8,7 +11,7 @@ class Manager extends BaseManager
 {
 	protected $enqueuedJobs = [];
 
-	public function __construct(\XF\App $app, $allowManual = true, $forceManual = false)
+	public function __construct(App $app, $allowManual = true, $forceManual = false)
 	{
 		$this->app = $app;
 		$this->allowManual = $allowManual;
@@ -76,9 +79,9 @@ class Manager extends BaseManager
 	{
 	}
 
-    public function cancelAndDequeueJob(array $job): void
-    {
-    }
+	public function cancelAndDequeueJob(array $job): void
+	{
+	}
 
 	public function getRunnable($manual)
 	{
@@ -134,15 +137,15 @@ class Manager extends BaseManager
 	 *
 	 * @return int|null ID of the enqueued job (or null if an error happened)
 	 */
-    protected function _enqueue(JobParams $jobParams): ?int
+	protected function _enqueue(JobParams $jobParams): ?int
 	{
-        $uniqueId = $jobParams->getUniqueId();
+		$uniqueId = $jobParams->getUniqueId();
 		if ($uniqueId)
 		{
 			if (strlen($uniqueId) > 50)
 			{
 				$uniqueId = md5($uniqueId);
-                $jobParams->setUniqueId($uniqueId);
+				$jobParams->setUniqueId($uniqueId);
 			}
 
 			if (isset($this->uniqueEnqueued[$uniqueId]))
@@ -155,32 +158,32 @@ class Manager extends BaseManager
 			$uniqueId = null;
 		}
 
-        $manual = $jobParams->isManual();
-        if ($this->forceManual)
-        {
-            $manual = true;
-        }
-        else if (!$this->allowManual)
-        {
-            $manual = false;
-        }
-        $jobParams->setManual($manual);
+		$manual = $jobParams->isManual();
+		if ($this->forceManual)
+		{
+			$manual = true;
+		}
+		else if (!$this->allowManual)
+		{
+			$manual = false;
+		}
+		$jobParams->setManual($manual);
 
-        $runTime = $jobParams->getRunTime();
-        if (!$runTime)
-        {
-            $runTime = \XF::$time;
-            $jobParams->setRunTime($runTime);
-        }
+		$runTime = $jobParams->getRunTime();
+		if (!$runTime)
+		{
+			$runTime = \XF::$time;
+			$jobParams->setRunTime($runTime);
+		}
 
-        $jobParams = $this->prepareJobParams($jobParams);
+		$jobParams = $this->prepareJobParams($jobParams);
 
 		$job = [
 			'execute_class' => $jobParams->getJobClass(),
 			'execute_data' => $jobParams->getParams(),
 			'unique_key' => $jobParams->getUniqueId(),
 			'manual_execute' => $jobParams->isManual(),
-			'trigger_date' => $jobParams->getRunTime()
+			'trigger_date' => $jobParams->getRunTime(),
 		];
 
 		$this->enqueuedJobs[] = $job;
@@ -199,7 +202,7 @@ class Manager extends BaseManager
 		}
 		else
 		{
-            $blocking = $jobParams->isBlocking();
+			$blocking = $jobParams->isBlocking();
 			if ($blocking)
 			{
 				$this->autoBlockingList[$id] = $id;

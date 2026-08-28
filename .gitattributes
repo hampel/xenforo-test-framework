@@ -7,3 +7,4 @@ phpstan.neon.dist export-ignore
 /.github export-ignore
 .editorconfig export-ignore
 /integration export-ignore
+.php-cs-fixer.dist.php export-ignore

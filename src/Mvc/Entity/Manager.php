@@ -1,7 +1,10 @@
-<?php namespace Hampel\Testing\Mvc\Entity;
+<?php
 
-use Closure;
+namespace Hampel\Testing\Mvc\Entity;
+
 use Mockery;
+use XF\Mvc\Entity\Entity;
+use XF\Mvc\Entity\Finder;
 use XF\Mvc\Entity\Manager as BaseManager;
 
 class Manager extends BaseManager
@@ -14,11 +17,11 @@ class Manager extends BaseManager
 
 	/**
 	 * @param $identifier string
-	 * @param Closure|null $mock
+	 * @param \Closure|null $mock
 	 *
 	 * @return Mockery\MockInterface
 	 */
-	public function mockRepository($identifier, ?Closure $mock = null)
+	public function mockRepository($identifier, ?\Closure $mock = null)
 	{
 		$repositoryClass = \XF::stringToClass($identifier, '%s\Repository\%s');
 		$repositoryClass = $this->extension->extendClass($repositoryClass, '\XF\Mvc\Entity\Repository');
@@ -29,7 +32,7 @@ class Manager extends BaseManager
 
 		$args = [$repositoryClass, $mock];
 
-		$repository = Mockery::mock(...array_filter($args));
+		$repository = \Mockery::mock(...array_filter($args));
 		$this->repositories[$identifier] = $repository;
 
 		return $repository;
@@ -39,7 +42,7 @@ class Manager extends BaseManager
 	 * @param string $shortName
 	 * @param bool $includeDefaultWith
 	 *
-	 * @return \XF\Mvc\Entity\Finder
+	 * @return Finder
 	 */
 	public function getFinder($shortName, $includeDefaultWith = true)
 	{
@@ -53,11 +56,11 @@ class Manager extends BaseManager
 
 	/**
 	 * @param $shortName string
-	 * @param Closure|null $mock
+	 * @param \Closure|null $mock
 	 *
 	 * @return mixed|Mockery\MockInterface
 	 */
-	public function mockFinder($shortName, ?Closure $mock = null)
+	public function mockFinder($shortName, ?\Closure $mock = null)
 	{
 		if ($shortName && isset($this->mockedFinders[$shortName]))
 		{
@@ -73,7 +76,7 @@ class Manager extends BaseManager
 
 		$args = [$finderClass, $mock];
 
-		$finder = Mockery::mock(...array_filter($args));
+		$finder = \Mockery::mock(...array_filter($args));
 
 		$this->mockedFinders[$shortName] = $finder;
 
@@ -88,7 +91,7 @@ class Manager extends BaseManager
 	 * @param array $relations
 	 * @param int $options Bit field of the INSTANTIATE_* options
 	 *
-	 * @return \XF\Mvc\Entity\Entity
+	 * @return Entity
 	 *
 	 * @throws \LogicException
 	 */
@@ -105,11 +108,11 @@ class Manager extends BaseManager
 	/**
 	 * @param $shortName string
 	 * @param bool $inherit - set to true (default) to inherit from the mocked entity, or false to mock a standalone class
-	 * @param Closure|null $mock
+	 * @param \Closure|null $mock
 	 *
 	 * @return Mockery\MockInterface
 	 */
-	public function mockEntity($shortName, $inherit = true, ?Closure $mock = null)
+	public function mockEntity($shortName, $inherit = true, ?\Closure $mock = null)
 	{
 		if ($inherit)
 		{
@@ -124,7 +127,7 @@ class Manager extends BaseManager
 
 		$args = [$className, $mock];
 
-		$entity = Mockery::mock(...array_filter($args));
+		$entity = \Mockery::mock(...array_filter($args));
 
 		$this->mockedEntities[$shortName] = $entity;
 

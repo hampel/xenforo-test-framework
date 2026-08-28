@@ -1,4 +1,6 @@
-<?php namespace Hampel\Testing\Integration;
+<?php
+
+namespace Hampel\Testing\Integration;
 
 use Hampel\Testing\Concerns\UsesDatabaseTransactions;
 
@@ -12,7 +14,7 @@ class DatabaseTransactionsTest extends TestCase
 {
 	use UsesDatabaseTransactions;
 
-	const KEY = '__auditProbeTransaction';
+	public const KEY = '__auditProbeTransaction';
 
 	public function test_a_writes_are_visible_inside_the_test()
 	{

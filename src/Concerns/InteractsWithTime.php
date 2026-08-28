@@ -1,4 +1,6 @@
-<?php namespace Hampel\Testing\Concerns;
+<?php
+
+namespace Hampel\Testing\Concerns;
 
 use Carbon\Carbon;
 
@@ -10,9 +12,10 @@ trait InteractsWithTime
 
 	protected function setUpTime()
 	{
-        $this->beforeApplicationDestroyed(function () {
-            $this->restoreTime();
-        });
+		$this->beforeApplicationDestroyed(function ()
+		{
+			$this->restoreTime();
+		});
 	}
 
 	/**

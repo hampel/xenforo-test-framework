@@ -1,4 +1,6 @@
-<?php namespace Hampel\Testing\Integration;
+<?php
+
+namespace Hampel\Testing\Integration;
 
 use Hampel\Testing\Extension;
 

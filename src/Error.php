@@ -1,4 +1,6 @@
-<?php namespace Hampel\Testing;
+<?php
+
+namespace Hampel\Testing;
 
 use XF\Error as BaseError;
 
@@ -58,10 +60,12 @@ class Error extends BaseError
 				'line' => $e->getLine(),
 				'trace_string' => $trace,
 				'request_state' => json_encode($requestInfo, JSON_PARTIAL_OUTPUT_ON_ERROR),
-				'raw_exception' => $e
+				'raw_exception' => $e,
 			];
 		}
-		catch (\Exception $e) {}
+		catch (\Exception $e)
+		{
+		}
 
 		return false;
 	}
