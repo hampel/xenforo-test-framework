@@ -1,10 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!--
-  failOnRisky is deliberately absent. XF::start() installs error and exception
-  handlers and never removes them, so PHPUnit marks every test that boots
-  XenForo as risky - which is every test using this framework. Turning it on
-  fails the whole suite.
--->
 <phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/10.5/phpunit.xsd"
          backupGlobals="false"
@@ -15,6 +9,7 @@
          processIsolation="false"
          stopOnFailure="false"
          failOnDeprecation="true"
+         failOnRisky="true"
          failOnNotice="true"
          failOnWarning="true">
   <testsuites>

@@ -21,7 +21,9 @@ CHANGELOG
   asserted against the wrong value
 * bugfix: Job\Manager::runByIds() returned null where an array was documented
 * bugfix: parameters are explicitly nullable, removing deprecation notices on PHP 8.4
-* phpunit.xml now fails the suite on deprecations, notices and warnings
+* error and exception handlers are restored after each test, so tests that boot XenForo are no
+  longer reported as risky
+* phpunit.xml now fails the suite on deprecations, notices, warnings and risky tests
 * the tests/Feature directory is included, which PHPUnit requires in order to run
 * the fakes* helpers and swapFs() now return the object they document, rather than the
   closure the container had not yet resolved

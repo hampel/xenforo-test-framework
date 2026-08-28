@@ -30,7 +30,7 @@ appropriate version of the test framework in your addon based on what version of
 $ cp vendor/hampel/xenforo-test-framework/phpunit.xml .
 ```
 
-It now fails the test suite on deprecations, notices and warnings. If your addon has no `tests/Feature`
+It now fails the test suite on deprecations, notices, warnings and risky tests. If your addon has no `tests/Feature`
 directory, create one - PHPUnit will not run without it, since `phpunit.xml` declares a Feature test suite.
 
 **Unit Test Framework v2.1**

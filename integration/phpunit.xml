@@ -2,9 +2,6 @@
 <!--
   This package's own integration tests. They need a XenForo install and are skipped
   without one, so they can never run in CI - see CLAUDE.md.
-
-  failOnRisky is absent for the same reason as in the shipped scaffold: XF::start()
-  leaves error and exception handlers installed, so every test here is "risky".
 -->
 <phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          backupGlobals="false"
@@ -13,6 +10,7 @@
          cacheDirectory="../.phpunit.cache"
          colors="true"
          failOnDeprecation="true"
+         failOnRisky="true"
          failOnNotice="true"
          failOnWarning="true">
   <testsuites>

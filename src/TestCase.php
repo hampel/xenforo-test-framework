@@ -201,6 +201,8 @@ abstract class TestCase extends BaseTestCase
 			$this->destroyProperty(\XF::class, 'app');
 		}
 
+		$this->restoreErrorHandlers();
+
 		$this->setUpHasRun = false;
 
 		if (class_exists('Mockery'))
@@ -252,6 +254,79 @@ abstract class TestCase extends BaseTestCase
 	protected function beforeApplicationDestroyed(callable $callback)
 	{
 		$this->beforeApplicationDestroyedCallbacks[] = $callback;
+	}
+
+	/**
+	 * Hand PHPUnit back its error and exception handlers.
+	 *
+	 * XF::start() installs its own and never removes them, so without this every test that
+	 * boots XenForo is reported as risky - "test code or tested code did not remove its own
+	 * error handlers" - and failOnRisky cannot be used at all.
+	 *
+	 * The handlers stay in place for the duration of the test, so code under test still sees
+	 * XenForo's error handling as it would in production. Only the teardown differs.
+	 *
+	 * @return void
+	 */
+	protected function restoreErrorHandlers()
+	{
+		// bounded rather than while(true): a test that booted the app more than once will have
+		// stacked more than one, and anything unexpected should not hang the suite
+		for ($i = 0; $i < 10; $i++)
+		{
+			if (!$this->isXenForoHandler($this->currentErrorHandler()))
+			{
+				break;
+			}
+
+			restore_error_handler();
+		}
+
+		for ($i = 0; $i < 10; $i++)
+		{
+			if (!$this->isXenForoHandler($this->currentExceptionHandler()))
+			{
+				break;
+			}
+
+			restore_exception_handler();
+		}
+	}
+
+	/**
+	 * @return callable|null
+	 */
+	private function currentErrorHandler()
+	{
+		// setting a handler returns the one it replaced, and restoring puts it straight back -
+		// there is no read-only way to ask PHP what is installed
+		$handler = set_error_handler(null);
+		restore_error_handler();
+
+		return $handler;
+	}
+
+	/**
+	 * @return callable|null
+	 */
+	private function currentExceptionHandler()
+	{
+		$handler = set_exception_handler(null);
+		restore_exception_handler();
+
+		return $handler;
+	}
+
+	/**
+	 * @param mixed $handler
+	 *
+	 * @return bool
+	 */
+	private function isXenForoHandler($handler)
+	{
+		return is_array($handler)
+			&& count($handler) === 2
+			&& ($handler[0] === 'XF' || $handler[0] === \XF::class);
 	}
 
 	public static function trace()

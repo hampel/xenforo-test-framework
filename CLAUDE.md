@@ -46,9 +46,10 @@ Two things in there are load-bearing and easy to undo by accident:
   installed add-on, and any that ship their own PHPUnit and Mockery then collide with this
   package's — Mockery registers an expectation in one instance and verifies it in another, and
   tests fail with counts of zero. An id matching nothing gives complete isolation.
-- **`failOnRisky` is absent**, here and in the shipped `phpunit.xml`. `XF::start()` installs
-  error and exception handlers and never removes them, so PHPUnit marks every test that boots
-  XenForo as risky. Turning it on fails whole suites and catches nothing.
+- **`TestCase` hands PHPUnit back its error and exception handlers** in teardown. `XF::start()`
+  installs its own and never removes them, which used to mark every XF-booting test risky and
+  made `failOnRisky` unusable. Don't remove that restoration without turning `failOnRisky` off
+  in both configs at the same time.
 
 Every test in `integration/` reproduces a bug that shipped in 3.0.3. **Check a change to the
 fakes against this suite** — the registry, mail and job bugs fixed in 4.0.0 were all invisible
