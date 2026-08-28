@@ -691,6 +691,64 @@ class MockFsTest extends TestCase
 }	
 ```
 
+### fakesEvents
+Record the code events fired by our code, and stop them reaching any listener - so we can assert
+that an event was fired without triggering whatever is listening for it.
+
+Only listeners are suppressed. Class extensions still resolve as normal, so mocked repositories,
+finders and entities keep working.
+
+While faking, `fire()` always reports that nothing vetoed the event, because no listener ran to
+veto it.
+
+##### Parameters:
+
+none
+
+##### Assertions available:
+
+* `assertEventFired`
+* `assertEventFiredTimes`
+* `assertEventNotFired`
+* `assertNoEventsFired`
+
+Truth-test callbacks receive `($args, $hint)` - the arguments the event was fired with, and its
+hint. `getFiredEvents()` returns them all, each as `['event' => ..., 'args' => [...], 'hint' => ...]`.
+
+Requires `enableListeners` in `config.php`; without it XenForo installs a plain extension with no
+listeners at all, and `fakesEvents()` throws to say so.
+
+##### Example:
+
+```php
+<?php namespace Tests\Unit;
+
+use Tests\TestCase;
+
+class EventTest extends TestCase
+{
+	public function test_our_event_fires()
+	{
+		$this->fakesEvents();
+
+		// ... execute code that fires a custom event
+
+		$this->assertEventFired('my_addon_thing_processed');
+
+		// ... or assert how many times
+		$this->assertEventFired('my_addon_thing_processed', 2);
+
+		// ... or assert on what it was fired with
+		$this->assertEventFired('my_addon_thing_processed', function ($args, $hint)
+		{
+			return $args[0]->thing_id == 5;
+		});
+
+		$this->assertEventNotFired('my_addon_thing_failed');
+	}
+}
+```
+
 ### fakesHttp
 Allow us to assert that certain HTTP requests were (or were not) sent as a result of executing our test code, and to 
 supply mock HTTP responses without side-effects (ie no requests actually sent).

@@ -10,6 +10,69 @@ class Extension extends BaseExtension
     protected static $globalClassAliasMap = [];
 
     /**
+     * When faking, code events are recorded and listeners are not run - see
+     * Concerns\InteractsWithEvents.
+     *
+     * @var bool
+     */
+    protected $fakeEvents = false;
+
+    /** @var array */
+    protected $firedEvents = [];
+
+    /**
+     * @param bool $enabled
+     *
+     * @return void
+     */
+    public function setFakeEventMode($enabled = true)
+    {
+        $this->fakeEvents = $enabled;
+    }
+
+    /**
+     * @return bool
+     */
+    public function isFakingEvents()
+    {
+        return $this->fakeEvents;
+    }
+
+    /**
+     * @return array - each entry is ['event' => string, 'args' => array, 'hint' => string|null]
+     */
+    public function getFiredEvents()
+    {
+        return $this->firedEvents;
+    }
+
+    /**
+     * Record the event, and in fake mode stop it reaching any listener.
+     *
+     * @param string $event
+     * @param array $args
+     * @param string|null $hint
+     *
+     * @return bool
+     */
+    public function fire($event, array $args = [], $hint = null)
+    {
+        if (!$this->fakeEvents)
+        {
+            return parent::fire($event, $args, $hint);
+        }
+
+        $this->firedEvents[] = [
+            'event' => $event,
+            'args' => $args,
+            'hint' => $hint,
+        ];
+
+        // no listener ran, so nothing vetoed the event
+        return true;
+    }
+
+    /**
      * @param $class
      *
      * @param $fakeBaseClass

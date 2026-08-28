@@ -4,6 +4,8 @@ CHANGELOG
 4.0.0 (unreleased)
 ------------------
 
+* new fakesEvents() - records code events and stops them reaching listeners, with
+  assertEventFired(), assertEventFiredTimes(), assertEventNotFired() and assertNoEventsFired()
 * new actingAs(), actingAsMember() and actingAsGuest() helpers - run a test as a given user,
   with permissions granted in memory rather than read from the database
 * new setVisitorPermissions(), setVisitorContentPermissions() and buildVisitor() helpers
