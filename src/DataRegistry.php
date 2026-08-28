@@ -12,7 +12,7 @@ class DataRegistry extends BaseDataRegistry
 		$this->fakeMode = $enabled;
 	}
 
-	public function set($key, $value)
+	public function set(string $key, $value): void
 	{
 		// don't update database if we're in fake mode
 		if (!$this->fakeMode)
@@ -32,7 +32,7 @@ class DataRegistry extends BaseDataRegistry
 		$this->localData[$key] = $value;
 	}
 
-	public function delete($keys)
+	public function delete($keys): void
 	{
 		if (!is_array($keys))
 		{

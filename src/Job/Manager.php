@@ -1,6 +1,7 @@
 <?php namespace Hampel\Testing\Job;
 
 use XF\Job\JobParams;
+use XF\Job\JobResult;
 use XF\Job\Manager as BaseManager;
 
 class Manager extends BaseManager
@@ -10,6 +11,8 @@ class Manager extends BaseManager
 	public function __construct(\XF\App $app, $allowManual = true, $forceManual = false)
 	{
 		$this->app = $app;
+		$this->allowManual = $allowManual;
+		$this->forceManual = $forceManual;
 	}
 
 	/**
@@ -29,6 +32,7 @@ class Manager extends BaseManager
 	 */
 	public function runByIds(array $ids, $maxRunTime)
 	{
+		return [];
 	}
 
 	/**
@@ -54,7 +58,7 @@ class Manager extends BaseManager
 	 * @param array $job
 	 * @param int $maxRunTime
 	 *
-	 * @return JobResult
+	 * @return JobResult|null
 	 */
 	public function runJobEntry(array $job, $maxRunTime)
 	{

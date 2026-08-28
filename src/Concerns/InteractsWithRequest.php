@@ -13,7 +13,7 @@ trait InteractsWithRequest
 	 *
 	 * @return mixed
 	 */
-	protected function mockRequest(Closure $mock = null)
+	protected function mockRequest(?Closure $mock = null)
 	{
 		return $this->mock('request', Request::class, $mock);
 	}

@@ -1,0 +1,18 @@
+# Tabs are the house style here. Some files carry four-space indentation from
+# the Laravel testing traits they were modelled on; this settles what new code
+# should do without reformatting those.
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+indent_style = tab
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.{json,yml,yaml,xml,neon,dist}]
+indent_style = space
+indent_size = 4
+
+[*.md]
+trim_trailing_whitespace = false

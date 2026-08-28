@@ -453,6 +453,9 @@ class IsolationTest extends TestCase
 Allow us to swap out the local filesystem with a memory based filesystem which is non-persistent. Ideal for avoiding
 side-effects when writing to the filesystem.
 
+Requires `league/flysystem-memory: ^1.0` in your addon's `require-dev`. XenForo 2.3 ships Flysystem 1.x, and the
+2.x and 3.x releases of the memory adapter do not provide the adapter class this uses.
+
 ##### Parameters
 
 * `fs` - the name of the filesystem to swap (eg `data`, `internal-data`, `code-cache`)
@@ -719,8 +722,8 @@ Refer to the `Hampel\Testing\Concerns\InteractsWithLogger` trait for full detail
 functions.
 
 ### fakesMail
-Allow us to assert that emails were (or were not) sent or queued as a result of executing our test code, 
-without side-effects (ie no emails actually get sent).
+Allow us to assert that emails were (or were not) sent as a result of executing our test code, without
+side-effects (ie no emails actually get sent). Mail queueing is disabled, so all mail goes via the test transport.
 
 ##### Parameters:
 
@@ -732,10 +735,6 @@ none
 * `assertMailSentTimes`
 * `assertMailNotSent`
 * `assertNoMailSent`
-* `assertMailQueued`
-* `assertMailQueuedTimes`
-* `assertMailNotQueued`
-* `assertNoMailQueued`
 
 ##### Example: 
 
@@ -765,8 +764,11 @@ class MailTest extends TestCase
 		
 		// alternatively, assert our mail was sent with specific attributes - return a truth test
 		$this->assertMailSent(function ($mail) use ($email) {
-			return $mail->getSubject() == "The subject from our mail template" 
-				   && array_key_exists($email, $mail->getTo());
+			return $mail->getSubject() == "The subject from our mail template"
+				   && in_array($email, array_map(
+						  function ($address) { return $address->getAddress(); },
+						  $mail->getTo()
+					  ));
 		});		
 	}
 }	

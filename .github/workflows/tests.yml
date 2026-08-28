@@ -1,0 +1,47 @@
+name: tests
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    name: PHP ${{ matrix.php }}
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        # Every PHP the package declares: floor, and the two above it.
+        php: ['8.3', '8.4', '8.5']
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2.37.2
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: none
+
+      # There is no test suite to run here and there cannot be one. The suite in
+      # tests/ is a scaffold that consuming add-ons copy, and it boots XenForo,
+      # which is licensed and unavailable to CI. PHPStan is blocked for the same
+      # reason and runs locally instead - see CLAUDE.md. What follows is what can
+      # genuinely be checked without a forum.
+
+      - name: composer.json is valid
+        run: composer validate --strict
+
+      - name: src/ parses on this PHP version
+        run: find src -name '*.php' -print0 | xargs -0 -n1 -P4 php -l
+
+      # The check that earns its place: compiles the eighteen traits with all
+      # diagnostics on. See .github/deprecation-check.php for why it is limited
+      # to traits, and which shipped bug it exists to catch.
+      - name: no deprecations or notices from src/Concerns
+        run: php -d error_reporting=E_ALL .github/deprecation-check.php

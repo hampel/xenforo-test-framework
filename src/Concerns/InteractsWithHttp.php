@@ -24,9 +24,13 @@ trait InteractsWithHttp
 		$handlerStack->push(Middleware::history($this->history));
 		$http = $this->app()->http();
 
-		return $this->swap([$http, $untrusted ? 'clientUntrusted' : 'client'], function ($c) use ($http, $handlerStack) {
+		$key = $untrusted ? 'clientUntrusted' : 'client';
+
+		$this->swap([$http, $key], function ($c) use ($http, $handlerStack) {
 			return $http->createClient(['handler' => $handlerStack]);
 		});
+
+		return $http->container()[$key];
 	}
 
 	/**
@@ -62,7 +66,8 @@ trait InteractsWithHttp
     protected function assertHttpRequestSent($callback = null)
     {
         if (is_numeric($callback)) {
-            return $this->assertHttpRequestSentTimes($callback);
+            $this->assertHttpRequestSentTimes($callback);
+            return;
         }
 
 	    $sentRequests = $this->sentHttpRequests($callback);

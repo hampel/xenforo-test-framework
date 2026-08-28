@@ -12,9 +12,11 @@ trait InteractsWithJobs
 	 */
 	protected function fakesJobs()
 	{
-		return $this->swap('job.manager', function (Container $c) {
+		$this->swap('job.manager', function (Container $c) {
 			return new Manager($this->app);
 		});
+
+		return $this->getJobManager();
 	}
 
 	/**
@@ -54,7 +56,8 @@ trait InteractsWithJobs
     protected function assertJobQueued($shortName, $callback = null)
     {
         if (is_numeric($callback)) {
-            return $this->assertJobsQueuedTimes($callback);
+            $this->assertJobQueuedTimes($shortName, $callback);
+            return;
         }
 
 	    $queuedJobs = $this->queuedJobs($shortName, $callback);

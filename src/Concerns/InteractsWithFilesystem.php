@@ -14,7 +14,7 @@ trait InteractsWithFilesystem
 	 *
 	 * @param $fs - the name of the filesystem to swap (eg `data`, `internal-data`, `code-cache`)
 	 *
-	 * @return MemoryAdapter;
+	 * @return MemoryAdapter
 	 */
 	protected function swapFs($fs)
 	{
@@ -23,7 +23,9 @@ trait InteractsWithFilesystem
 		{
 			return new MemoryAdapter();
 		};
-		return $this->swap('config', $config);
+		$this->swap('config', $config);
+
+		return $this->app()->fs()->getFilesystem($fs)->getAdapter();
 	}
 
 	protected function assertFsHas($file)
@@ -51,7 +53,7 @@ trait InteractsWithFilesystem
 	 *
 	 * @return mixed
 	 */
-	protected function mockFs($fs, Closure $mock = null)
+	protected function mockFs($fs, ?Closure $mock = null)
 	{
 		$args = func_get_args();
 		array_shift($args);

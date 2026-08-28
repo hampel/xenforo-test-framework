@@ -14,13 +14,7 @@ class TestTransport extends AbstractTransport
 
     protected function doSend(SentMessage $message): void
     {
-        $subjectHeader = $message->getOriginalMessage()->getHeaders()->get('Subject');
-        $subject = $subjectHeader ? $subjectHeader->getBody() : '';
-        $subject = preg_replace('#[^a-z0-9_ -]#', '', strtolower($subject));
-        $subject = strtr($subject, ' ', '-');
-        $subject = substr($subject, 0, 30);
-
-        $this->sentEmails = $message->toString();
+        $this->sentEmails[] = $message->getOriginalMessage();
     }
 
     public function __toString(): string

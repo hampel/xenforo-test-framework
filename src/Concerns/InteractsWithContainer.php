@@ -47,7 +47,7 @@ trait InteractsWithContainer
      * @param  \Closure|null  $mock - (optional) the mock closure to define expectations on
      * @return object - the mock object
      */
-    protected function mock($key, $abstract, Closure $mock = null)
+    protected function mock($key, $abstract, ?Closure $mock = null)
     {
         $args = func_get_args();
         array_shift($args);
@@ -63,7 +63,7 @@ trait InteractsWithContainer
      * @param  \Closure|null  $mock - (optional) the mock closure to define expectations on
      * @return object
      */
-    protected function mockFactory($key, $abstract, Closure $mock = null)
+    protected function mockFactory($key, $abstract, ?Closure $mock = null)
     {
         return $this->app()->container()->factory($key, function() use ($abstract, $mock)
         {
@@ -81,7 +81,7 @@ trait InteractsWithContainer
      *
      * @return object
      */
-    protected function mockService($shortName, Closure $mock = null)
+    protected function mockService($shortName, ?Closure $mock = null)
     {
         $class = \XF::stringToClass($shortName, '\%s\Service\%s');
 
@@ -96,7 +96,7 @@ trait InteractsWithContainer
      * @param  \Closure|null  $mock
      * @return object
      */
-    protected function spy($key, $abstract, Closure $mock = null)
+    protected function spy($key, $abstract, ?Closure $mock = null)
     {
         $args = func_get_args();
         array_shift($args);

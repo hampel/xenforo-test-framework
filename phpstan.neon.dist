@@ -1,0 +1,28 @@
+# PHPStan cannot analyse this package without XenForo: almost every class here
+# extends one of XF's. The source is licensed and not on Packagist, and there is
+# no public stub package, so the forum root is supplied per machine instead of
+# being committed:
+#
+#     XF_ROOT=/srv/www/myforum composer analyse
+#
+# Copy this file to phpstan.neon (gitignored) to hard-code your own path.
+parameters:
+    level: 1
+
+    # The range the package declares support for, checked in one run.
+    phpVersion:
+        min: 80300
+        max: 80500
+
+    paths:
+        - src
+
+    scanDirectories:
+        - %env.XF_ROOT%/src/XF
+        - %env.XF_ROOT%/src/vendor
+
+    scanFiles:
+        # \XF itself, and utf8_substr and friends, which XF require()s at
+        # runtime rather than autoloading - src/Error.php calls them.
+        - %env.XF_ROOT%/src/XF.php
+        - %env.XF_ROOT%/src/utf8.php

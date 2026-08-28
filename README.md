@@ -2,7 +2,8 @@
 
 [![Latest Version on Packagist](https://img.shields.io/packagist/v/hampel/xenforo-test-framework.svg?style=flat-square)](https://packagist.org/packages/hampel/xenforo-test-framework)
 [![Total Downloads](https://img.shields.io/packagist/dt/hampel/xenforo-test-framework.svg?style=flat-square)](https://packagist.org/packages/hampel/xenforo-test-framework)
-[![Open Issues](https://img.shields.io/bitbucket/issues/hampel/xenforo-test-framework.svg?style=flat-square)](https://bitbucket.org/hampel/xenforo-test-framework/issues)
+[![Tests](https://img.shields.io/github/actions/workflow/status/hampel/xenforo-test-framework/tests.yml?branch=master&style=flat-square&label=tests)](https://github.com/hampel/xenforo-test-framework/actions/workflows/tests.yml)
+[![Open Issues](https://img.shields.io/github/issues/hampel/xenforo-test-framework.svg?style=flat-square)](https://github.com/hampel/xenforo-test-framework/issues)
 [![License](https://img.shields.io/packagist/l/hampel/xenforo-test-framework.svg?style=flat-square)](https://packagist.org/packages/hampel/xenforo-test-framework)
 
 Unit testing framework for XenForo
@@ -12,13 +13,25 @@ Unit testing framework for XenForo
 The test framework is specific to the version of XenForo being run. Given this is a development tool, simply install the
 appropriate version of the test framework in your addon based on what version of XenForo you are developing on.
 
-|XenForo|Unit Test Framework|
-|-------|-------------------|
-|v2.1   |v1.x               |
-|v2.2   |v2.x               |
-|v2.3   |v3.x               |
+|XenForo|PHP  |Unit Test Framework|
+|-------|-----|-------------------|
+|v2.1   |     |v1.x               |
+|v2.2   |     |v2.x               |
+|v2.3   |8.1+ |v3.x               |
+|v2.3   |8.3+ |v4.x               |
 
 ## Upgrading
+
+**Unit Test Framework v4.0**
+
+`phpunit.xml` has been updated in v4.0 and you should copy the new version into your addon root:
+
+```bash
+$ cp vendor/hampel/xenforo-test-framework/phpunit.xml .
+```
+
+It now fails the test suite on deprecations, notices and warnings. If your addon has no `tests/Feature`
+directory, create one - PHPUnit will not run without it, since `phpunit.xml` declares a Feature test suite.
 
 **Unit Test Framework v2.1**
 
@@ -418,7 +431,7 @@ framework only in our development environment. We will later show the commands r
 addon during the build process - we don't want or need to deploy our unit tests to our production servers.
 
 You can view the source code for the package here: 
-[XenForo Test Framework](https://bitbucket.org/hampel/xenforo-test-framework)
+[XenForo Test Framework](https://github.com/hampel/xenforo-test-framework)
 
 If you need more guidance on using Composer packages in your XenForo addons - refer to my tutorial: [Using Composer 
 Packages in XenForo 2.1+ Addons Tutorial](https://xenforo.com/community/resources/using-composer-packages-in-xenforo-2-1-addons-tutorial.7432/)
@@ -434,7 +447,7 @@ use Composer, you can simply create a `composer.json` file with the following in
 ```json
 {
     "require-dev": {
-        "hampel/xenforo-test-framework": "^2.1",
+        "hampel/xenforo-test-framework": "^4.0",
         "nesbot/carbon": "^3.0"
     },
     "autoload-dev": {
@@ -597,7 +610,7 @@ PHPUnit where to find our tests.
 ```bash
 $ cd /srv/www/xenforo/src/addons/Vendorly/Addonista/
 $ ./vendor/bin/phpunit
-PHPUnit 8.4.1 by Sebastian Bergmann and contributors.
+PHPUnit 12.5.34 by Sebastian Bergmann and contributors.
 
 ..................                                                18 / 18 (100%)
 

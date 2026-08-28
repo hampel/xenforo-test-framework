@@ -22,10 +22,39 @@ It ships two distinct things, and the distinction matters when editing:
 
 `./vendor/bin/phpunit` in this repository fails with `Class "Tests\TestCase" not found`, by design:
 the scaffold needs a XenForo install above it (`$rootDir` points at the forum root) and a `Tests\`
-autoload mapping that only the consuming add-on provides. **Do not "fix" this** by adding
-`autoload-dev` or rewriting `tests/` — that would break the copy-into-your-addon contract.
+autoload mapping that only the consuming add-on provides. **Do not "fix" this** by making `tests/`
+autoloadable or rewriting it — that would break the copy-into-your-addon contract. (The
+`autoload-dev` entry in `composer.json` is for `integration/`, below, and deliberately does not
+cover `tests/`.)
 
-Verification is therefore manual, against a real add-on in a real forum:
+### There IS an integration suite — `integration/`
+
+It is this package's own, not the scaffold, and it is export-ignored so it never reaches a
+consumer. It boots a real XenForo application, so it needs a forum:
+
+```bash
+XF_ROOT=/srv/www/myforum composer integration
+```
+
+Without `XF_ROOT`, or with one that has no `src/XF.php`, every test **skips** and the run exits 0
+— so it can sit in the repository without breaking anyone who has no forum. It can never run in
+CI for the same reason PHPStan cannot.
+
+Two things in there are load-bearing and easy to undo by accident:
+
+- **`$addonsToLoad = ['None/None']`** loads no add-ons at all. An empty array loads *every*
+  installed add-on, and any that ship their own PHPUnit and Mockery then collide with this
+  package's — Mockery registers an expectation in one instance and verifies it in another, and
+  tests fail with counts of zero. An id matching nothing gives complete isolation.
+- **`failOnRisky` is absent**, here and in the shipped `phpunit.xml`. `XF::start()` installs
+  error and exception handlers and never removes them, so PHPUnit marks every test that boots
+  XenForo as risky. Turning it on fails whole suites and catches nothing.
+
+Every test in `integration/` reproduces a bug that shipped in 3.0.3. **Check a change to the
+fakes against this suite** — the registry, mail and job bugs fixed in 4.0.0 were all invisible
+to PHPStan and to a scaffold suite with no forum behind it.
+
+Verification against a consuming add-on, when that is what you need:
 
 ```bash
 cd /srv/www/<forum>/src/addons/<Vendor>/<AddonId>
@@ -35,8 +64,40 @@ cd /srv/www/<forum>/src/addons/<Vendor>/<AddonId>
 ./vendor/bin/phpunit --filter test_name           # one test
 ```
 
-Static checks available in this repo: `php -l src/**/*.php`. There is no CI, PHPStan or linter
-configured.
+**PHPStan is the only automated check this package has**, and it needs a XenForo install to
+analyse against — almost every class here extends one of XF's, the source is licensed and not on
+Packagist, and there is no public stub package. So the forum root comes from the environment:
+
+```bash
+XF_ROOT=/srv/www/myforum composer analyse
+```
+
+`phpstan.neon.dist` is committed and expands `%env.XF_ROOT%`; copy it to `phpstan.neon`
+(gitignored) to hard-code your own path. It scans `src/XF`, XF's `vendor`, `XF.php` and
+`utf8.php` — the last because XF `require`s it at runtime rather than autoloading it, and
+`src/Error.php` calls `utf8_substr()`.
+
+Level 1 is clean. It found four real defects the first time it ran, which on a package whose own
+suite cannot execute is the whole argument for keeping it green.
+
+### The dependency checks do not apply either — do not add them
+
+`composer-require-checker` and a dev-free PHPStan run are the standard way to catch a package
+calling a class it never declared. Both report the same 27 symbols here, and **every one of them
+is undeclarable rather than undeclared**:
+
+- `XF\*` and XenForo's global helpers (`utf8_substr`) come from XenForo itself, which is licensed
+  and not on Packagist.
+- `GuzzleHttp\*`, `League\Flysystem\*` and `Symfony\Component\Mailer\*` are supplied by the
+  **forum's** vendor directory, not the add-on's. Declaring them would install a second copy
+  alongside the forum's — see the `league/flysystem-memory` conflict in `composer.json` for what
+  a duplicate of one of these actually costs.
+- `Carbon\*` is genuinely optional and is in `suggest`.
+
+So neither check can ever be green, and whitelisting all 27 silences the check rather than
+configuring it. A permanently red CI job is worse than no job, which is why there is no
+`dependencies` workflow. The equivalent coverage comes from PHPStan reading XenForo's source
+directly.
 
 ## Version compatibility is the release axis
 

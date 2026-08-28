@@ -7,17 +7,22 @@ use XF\Container;
 trait InteractsWithMail
 {
 	/**
-	 * Allow us to assert that emails were (or were not) sent or queued as a result of executing our test code,
-	 * without side-effects (ie no emails actually get sent).
+	 * Allow us to assert that emails were (or were not) sent as a result of executing our test code, without
+	 * side-effects (ie no emails actually get sent). Mail queueing is disabled, so all mail goes via the test
+	 * transport.
+	 *
+	 * @return TestTransport
 	 */
 	protected function fakesMail()
 	{
         // disable mail queueing
         $this->setOption('enableMailQueue', false);
 
-		return $this->swap('mailer.transport', function (Container $c) {
+		$this->swap('mailer.transport', function (Container $c) {
 			return new TestTransport();
 		});
+
+		return $this->getMailTransport();
 	}
 
 	protected function getMailTransport()
@@ -52,7 +57,8 @@ trait InteractsWithMail
     protected function assertMailSent($callback = null)
     {
         if (is_numeric($callback)) {
-            return $this->assertMailSentTimes($callback);
+            $this->assertMailSentTimes($callback);
+            return;
         }
 
         $message = "The expected mail was not sent.";

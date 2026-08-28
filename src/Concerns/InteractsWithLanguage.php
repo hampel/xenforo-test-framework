@@ -19,9 +19,9 @@ trait InteractsWithLanguage
 	 * Allow us to easily mock the phrase/language system to avoid database lookups and rendering phrases. This is
 	 * especially useful when dealing with error messages which include phrases that may be variable.
 	 *
-	 * @param $key - the phrase_id
-	 * @param null $parameters - optional - parameters that are expected to be passed to the phrase
-	 * @param null $response - optional - the response that should be returned
+	 * @param string $key - the phrase_id
+	 * @param array|null $parameters - optional - parameters that are expected to be passed to the phrase
+	 * @param string|null $response - optional - the response that should be returned
 	 *
 	 * @return Phrase
 	 */

@@ -18,7 +18,7 @@ class Manager extends BaseManager
 	 *
 	 * @return Mockery\MockInterface
 	 */
-	public function mockRepository($identifier, Closure $mock = null)
+	public function mockRepository($identifier, ?Closure $mock = null)
 	{
 		$repositoryClass = \XF::stringToClass($identifier, '%s\Repository\%s');
 		$repositoryClass = $this->extension->extendClass($repositoryClass, '\XF\Mvc\Entity\Repository');
@@ -57,7 +57,7 @@ class Manager extends BaseManager
 	 *
 	 * @return mixed|Mockery\MockInterface
 	 */
-	public function mockFinder($shortName, Closure $mock = null)
+	public function mockFinder($shortName, ?Closure $mock = null)
 	{
 		if ($shortName && isset($this->mockedFinders[$shortName]))
 		{
@@ -109,7 +109,7 @@ class Manager extends BaseManager
 	 *
 	 * @return Mockery\MockInterface
 	 */
-	public function mockEntity($shortName, $inherit = true, Closure $mock = null)
+	public function mockEntity($shortName, $inherit = true, ?Closure $mock = null)
 	{
 		if ($inherit)
 		{

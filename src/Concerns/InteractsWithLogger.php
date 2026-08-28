@@ -12,9 +12,11 @@ trait InteractsWithLogger
 	 */
 	protected function fakesLogger()
 	{
-		return $this->swap('logger', function (Container $c) {
+		$this->swap('logger', function (Container $c) {
 			return new Logger($this->app);
 		});
+
+		return $this->getLoggerFake();
 	}
 
 	/**
@@ -66,7 +68,8 @@ trait InteractsWithLogger
     protected function assertActionLogged($type, $callback = null)
     {
         if (is_numeric($callback)) {
-            return $this->assertActionLoggedTimes($callback);
+            $this->assertActionLoggedTimes($type, $callback);
+            return;
         }
 
 	    $loggedActions = $this->loggedActions($type, $callback);
@@ -90,7 +93,8 @@ trait InteractsWithLogger
     protected function assertChangeLogged($type, $callback = null)
     {
         if (is_numeric($callback)) {
-            return $this->assertChangeLoggedTimes($callback);
+            $this->assertChangeLoggedTimes($type, $callback);
+            return;
         }
 
 	    $loggedChanges = $this->loggedChanges($type, $callback);

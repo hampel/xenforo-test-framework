@@ -12,9 +12,11 @@ trait InteractsWithErrors
 	 */
 	protected function fakesErrors()
 	{
-		return $this->swap('error', function (Container $c) {
+		$this->swap('error', function (Container $c) {
 			return new Error($this->app);
 		});
+
+		return $this->getErrorFake();
 	}
 
 	/**
@@ -67,7 +69,8 @@ trait InteractsWithErrors
     protected function assertExceptionLogged($class, $callback = null)
     {
         if (is_numeric($callback)) {
-            return $this->assertExceptionLoggedTimes($callback);
+            $this->assertExceptionLoggedTimes($class, $callback);
+            return;
         }
 
 	    $loggedExceptions = $this->loggedExceptions($class, $callback);

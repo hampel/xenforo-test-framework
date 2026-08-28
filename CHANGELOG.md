@@ -1,6 +1,28 @@
 CHANGELOG
 =========
 
+4.0.0 (unreleased)
+------------------
+
+* PHPUnit 11 and 12 are now supported
+* bugfix: fakesRegistry() failed with a fatal error - DataRegistry did not match the XenForo 2.3
+  method signatures
+* bugfix: mail assertions failed with a TypeError once any mail had been sent
+* bugfix: assertJobQueued() with a count called a method that does not exist
+* bugfix: assertExceptionLogged(), assertActionLogged() and assertChangeLogged() with a count
+  asserted against the wrong value
+* bugfix: Job\Manager::runByIds() returned null where an array was documented
+* bugfix: parameters are explicitly nullable, removing deprecation notices on PHP 8.4
+* phpunit.xml now fails the suite on deprecations, notices and warnings
+* the tests/Feature directory is included, which PHPUnit requires in order to run
+* the fakes* helpers and swapFs() now return the object they document, rather than the
+  closure the container had not yet resolved
+* league/flysystem-memory 2.0 and above are rejected - XenForo 2.3 ships Flysystem 1.x
+
+**Breaking changes:**
+* minimum PHP version is now 8.3
+* phpunit.xml has been updated and should be re-copied into your addon
+
 3.0.3 (2024-12-30)
 ------------------
 
