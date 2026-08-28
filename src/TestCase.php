@@ -26,6 +26,7 @@ abstract class TestCase extends BaseTestCase
 		Concerns\InteractsWithRequest,
 		Concerns\InteractsWithSimpleCache,
 		Concerns\InteractsWithTime,
+		Concerns\InteractsWithVisitor,
 		Concerns\UsesReflection;
 
 	/**
@@ -147,6 +148,10 @@ abstract class TestCase extends BaseTestCase
 
         if (isset($uses[Concerns\InteractsWithTime::class])) {
             $this->setUpTime();
+        }
+
+        if (isset($uses[Concerns\InteractsWithVisitor::class])) {
+            $this->setUpVisitor();
         }
 
         // opt-in per test class - this trait is deliberately not composed in above, because it

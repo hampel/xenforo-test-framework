@@ -55,6 +55,100 @@ class BbCodeTest extends TestCase
 }	
 ``` 
 
+### actingAs / actingAsMember / actingAsGuest
+Run a test as a given user, so code that reads `\XF::visitor()` or checks permissions behaves as
+it would for that user. The visitor is restored automatically after each test.
+
+Users are built in memory and are never written to the database, so these work without
+`UsesDatabaseTransactions` and without a `tests/mock` fixture.
+
+##### Parameters:
+
+* `actingAs($user, $permissions = [])` - act as an existing `XF\Entity\User`
+* `actingAsMember($values = [], $permissions = [])` - act as a logged-in member. Defaults to
+  `user_id` 1 with a valid user state; pass `$values` to override any column
+* `actingAsGuest($permissions = [], $username = null)` - act as a guest, `user_id` 0
+
+`$permissions` is `group => [permission => value]`, matching the way XenForo caches global
+permissions. Anything not granted is denied, exactly as in production.
+
+##### Example:
+
+```php
+<?php namespace Tests\Unit;
+
+use Tests\TestCase;
+
+class PermissionTest extends TestCase
+{
+	public function test_a_member_who_may_post()
+	{
+		$this->actingAsMember(
+			['user_id' => 5, 'username' => 'Alice'],
+			['forum' => ['view' => true, 'postThread' => true]]
+		);
+
+		$this->assertTrue(\XF::visitor()->hasPermission('forum', 'postThread'));
+		$this->assertFalse(\XF::visitor()->hasPermission('forum', 'deleteAnyPost'));
+
+		// ... now exercise code that checks those permissions
+	}
+
+	public function test_a_guest()
+	{
+		$this->actingAsGuest();
+
+		$this->assertSame(0, \XF::visitor()->user_id);
+	}
+}
+```
+
+### setVisitorPermissions / setVisitorContentPermissions
+Grant permissions for a user without reading the permission cache from the database. Usually you
+would pass permissions straight to `actingAs`; these are for granting more later, or for granting
+content permissions.
+
+##### Parameters:
+
+* `setVisitorPermissions($user, $permissions)` - `$permissions` is `group => [permission => value]`
+* `setVisitorContentPermissions($user, $contentType, $contentId, $permissions)` - for node
+  permissions and the like
+
+**Content permissions are not grouped.** XenForo stores them flat, as `permission => value`, with
+no permission group above them - unlike global permissions. Passing a grouped array silently
+grants nothing.
+
+##### Example:
+
+```php
+$user = $this->actingAsMember();
+
+$this->setVisitorPermissions($user, ['forum' => ['view' => true]]);
+$this->setVisitorContentPermissions($user, 'node', 7, ['view' => true]);
+
+$this->assertTrue($user->hasPermission('forum', 'view'));
+$this->assertTrue($user->hasNodePermission(7, 'view'));
+$this->assertFalse($user->hasNodePermission(8, 'view'));
+```
+
+### buildVisitor
+Build an `XF\Entity\User` in memory without writing it to the database, for cases where you want
+the entity but not to act as it.
+
+XenForo will only construct a user without a database row via its guest user, so members are built
+from that with the columns overridden.
+
+##### Parameters:
+
+* `values` - optional - column => value overrides
+* `username` - optional
+
+##### Example:
+
+```php
+$user = $this->buildVisitor(['user_id' => 99, 'username' => 'Built']);
+```
+
 ### swap
 Register an instance of an object in the container.
 

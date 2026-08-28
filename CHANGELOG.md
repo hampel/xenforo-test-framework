@@ -4,6 +4,9 @@ CHANGELOG
 4.0.0 (unreleased)
 ------------------
 
+* new actingAs(), actingAsMember() and actingAsGuest() helpers - run a test as a given user,
+  with permissions granted in memory rather than read from the database
+* new setVisitorPermissions(), setVisitorContentPermissions() and buildVisitor() helpers
 * new UsesDatabaseTransactions trait - wraps each test in a transaction and rolls it back, so
   tests can exercise real entity saves without leaving anything behind
 * new assertDatabaseHas(), assertDatabaseMissing() and assertDatabaseCount() assertions
