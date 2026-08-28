@@ -4,6 +4,9 @@ CHANGELOG
 4.0.0 (unreleased)
 ------------------
 
+* new UsesDatabaseTransactions trait - wraps each test in a transaction and rolls it back, so
+  tests can exercise real entity saves without leaving anything behind
+* new assertDatabaseHas(), assertDatabaseMissing() and assertDatabaseCount() assertions
 * PHPUnit 11 and 12 are now supported
 * bugfix: fakesRegistry() failed with a fatal error - DataRegistry did not match the XenForo 2.3
   method signatures

@@ -217,6 +217,86 @@ class ServiceTest extends TestCase
 }	
 ```
 
+### UsesDatabaseTransactions
+Wrap each test in a database transaction and roll it back afterwards, so tests can exercise real
+entity saves, finders and repositories without leaving anything behind.
+
+Unlike every other helper here, this one is a trait you opt into per test class - it needs a real
+database connection and it changes how your test behaves, so it is not switched on for you.
+
+Nested transactions are safe: XenForo's database adapter issues a `SAVEPOINT` rather than a second
+`BEGIN`, so code under test may run its own `beginTransaction()` and `commit()` - as entity saves
+do - without escaping the wrapper.
+
+Two things it cannot roll back, both MySQL behaviour rather than XenForo's:
+
+* DDL implicitly commits, so anything altering the schema - a `Setup.php` step, for instance -
+  escapes the transaction and must clean up after itself.
+* Only this connection sees the uncommitted rows, so a test that reads the database through a
+  second connection will not see what it wrote.
+
+It cannot be combined with `mockDatabase()`, and throws if you try.
+
+##### Example:
+
+```php
+<?php namespace Tests\Unit;
+
+use Hampel\Testing\Concerns\UsesDatabaseTransactions;
+use Tests\TestCase;
+
+class ThingTest extends TestCase
+{
+	use UsesDatabaseTransactions;
+
+	public function test_saving_a_thing()
+	{
+		$thing = $this->app()->em()->create('MyVendor\MyAddon:Thing');
+		$thing->title = 'probe';
+		$thing->save();
+
+		$this->assertDatabaseHas('xf_myaddon_thing', ['title' => 'probe']);
+
+		// ... and the row is gone again once the test finishes
+	}
+}
+```
+
+### assertDatabaseHas / assertDatabaseMissing / assertDatabaseCount
+Assert against rows actually present in the database. Most useful alongside
+`UsesDatabaseTransactions`, which keeps whatever the test writes from persisting.
+
+These read the real database, so they cannot be used with `mockDatabase()` and will throw if the
+database has been mocked.
+
+##### Parameters:
+
+* `table` - the table name, in full - no `xf_` prefix is assumed
+* `criteria` - an array of `column => value` pairs, combined with `AND`. A `null` value matches
+  `IS NULL`
+* `expected` - `assertDatabaseCount` only - the number of rows expected
+
+##### Example:
+
+```php
+<?php namespace Tests\Unit;
+
+use Tests\TestCase;
+
+class ThingTest extends TestCase
+{
+	public function test_database_state()
+	{
+		$this->assertDatabaseHas('xf_user', ['user_id' => 1]);
+		$this->assertDatabaseMissing('xf_user', ['username' => 'nobody']);
+		$this->assertDatabaseCount('xf_user', 1, ['user_id' => 1]);
+
+		// no criteria counts the whole table
+		$this->assertDatabaseCount('xf_myaddon_thing', 0);
+	}
+}
+```
+
 ### mockDatabase
 Mock the database adapter.
 

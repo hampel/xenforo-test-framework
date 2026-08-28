@@ -149,6 +149,14 @@ abstract class TestCase extends BaseTestCase
             $this->setUpTime();
         }
 
+        // opt-in per test class - this trait is deliberately not composed in above, because it
+        // needs a real database connection and changes how the test behaves
+        if (isset($uses[Concerns\UsesDatabaseTransactions::class])
+            && method_exists($this, 'setUpDatabaseTransactions')
+        ) {
+            $this->setUpDatabaseTransactions();
+        }
+
         return $uses;
     }
 
