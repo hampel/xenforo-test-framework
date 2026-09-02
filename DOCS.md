@@ -593,8 +593,8 @@ none
 * `assertExceptionLoggedTimes`
 * `assertExceptionNotLogged`
 * `assertNoExceptionsLogged`
-* `assertErrorLogged`
-* `assertErrorNotLogged`
+* `assertErrorLogged` - takes an optional message; omit it to assert that any error was logged
+* `assertErrorNotLogged` - takes an optional message; omit it to assert that no error was logged
 * `assertNoErrorsLogged`
 
 ##### Example: 
@@ -669,6 +669,18 @@ side-effects when writing to the filesystem.
 
 Requires `league/flysystem-memory: ^1.0` in your addon's `require-dev`. XenForo 2.3 ships Flysystem 1.x, and the
 2.x and 3.x releases of the memory adapter do not provide the adapter class this uses.
+
+**This only helps when every access goes through `$app->fs()`.** Code that writes to a real path -
+`XF\Util\File::getTempDir()`, `File::getNamedTempFile()` - and then reads it back through an
+abstracted path breaks under a swapped filesystem: in production those are the same directory, but
+with `internal-data://` in memory they stop pointing at the same place, so the write lands on disk
+and the read finds nothing. That fails in a way that looks like a bug in the code under test. Test
+such code against the real filesystem instead, writing to a namespaced path you delete in
+`tearDown()`.
+
+Note also that `$fs->has()` does not reliably report **directories**, so the obvious
+`if ($fs->has($dir)) { $fs->deleteDir($dir); }` cleanup silently does nothing and leaks state into
+the next test. Call `deleteDir()` unconditionally inside a try/catch.
 
 ##### Parameters
 
@@ -866,6 +878,13 @@ it expects.
 
 The same assertions as `fakesHttp` apply - `assertHttpRequestSent`, `assertHttpRequestSentTimes`,
 `assertHttpRequestNotSent`, `assertNoHttpRequestSent`.
+
+Like `fakesHttp`, the response body is written to Guzzle's `sink` when the request asks for one,
+so code that downloads to a file through `XF\Http\Reader::getUntrusted($url, $limits, $saveTo)`
+gets the faked content on disk.
+
+Only one http fake is active at a time. Calling either helper again in the same test replaces the
+previous fake, including for anything holding `$app->http()->reader()`.
 
 ##### Example:
 

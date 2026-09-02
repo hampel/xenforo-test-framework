@@ -23,8 +23,18 @@ CHANGELOG
   asserted against the wrong value
 * bugfix: Job\Manager::runByIds() returned null where an array was documented
 * bugfix: parameters are explicitly nullable, removing deprecation notices on PHP 8.4
-* error and exception handlers are restored after each test, so tests that boot XenForo are no
-  longer reported as risky
+* bugfix: fakesHttpByUrl() ignored Guzzle's `sink`, so code downloading to a file - which is
+  what XF\Http\Reader::getUntrusted($url, $limits, $saveTo) does - received the response and
+  wrote nothing, while every request assertion still passed
+* bugfix: a second fakesHttp() or fakesHttpByUrl() call in one test had no effect, because
+  XenForo's cached `reader` still held the first fake's client; the failure surfaced later as
+  "Mock queue is empty"
+* assertErrorLogged() and assertErrorNotLogged() no longer require a message, matching
+  assertExceptionLogged() - omit it to assert that any error at all was, or was not, logged
+* error and exception handlers are restored after each test. This is what makes PHPUnit 11 and
+  12 support possible rather than a separate fix: XF::start() installs handlers and never
+  removes them, which PHPUnit 11 onwards reports as risky on every test that boots XenForo.
+  PHPUnit 10 does not report it, so the symptom cannot be reproduced on 3.0.3
 * phpunit.xml now fails the suite on deprecations, notices, warnings and risky tests
 * the tests/Feature directory is included, which PHPUnit requires in order to run
 * the fakes* helpers and swapFs() now return the object they document, rather than the
@@ -33,7 +43,12 @@ CHANGELOG
 * league/flysystem-memory 2.0 and above are rejected - XenForo 2.3 ships Flysystem 1.x
 
 **Breaking changes:**
-* minimum PHP version is now 8.3
+* minimum PHP version is now 8.3. If your addon pins `config.platform.php` below 8.3, Composer
+  cannot install this package at all - the solve fails outright. Raising that pin is not
+  dev-only in effect: it also lets Composer select **runtime** dependencies above the PHP
+  version your addon declares, and those ship in your release zip. After raising it, check that
+  every package in composer.lock's `packages` array still satisfies your addon's own PHP floor,
+  and cap any that do not
 * phpunit.xml has been updated and should be re-copied into your addon
 * the files in tests/ have been restyled, so a diff against your own copies will show
   formatting changes as well as the changes described above

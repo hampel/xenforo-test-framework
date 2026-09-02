@@ -9,6 +9,8 @@ use GuzzleHttp\Middleware;
 use GuzzleHttp\Promise\Create;
 use PHPUnit\Framework\Assert as PHPUnit;
 use Psr\Http\Message\RequestInterface;
+use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\StreamInterface;
 
 trait InteractsWithHttp
 {
@@ -25,17 +27,8 @@ trait InteractsWithHttp
 	protected function fakesHttp(array $responseStack, $untrusted = false)
 	{
 		$handlerStack = HandlerStack::create(new MockHandler($responseStack));
-		$handlerStack->push(Middleware::history($this->history));
-		$http = $this->app()->http();
 
-		$key = $untrusted ? 'clientUntrusted' : 'client';
-
-		$this->swap([$http, $key], function ($c) use ($http, $handlerStack)
-		{
-			return $http->createClient(['handler' => $handlerStack]);
-		});
-
-		return $http->container()[$key];
+		return $this->installHttpFake($handlerStack, $untrusted);
 	}
 
 	/**
@@ -78,6 +71,11 @@ trait InteractsWithHttp
 					return Create::rejectionFor($response);
 				}
 
+				if ($response instanceof ResponseInterface)
+				{
+					$this->writeHttpSink($response, $options);
+				}
+
 				return Create::promiseFor($response);
 			}
 
@@ -87,10 +85,22 @@ trait InteractsWithHttp
 			);
 		};
 
-		$handlerStack = HandlerStack::create($handler);
-		$handlerStack->push(Middleware::history($this->history));
-		$http = $this->app()->http();
+		return $this->installHttpFake(HandlerStack::create($handler), $untrusted);
+	}
 
+	/**
+	 * Install a faked Http client built around the given handler stack.
+	 *
+	 * @param HandlerStack $handlerStack
+	 * @param bool $untrusted - set to true when using the untrusted client
+	 *
+	 * @return Client
+	 */
+	private function installHttpFake(HandlerStack $handlerStack, $untrusted)
+	{
+		$handlerStack->push(Middleware::history($this->history));
+
+		$http = $this->app()->http();
 		$key = $untrusted ? 'clientUntrusted' : 'client';
 
 		$this->swap([$http, $key], function ($c) use ($http, $handlerStack)
@@ -98,7 +108,51 @@ trait InteractsWithHttp
 			return $http->createClient(['handler' => $handlerStack]);
 		});
 
-		return $http->container()[$key];
+		// XF builds `reader` and `metadataFetcher` once and they hold the clients by value, so
+		// without this a fake installed after either has already resolved - which includes any
+		// second fake in the same test - is swapped into a client nothing goes on to use.
+		$container = $http->container();
+		$container->decache('reader');
+		$container->decache('metadataFetcher');
+
+		return $container[$key];
+	}
+
+	/**
+	 * Write a faked response body to the request's sink, if it asked for one.
+	 *
+	 * Guzzle's own handlers do this, including the MockHandler behind fakesHttp(), and
+	 * XF\Http\Reader::getUntrusted($url, $limits, $saveTo) relies on it to download to a file.
+	 * A fake that skips it delivers the response and writes nothing, which looks like a bug in
+	 * the code under test.
+	 *
+	 * @param ResponseInterface $response
+	 * @param array $options - the Guzzle request options
+	 *
+	 * @return void
+	 */
+	private function writeHttpSink(ResponseInterface $response, array $options)
+	{
+		if (!isset($options['sink']))
+		{
+			return;
+		}
+
+		$contents = (string) $response->getBody();
+		$sink = $options['sink'];
+
+		if (is_resource($sink))
+		{
+			fwrite($sink, $contents);
+		}
+		else if (is_string($sink))
+		{
+			file_put_contents($sink, $contents);
+		}
+		else if ($sink instanceof StreamInterface)
+		{
+			$sink->write($contents);
+		}
 	}
 
 	/**

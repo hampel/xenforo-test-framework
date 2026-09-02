@@ -33,6 +33,12 @@ $ cp vendor/hampel/xenforo-test-framework/phpunit.xml .
 It now fails the test suite on deprecations, notices, warnings and risky tests. If your addon has no `tests/Feature`
 directory, create one - PHPUnit will not run without it, since `phpunit.xml` declares a Feature test suite.
 
+The minimum PHP version is now 8.3. If your addon pins `config.platform.php` in `composer.json` below that, Composer
+cannot install v4.0 at all - the solve fails outright rather than falling back to an older release. Raising the pin is
+dev-only in intent but not in effect: it also lets Composer select **runtime** dependencies above the PHP version your
+addon declares, and those go into your release zip. After raising it, check that every package in the `packages` array
+of `composer.lock` still satisfies your addon's own PHP floor, and cap any that don't.
+
 **Unit Test Framework v2.1**
 
 The `TestCase.php` and `CreatesApplication.php` files have been updated in v2.1 of the unit test framework and you 
@@ -601,6 +607,16 @@ addons.
 
 Leaving the array empty will load all addons as normal.
 
+**A note on `failOnRisky`**
+
+The supplied `phpunit.xml` turns `failOnRisky` on. That is only safe because `TestCase` hands PHPUnit back its error and
+exception handlers after every test: `XF::start()` installs its own and never removes them, which PHPUnit 11 and 12
+report as risky on every test that boots XenForo.
+
+The side effect is that `failOnRisky` no longer guards **your** code against handler leaks either - a test which leaves
+a handler installed is cleaned up silently rather than reported. That is the right trade, since otherwise the flag is
+unusable here, but it means the flag is catching less than it appears to.
+
 ## 10. Running Unit Tests
 
 Composer installed the PHPUnit executable at `{addon_root}/vendor/bin/phpunit`. To run our tests, we go to our addon 
@@ -706,6 +722,18 @@ tests, and there is currently no good way to build up a known set of data for a 
 database such as SQLite would help here, and XenForo may support it in future - though there are many MySQL-specific
 functions built into XenForo, so it will not be a trivial exercise. Even then, the question of how to quickly seed a
 newly created database with everything a functioning XenForo instance needs remains an open one.
+
+### Filesystem paths which aren't abstracted
+
+`swapFs()` only helps when **every** access goes through `$app->fs()`. Code which writes to a real path -
+`XF\Util\File::getTempDir()`, `File::getNamedTempFile()` - and then reads the result back through an abstracted path
+such as `internal-data://` will break under a swapped filesystem. In production those two are the same directory; with
+the abstracted one swapped for an in-memory filesystem they are not, so the write lands on disk and the read finds
+nothing. It fails as though the code under test were broken, which makes it an expensive one to diagnose.
+
+Test that code against the real filesystem instead, writing to a namespaced path you delete in `tearDown()`. And note
+that `$fs->has()` does not reliably report **directories**, so the obvious `if ($fs->has($dir)) { $fs->deleteDir($dir); }`
+cleanup silently does nothing and leaks state into the next test - call `deleteDir()` unconditionally in a try/catch.
 
 ### Static classes
 
@@ -888,7 +916,9 @@ usually the better bet - a queue makes your test depend on the order your code h
 
 ### Don't mock the filesystem
 
-Use `swapFs()` to swap in a memory-based filesystem, or `mockFs()` if you need to set expectations on it.
+Use `swapFs()` to swap in a memory-based filesystem, or `mockFs()` if you need to set expectations on it. Both only
+reach code which goes through `$app->fs()` - see [Filesystem paths which aren't abstracted](#filesystem-paths-which-arent-abstracted)
+before reaching for either on code which also touches real paths.
 
 ### Don't mock `XF\Entity\User` to fake the visitor
 

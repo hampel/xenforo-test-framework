@@ -88,12 +88,12 @@ trait InteractsWithErrors
 	/**
 	 * Assert an error was logged matching the supplied message.
 	 *
-	 * @param string $message
+	 * @param string|null $message - omit to assert that any error at all was logged
 	 * @return void
 	 *
 	 * @throws \Exception
 	 */
-	protected function assertErrorLogged($message)
+	protected function assertErrorLogged($message = null)
 	{
 		$loggedErrors = $this->loggedErrors($message);
 
@@ -144,12 +144,12 @@ trait InteractsWithErrors
 	/**
 	* Determine if error matching message was not logged
 	*
-	* @param string $message
+	* @param string|null $message - omit to assert that no error at all was logged
 	* @return void
 	*
 	* @throws \Exception
 	*/
-	protected function assertErrorNotLogged($message)
+	protected function assertErrorNotLogged($message = null)
 	{
 		$loggedErrors = $this->loggedErrors($message);
 
@@ -222,12 +222,12 @@ trait InteractsWithErrors
 	/**
 	 * Get all of the logged errors matching the supplied message.
 	 *
-	 * @param string $message
+	 * @param string|null $message - null matches every logged error
 	 * @return array
 	 *
 	 * @throws \Exception
 	 */
-	private function loggedErrors($message)
+	private function loggedErrors($message = null)
 	{
 		if (! $this->hasLoggedErrors())
 		{
@@ -235,6 +235,11 @@ trait InteractsWithErrors
 		}
 
 		$loggedErrors = $this->getErrors();
+
+		if ($message === null)
+		{
+			return $loggedErrors;
+		}
 
 		return array_filter($loggedErrors, function ($exception) use ($message)
 		{
