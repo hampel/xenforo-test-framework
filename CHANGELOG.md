@@ -29,6 +29,16 @@ CHANGELOG
 * bugfix: a second fakesHttp() or fakesHttpByUrl() call in one test had no effect, because
   XenForo's cached `reader` still held the first fake's client; the failure surfaced later as
   "Mock queue is empty"
+* bugfix: every user built by buildVisitor() / actingAs* landed on permission combination id 1 -
+  the forum's real guest combination. Permissions granted to one built user therefore applied to
+  all of them, and a permission the test never granted was read from the development forum rather
+  than denied, so the same test could pass on one forum and fail on another. Each built user now
+  gets its own combination id; pass permission_combination_id yourself to opt out
+* bugfix: fakesEvents() recorded event arguments by reference, since XenForo fires extension
+  points as `$app->fire('event', [&$args])` and copying an array preserves the references in it.
+  An assertion therefore saw whatever the caller left in the variable after the event, not what
+  was fired. Arguments are now recorded as they were at the moment of firing; objects are still
+  recorded as the same instance
 * assertErrorLogged() and assertErrorNotLogged() no longer require a message, matching
   assertExceptionLogged() - omit it to assert that any error at all was, or was not, logged
 * error and exception handlers are restored after each test. This is what makes PHPUnit 11 and

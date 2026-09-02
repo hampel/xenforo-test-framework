@@ -93,6 +93,45 @@ class EventsTest extends TestCase
 		$this->getFiredEvents();
 	}
 
+	/**
+	 * XenForo's idiom for an extension point is `$app->fire('event', [&$map])`, and copying an
+	 * array preserves the references in it - so a naive recorder hands the assertion whatever the
+	 * caller left in the variable afterwards, not what was fired.
+	 */
+	public function test_arguments_are_recorded_as_they_were_when_fired()
+	{
+		$this->fakesEvents();
+
+		$map = ['prepared_email' => 'list'];
+		$this->app()->fire('probe_event', [&$map]);
+
+		// the code under test carries on and changes its own variable
+		$map['added_afterwards'] = 'thread';
+
+		$this->assertEventFired('probe_event', function ($args)
+		{
+			return $args[0] === ['prepared_email' => 'list'];
+		});
+
+		$fired = $this->getFiredEvents();
+		$this->assertSame(['prepared_email' => 'list'], $fired[0]['args'][0]);
+	}
+
+	/** an object argument must stay the same instance, so assertions can compare identity */
+	public function test_object_arguments_are_not_copied()
+	{
+		$this->fakesEvents();
+
+		$object = new \stdClass();
+		$object->value = 'before';
+		$this->app()->fire('probe_event', [$object]);
+
+		$object->value = 'after';
+
+		$fired = $this->getFiredEvents();
+		$this->assertSame($object, $fired[0]['args'][0]);
+	}
+
 	/** faking suppresses listeners only - class extensions must still resolve */
 	public function test_class_extensions_still_work_while_faking()
 	{

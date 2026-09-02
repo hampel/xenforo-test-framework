@@ -6,11 +6,21 @@ use XF\Entity\User;
 
 trait InteractsWithVisitor
 {
+	/**
+	 * Built visitors get their own permission combination id from here, counting up. The base is
+	 * far above any id a real forum will have in xf_permission_combination, so a combination
+	 * nothing has granted resolves to no permissions at all rather than to a real row.
+	 */
+	private const PERMISSION_COMBINATION_BASE = 1000000;
+
 	/** @var User|null */
 	private $originalVisitor;
 
 	/** @var bool */
 	private $visitorRemembered = false;
+
+	/** @var int */
+	private $builtVisitorCount = 0;
 
 	protected function setUpVisitor()
 	{
@@ -126,6 +136,15 @@ trait InteractsWithVisitor
 	 * Build a User entity in memory. XenForo's guest user is the only user it will construct
 	 * without a database row, so members are built from it with the columns overridden.
 	 *
+	 * Each built user gets its own permission combination id, so that permissions granted to one
+	 * do not apply to another, and so that a user nothing has been granted for has no permissions
+	 * rather than the forum's real guest permissions. Pass permission_combination_id in $values to
+	 * opt out - `['permission_combination_id' => 1]` reads whatever the forum grants guests.
+	 *
+	 * Note XenForo ignores the id for any user whose user_state is not 'valid': User::
+	 * getPermissionCombinationId() returns the guest combination for those, so a user built as
+	 * 'moderated' shares permissions with guests exactly as it would in production.
+	 *
 	 * @param array $values
 	 * @param string|null $username
 	 *
@@ -133,12 +152,14 @@ trait InteractsWithVisitor
 	 */
 	protected function buildVisitor(array $values = [], $username = null)
 	{
-		$manipulator = $values
-			? function (array $data) use ($values)
-			{
-				return array_replace($data, $values);
-			}
-		: null;
+		$values += [
+			'permission_combination_id' => self::PERMISSION_COMBINATION_BASE + $this->builtVisitorCount++,
+		];
+
+		$manipulator = function (array $data) use ($values)
+		{
+			return array_replace($data, $values);
+		};
 
 		return $this->app()->repository('XF:User')->getGuestUser($username, $manipulator);
 	}

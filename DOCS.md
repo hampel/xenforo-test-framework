@@ -118,6 +118,14 @@ content permissions.
 no permission group above them - unlike global permissions. Passing a grouped array silently
 grants nothing.
 
+Every user built by the framework gets its own permission combination id, so granting a permission
+to one does not grant it to another, and a permission nothing has granted is denied rather than
+read from your development forum - see [buildVisitor](#buildvisitor).
+
+XenForo caches the `PermissionSet` relation on the user entity, so **grant permissions before the
+first permission check on that user**, or the check populates the cache from an empty combination
+and the grant never takes effect.
+
 ##### Example:
 
 ```php
@@ -148,6 +156,26 @@ from that with the columns overridden.
 ```php
 $user = $this->buildVisitor(['user_id' => 99, 'username' => 'Built']);
 ```
+
+**Each built user gets its own permission combination id**, counting up from 1000000 - far above
+anything a real forum has in `xf_permission_combination`. Two things follow, and both are the
+reason it works that way:
+
+* permissions granted to one built user do not apply to another, so a test can give two users
+  different permissions and assert that they see different things;
+* a permission the test never granted is **denied**, rather than inherited from whatever your
+  development forum happens to grant guests. Every built user previously landed on combination id
+  1 - the real guest combination - so `hasPermission('general', 'view')` returned true on most
+  forums without the test granting anything, and the same test could fail on someone else's forum.
+
+Pass `permission_combination_id` yourself to opt out: `['permission_combination_id' => 1]` reads
+the forum's real guest permissions.
+
+One piece of XenForo behaviour is deliberately preserved: `User::getPermissionCombinationId()`
+ignores the stored id for any user whose `user_state` is not `valid`, returning the guest
+combination instead. A user built as `moderated` therefore shares permissions with guests, exactly
+as it would in production - so granting permissions to one has no effect. `actingAsMember()` sets
+`user_state` to `valid`, so the usual path is unaffected.
 
 ### swap
 Register an instance of an object in the container.
@@ -766,6 +794,12 @@ none
 
 Truth-test callbacks receive `($args, $hint)` - the arguments the event was fired with, and its
 hint. `getFiredEvents()` returns them all, each as `['event' => ..., 'args' => [...], 'hint' => ...]`.
+
+Arguments are recorded **as they were when the event fired**. This matters because XenForo's idiom
+for an extension point passes the argument by reference - `$app->fire('some_event', [&$map])` - and
+copying an array in PHP preserves the references inside it, so a recorder that kept them would hand
+your assertion whatever the caller left in the variable afterwards. Objects are still recorded as
+the same instance, so an assertion can compare identity with the entity that was passed.
 
 Requires `enableListeners` in `config.php`; without it XenForo installs a plain extension with no
 listeners at all, and `fakesEvents()` throws to say so.

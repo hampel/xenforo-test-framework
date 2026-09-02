@@ -66,12 +66,38 @@ class Extension extends BaseExtension
 
 		$this->firedEvents[] = [
 			'event' => $event,
-			'args' => $args,
+			'args' => $this->snapshotEventArgs($args),
 			'hint' => $hint,
 		];
 
 		// no listener ran, so nothing vetoed the event
 		return true;
+	}
+
+	/**
+	 * Record the arguments as they were at the moment the event fired.
+	 *
+	 * XenForo's convention for an extension point is to pass the argument by reference -
+	 * `$app->fire('some_event', [&$map])` - and copying an array preserves the references inside
+	 * it. Recorded as-is, an assertion would see whatever the caller left in the variable
+	 * afterwards rather than what was fired, which can silently pass or fail. Reassigning each
+	 * element breaks the reference while keeping objects identical, so assertions on an entity
+	 * that was passed still compare the same instance.
+	 *
+	 * @param array $args
+	 *
+	 * @return array
+	 */
+	protected function snapshotEventArgs(array $args)
+	{
+		$snapshot = [];
+
+		foreach ($args AS $key => $value)
+		{
+			$snapshot[$key] = $value;
+		}
+
+		return $snapshot;
 	}
 
 	/**
