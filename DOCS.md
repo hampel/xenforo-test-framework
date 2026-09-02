@@ -126,6 +126,13 @@ XenForo caches the `PermissionSet` relation on the user entity, so **grant permi
 first permission check on that user**, or the check populates the cache from an empty combination
 and the grant never takes effect.
 
+**Admin permissions are a different mechanism and are not covered.** `User::hasAdminPermission()`
+returns false unless the user has both `is_admin` and an `Admin` relation, and then defers to the
+`Admin` entity's own permission cache. A visitor built in memory has no `Admin` relation, so
+`actingAsMember(['is_admin' => true], [...])` still returns false for every admin permission. Test
+code guarded by `hasAdminPermission()` by mocking the user, or restructure it so the permission
+check sits outside the code you want to test.
+
 ##### Example:
 
 ```php
