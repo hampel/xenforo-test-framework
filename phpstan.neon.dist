@@ -7,7 +7,9 @@
 #
 # Copy this file to phpstan.neon (gitignored) to hard-code your own path.
 parameters:
-    level: 1
+    # Level 3 wants six return types corrected first - the fakes* helpers and swapFs()
+    # document a concrete class where the container hands back something looser.
+    level: 2
 
     # The range the package declares support for, checked in one run.
     phpVersion:

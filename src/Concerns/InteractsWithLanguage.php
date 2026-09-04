@@ -2,12 +2,19 @@
 
 namespace Hampel\Testing\Concerns;
 
+use Mockery\MockInterface;
 use XF\Language;
 use XF\Phrase;
 
 trait InteractsWithLanguage
 {
-	private $languageMocked = false;
+	/**
+	 * The mock installed by expectPhrase(), held here rather than fetched back through
+	 * XF::language() - that returns the real Language type, which has no expectation methods.
+	 *
+	 * @var (Language&MockInterface)|null
+	 */
+	private $languageMock;
 
 	protected function setUpLanguage()
 	{
@@ -29,17 +36,17 @@ trait InteractsWithLanguage
 	 */
 	protected function expectPhrase($key, $parameters = null, $response = null)
 	{
-		if (!$this->languageMocked)
+		if ($this->languageMock === null)
 		{
-			\XF::setLanguage(\Mockery::mock(Language::class));
-			$this->languageMocked = true;
+			$this->languageMock = \Mockery::mock(Language::class);
+			\XF::setLanguage($this->languageMock);
 		}
 
 		$phrase = \Mockery::mock(Phrase::class);
 		$phrase->shouldReceive('__toString')->andReturn($response ?? $key);
 		$phrase->shouldReceive('render')->andReturn($response ?? $key);
 
-		\XF::language()
+		$this->languageMock
 		   ->shouldReceive('phrase')
 		   ->once()
 		   ->with($key, $parameters ?? \Mockery::any(), \Mockery::any(), \Mockery::any())
@@ -50,10 +57,10 @@ trait InteractsWithLanguage
 
 	private function restoreLanguage()
 	{
-		if ($this->languageMocked)
+		if ($this->languageMock !== null)
 		{
 			\XF::setLanguage($this->app()->language());
-			$this->languageMocked = false;
+			$this->languageMock = null;
 		}
 	}
 }

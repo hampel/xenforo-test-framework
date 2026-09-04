@@ -6,7 +6,6 @@ use Carbon\Carbon;
 use Carbon\CarbonImmutable;
 use Mockery\MockInterface;
 use PHPUnit\Framework\TestCase as BaseTestCase;
-use XF\App;
 use XF\Db\AbstractAdapter;
 
 abstract class TestCase extends BaseTestCase

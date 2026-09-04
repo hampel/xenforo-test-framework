@@ -4,6 +4,7 @@ namespace Hampel\Testing\Concerns;
 
 use Closure;
 use League\Flysystem\AdapterInterface;
+use League\Flysystem\Filesystem;
 use League\Flysystem\Memory\MemoryAdapter;
 use PHPUnit\Framework\Assert as PHPUnit;
 
@@ -27,7 +28,7 @@ trait InteractsWithFilesystem
 		$this->swap('config', $config);
 		$this->decacheFs();
 
-		return $this->app()->fs()->getFilesystem($fs)->getAdapter();
+		return $this->adapterFor($fs);
 	}
 
 	protected function assertFsHas($file)
@@ -68,7 +69,7 @@ trait InteractsWithFilesystem
 		$this->swap('config', $config);
 		$this->decacheFs();
 
-		return $this->app()->fs()->getFilesystem($fs)->getAdapter();
+		return $this->adapterFor($fs);
 	}
 
 	/**
@@ -78,6 +79,32 @@ trait InteractsWithFilesystem
 	 * adapter, and the test goes on to read and write the real data directory: the side effects the
 	 * helper exists to prevent, with nothing reported.
 	 */
+	/**
+	 * The adapter behind one of XenForo's mounted filesystems.
+	 *
+	 * MountManager::getFilesystem() is typed to FilesystemInterface, which does not declare
+	 * getAdapter() - only the concrete Filesystem does. Narrow it here, so a mount that is not one
+	 * says so instead of fatalling on an undefined method.
+	 *
+	 * @param string $fs
+	 *
+	 * @return AdapterInterface
+	 */
+	private function adapterFor($fs)
+	{
+		$filesystem = $this->app()->fs()->getFilesystem($fs);
+
+		if (!($filesystem instanceof Filesystem))
+		{
+			throw new \LogicException(
+				"Cannot reach the adapter for '$fs': XenForo mounted a "
+				. get_class($filesystem) . ', which does not expose getAdapter()'
+			);
+		}
+
+		return $filesystem->getAdapter();
+	}
+
 	private function decacheFs()
 	{
 		$this->app()->container()->decache('fs');

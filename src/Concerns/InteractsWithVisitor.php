@@ -3,6 +3,7 @@
 namespace Hampel\Testing\Concerns;
 
 use XF\Entity\User;
+use XF\Repository\UserRepository;
 
 trait InteractsWithVisitor
 {
@@ -161,7 +162,17 @@ trait InteractsWithVisitor
 			return array_replace($data, $values);
 		};
 
-		return $this->app()->repository('XF:User')->getGuestUser($username, $manipulator);
+		$repository = $this->app()->repository('XF:User');
+
+		if (!($repository instanceof UserRepository))
+		{
+			throw new \LogicException(
+				'Expected XF:User to resolve to a ' . UserRepository::class . ', got '
+				. get_class($repository)
+			);
+		}
+
+		return $repository->getGuestUser($username, $manipulator);
 	}
 
 	private function rememberVisitor()
