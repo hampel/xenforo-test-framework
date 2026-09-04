@@ -2,7 +2,7 @@
 
 [![Latest Version on Packagist](https://img.shields.io/packagist/v/hampel/xenforo-test-framework.svg?style=flat-square)](https://packagist.org/packages/hampel/xenforo-test-framework)
 [![Total Downloads](https://img.shields.io/packagist/dt/hampel/xenforo-test-framework.svg?style=flat-square)](https://packagist.org/packages/hampel/xenforo-test-framework)
-[![Open Issues](https://img.shields.io/bitbucket/issues/hampel/xenforo-test-framework.svg?style=flat-square)](https://bitbucket.org/hampel/xenforo-test-framework/issues)
+[![Open Issues](https://img.shields.io/github/issues/hampel/xenforo-test-framework.svg?style=flat-square)](https://github.com/hampel/xenforo-test-framework/issues)
 [![License](https://img.shields.io/packagist/l/hampel/xenforo-test-framework.svg?style=flat-square)](https://packagist.org/packages/hampel/xenforo-test-framework)
 
 Unit testing framework for XenForo
@@ -336,29 +336,39 @@ container with our own objects.
 `swap()` simply replaces the code at a specific container key with an instance we supply.
 
 So if we have written a test harness which replaces certain functionality, we can just swap in our class in place of 
-the core one. We do exactly this in our `fakesMail()` helper - we replace the `mailer.transport` and `mailer.queue` 
-container keys with our own classes that logs mails that were sent by the application and lets us run assertions 
-against that log - but never actually sends mail.
+the core one. We do exactly this in our `fakesMail()` helper - we replace the `mailer.transport` container key with our
+own class that logs mails the application sent and lets us run assertions against that log, but never actually sends
+mail.
 
 ```php
     protected function fakesMail()
     {
+        // enableMailQueue is a config.php value, not an option - so mail sent with queue()
+        // goes straight to the transport rather than becoming a MailSend job we never see
+        $config = $this->app()->config();
+        $config['enableMailQueue'] = false;
+        $this->swap('config', $config);
+
         $this->swap('mailer.transport', function (Container $c) {
-            return new Transport(
-                \Swift_DependencyContainer::getInstance()->lookup('transport.eventdispatcher')
-            );
+            return new TestTransport();
         });
 
-        $this->swap('mailer.queue', function(Container $c)
-        {
-            return new Queue($c['db']);
-        });
+        // XF\Mail\Mailer takes both the transport and the queue flag as constructor arguments,
+        // and `mailer` is separately cached - so an already-built mailer would keep the real ones
+        $this->app()->container()->decache('mailer');
+
+        return $this->getMailTransport();
     }
 ```
-    
-In the above code, the `Transport` class we instantiate is actually a custom class I built which implements the
-`\Swift_Transport` interface and so accepts all the same calls that a normal Swift Transport class would, but just 
-stores them in an array rather than sending them.
+
+That last step is worth carrying away, because it is not specific to mail: **swapping a container key does not reach
+anything that has already been built from it.** XenForo caches resolved entries, and a resolved object holds the values
+it was constructed with, not the container. So a swap installed after its consumer exists lands somewhere nothing looks -
+silently, since the fake is genuinely in the container and merely unused.
+
+In the above code, the `TestTransport` class we instantiate is a custom class I built which extends Symfony Mailer's
+`AbstractTransport` and so accepts all the same calls a real transport would, but just stores the messages in an array
+rather than sending them.
 
 `mock()` takes that one step further and lets us swap the closure function with a mock object that we can declare 
 assertions on for testing purposes.
@@ -410,9 +420,11 @@ options repository. It restores options after each test is executed - keeping to
 * `setTestTime` lets us set the application execution time (`\XF::$time`) to a known specific time (optionally using the
 Carbon library), so that we can test functions that rely on time intervals or comparisons.
 * `swapFs` lets us swap the filesystem from _local_ to _memory_ so that we can make non-persistent changes to the 
-filesystem and avoid side effects
-* `isolateAddon` lets us force XenForo to only load class extensions and code event listeners for our addon, thus 
-avoiding potential conflicts or unexpected code paths from other addons installed on our dev server
+filesystem and avoid side effects. This one needs `league/flysystem-memory: ^1.0` adding to your own `require-dev` -
+XenForo 2.3 ships Flysystem 1.x, and the 2.x and 3.x releases of the memory adapter do not provide the class it uses
+
+`isolateAddon()` was removed in v3.0.0. Use the `$addonsToLoad` property in your `tests/TestCase.php` instead - it does
+the same job, for the whole test class rather than per test.
 
 ## 8. Installing the Framework
 
@@ -422,7 +434,7 @@ framework only in our development environment. We will later show the commands r
 addon during the build process - we don't want or need to deploy our unit tests to our production servers.
 
 You can view the source code for the package here: 
-[XenForo Test Framework](https://bitbucket.org/hampel/xenforo-test-framework)
+[XenForo Test Framework](https://github.com/hampel/xenforo-test-framework)
 
 If you need more guidance on using Composer packages in your XenForo addons - refer to my tutorial: [Using Composer 
 Packages in XenForo 2.1+ Addons Tutorial](https://xenforo.com/community/resources/using-composer-packages-in-xenforo-2-1-addons-tutorial.7432/)
@@ -464,12 +476,15 @@ the root of your addon.
 
 ```bash
 $ cd /srv/www/xenforo/src/addons/Vendorly/Addonista/
-$ cp vendor/hampel/xenforo-test-framework/tests .
+$ cp -r vendor/hampel/xenforo-test-framework/tests .
 ```
 
 Inside the tests directory, you'll find the following directories and files:
 
-* `/tests/Feature` this is a placeholder for future support for feature testing
+* `/tests/Feature` this is a placeholder for future support for feature testing. It contains only a `.gitkeep`,
+which is there so the directory can be committed - git does not track empty directories, and `phpunit.xml` declares a
+Feature test suite, so PHPUnit refuses to run at all without this directory. **Commit the `.gitkeep` along with the
+rest**, or the directory will be missing from every clone, including CI.
 * `/tests/Unit` this is where all of your unit tests should go
 * `/tests/Unit/ExampleTest.php` this is a simple example test - edit or copy it as the basis for your own test classes
 * `/tests/CreatesApplication.php` this is the trait that boots our XenForo test framework. If you need to adjust the way we boot things, you can change this - but for most cases you should leave it as is
@@ -487,24 +502,24 @@ options - they tell PHPUnit where to find our unit tests.
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
-<phpunit backupGlobals="false"
-         backupStaticAttributes="false"
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/10.5/phpunit.xsd"
+         backupGlobals="false"
+         backupStaticProperties="false"
          bootstrap="vendor/autoload.php"
+         cacheDirectory=".phpunit.cache"
          colors="true"
-         convertErrorsToExceptions="true"
-         convertNoticesToExceptions="true"
-         convertWarningsToExceptions="true"
          processIsolation="false"
          stopOnFailure="false">
-    <testsuites>
-        <testsuite name="Unit">
-            <directory suffix="Test.php">./tests/Unit</directory>
-        </testsuite>
+  <testsuites>
+    <testsuite name="Unit">
+      <directory suffix="Test.php">./tests/Unit</directory>
+    </testsuite>
 
-        <testsuite name="Feature">
-            <directory suffix="Test.php">./tests/Feature</directory>
-        </testsuite>
-    </testsuites>
+    <testsuite name="Feature">
+      <directory suffix="Test.php">./tests/Feature</directory>
+    </testsuite>
+  </testsuites>
 </phpunit>
 ```
 
@@ -601,7 +616,7 @@ PHPUnit where to find our tests.
 ```bash
 $ cd /srv/www/xenforo/src/addons/Vendorly/Addonista/
 $ ./vendor/bin/phpunit
-PHPUnit 8.4.1 by Sebastian Bergmann and contributors.
+PHPUnit 10.5.64 by Sebastian Bergmann and contributors.
 
 ..................                                                18 / 18 (100%)
 

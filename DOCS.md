@@ -453,6 +453,9 @@ class IsolationTest extends TestCase
 Allow us to swap out the local filesystem with a memory based filesystem which is non-persistent. Ideal for avoiding
 side-effects when writing to the filesystem.
 
+Requires `league/flysystem-memory: ^1.0` in your addon's `require-dev`. XenForo 2.3 ships Flysystem 1.x, and the
+2.x and 3.x releases of the memory adapter do not provide the adapter class this uses.
+
 ##### Parameters
 
 * `fs` - the name of the filesystem to swap (eg `data`, `internal-data`, `code-cache`)

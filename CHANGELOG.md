@@ -1,12 +1,33 @@
 CHANGELOG
 =========
 
+3.0.5 (2026-09-04)
+------------------
+
+A documentation and packaging fix. No code changes to the framework itself.
+
+* the `tests/Feature` directory is now shipped, with a `.gitkeep` so it survives being committed.
+  `phpunit.xml` declares a Feature test suite, and PHPUnit refuses to run at all when the directory
+  is missing - it reports `Test directory "..." not found` and exits without running anything. Since
+  git does not track empty directories, following the README exactly produced a suite that never ran
+* docs: the README's install command was `cp` rather than `cp -r`, which simply fails on a directory
+* docs: the README's `fakesMail()` example was v1.x Swiftmailer code, swapping a `mailer.queue`
+  container key that was removed in 3.0.0, and described the test transport as implementing
+  `\Swift_Transport`. It extends Symfony Mailer's `AbstractTransport`
+* docs: the README's `phpunit.xml` example was the PHPUnit 9 format, with attributes that no longer
+  exist in the PHPUnit 10 this package requires
+* docs: `isolateAddon` was still listed in the README as an available helper. It was removed in
+  3.0.0 - use the `$addonsToLoad` property in `tests/TestCase.php` instead
+* docs: `swapFs()` needs `league/flysystem-memory` in your own `require-dev`, which neither the
+  README nor DOCS.md mentioned - it is a Composer suggestion, so it is not installed for you
+* docs: the source and issue links pointed at Bitbucket; the package is on GitHub
+
 3.0.4 (2026-09-04)
 ------------------
 
-A maintenance release for the v3 line. Every fix here is a backport of one made in 4.0.0, limited to
+A maintenance release for the v3 line. Backported from the unreleased 4.0.0 branch, limited to
 helpers that exist in v3 - no new helpers, and no change to the PHP or PHPUnit requirements. If you can
-run PHP 8.3, prefer 4.x.
+run PHP 8.3, prefer 4.x when it is released.
 
 * bugfix: fakesRegistry() failed with a fatal error - DataRegistry did not match the XenForo 2.3 method
   signatures, so the class could not be declared. The helper has been unusable for the whole v3 line
