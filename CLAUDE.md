@@ -51,6 +51,19 @@ Two things in there are load-bearing and easy to undo by accident:
   made `failOnRisky` unusable. Don't remove that restoration without turning `failOnRisky` off
   in both configs at the same time.
 
+  A consequence worth knowing before changing either config: **while a test is running, XenForo's
+  handler is what a deprecation meets, not PHPUnit's.** `E_USER_DEPRECATED` arrives as
+  `ErrorException: [E_USER_DEPRECATED] …` and fails the test outright, so a XenForo-booting suite
+  is stricter about deprecations than its `phpunit.xml` describes, and stays that way whether or
+  not `failOnDeprecation` is set. The flag is correct in intent and currently redundant.
+
+  Neither config declares a `<source>` element, and adding one does not change this. `<source>`
+  governs neither whether `failOnDeprecation` fires nor which files it fires for — measured on
+  PHPUnit 10.5, 11.5 and 12.5, with the deprecation raised both inside and outside the declared
+  source, all six runs failing identically. Note that a run failing this way still prints
+  `OK, but there were issues!` in yellow, so **read the exit status, and capture it without a
+  pipe** — `vendor/bin/phpunit; echo $?`, since `phpunit | tail` reports `tail`'s status.
+
 Every test in `integration/` reproduces a bug that shipped in 3.0.3. **Check a change to the
 fakes against this suite** — the registry, mail and job bugs fixed in 4.0.0 were all invisible
 to PHPStan and to a scaffold suite with no forum behind it.
