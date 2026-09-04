@@ -31,6 +31,10 @@ CHANGELOG
 * `swapFs()`, `mockFs()`, `fakesRegistry()` and `buildVisitor()` throw a `LogicException` if
   XenForo hands back a filesystem, registry or repository of an unexpected type, rather than
   fatalling on an undefined method
+* `app()` throws a `LogicException` when called before the application has been booted, rather
+  than returning null for something else to fail on later
+* `Error::logException()` accepts a non-throwable, as XenForo's own signature does, and turns
+  it into an `ErrorException`. The check that does so was previously unreachable
 * `setOptions()` is documented as returning `XF\Options`, which is what it has always returned;
   the docblock said `array`. `swap()` is documented as taking and returning `mixed`, which
   covers the closures and the config array it has always accepted

@@ -6,7 +6,6 @@ use Carbon\Carbon;
 use Carbon\CarbonImmutable;
 use Mockery\MockInterface;
 use PHPUnit\Framework\TestCase as BaseTestCase;
-use XF\Db\AbstractAdapter;
 
 abstract class TestCase extends BaseTestCase
 {
@@ -32,9 +31,9 @@ abstract class TestCase extends BaseTestCase
 	use Concerns\UsesReflection;
 
 	/**
-	 * The XenForo application instance.
+	 * The XenForo application instance. Null until setUp() boots one.
 	 *
-	 * @var App
+	 * @var App|null
 	 */
 	protected $app;
 
@@ -100,6 +99,14 @@ abstract class TestCase extends BaseTestCase
 	 */
 	public function app()
 	{
+		if ($this->app === null)
+		{
+			throw new \LogicException(
+				'The XenForo application has not been booted. app() is only available once setUp() '
+				. 'has run - call it from a test, not from a data provider or a constructor.'
+			);
+		}
+
 		return $this->app;
 	}
 
@@ -192,7 +199,7 @@ abstract class TestCase extends BaseTestCase
 
 			// close the database connection to avoid connection limit issues (unless it's been mocked)
 			$db = $this->app->db();
-			if ($db instanceof AbstractAdapter && !($db instanceof MockInterface))
+			if (!($db instanceof MockInterface))
 			{
 				$this->app()->db()->closeConnection();
 			}
@@ -206,10 +213,7 @@ abstract class TestCase extends BaseTestCase
 
 		if (class_exists('Mockery'))
 		{
-			if ($container = \Mockery::getContainer())
-			{
-				$this->addToAssertionCount($container->mockery_getExpectationCount());
-			}
+			$this->addToAssertionCount(\Mockery::getContainer()->mockery_getExpectationCount());
 
 			\Mockery::close();
 		}
@@ -323,9 +327,10 @@ abstract class TestCase extends BaseTestCase
 	 */
 	private function isXenForoHandler($handler)
 	{
+		// \XF is in the global namespace, so \XF::class is the string 'XF'
 		return is_array($handler)
 			&& count($handler) === 2
-			&& ($handler[0] === 'XF' || $handler[0] === \XF::class);
+			&& $handler[0] === \XF::class;
 	}
 
 	public static function trace()

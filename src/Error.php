@@ -20,14 +20,18 @@ class Error extends BaseError
 		$this->logException(new \ErrorException($message), false, '', $forceLog);
 	}
 
+	/**
+	 * @param mixed $e - deliberately untyped, as XF's own signature is: the guard below is what
+	 *                   turns anything else into something loggable
+	 * @param bool $rollback
+	 * @param string $messagePrefix
+	 * @param bool $forceLog
+	 */
 	public function logException($e, $rollback = false, $messagePrefix = '', $forceLog = false)
 	{
-		/** @var \Throwable $e */
-
 		try
 		{
-			$isValidArg = ($e instanceof \Exception || $e instanceof \Throwable);
-			if (!$isValidArg)
+			if (!($e instanceof \Throwable))
 			{
 				$e = new \ErrorException('Non-exception passed to logException. See trace for details.');
 			}

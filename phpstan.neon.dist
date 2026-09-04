@@ -12,10 +12,9 @@ includes:
     - vendor/phpstan/phpstan-mockery/extension.neon
 
 parameters:
-    # Level 4 is nine errors away, and they are a different kind: always-true conditions and
-    # dead branches, plus one false positive - it counts UsesDatabaseTransactions as used zero
-    # times, because the only things that use it are consumers' test classes.
-    level: 3
+    # Level 5 is ten errors away and level 6 is 222, almost all of them XenForo entities, whose
+    # columns are magic properties that no static type can know about.
+    level: 4
 
     # The range the package declares support for, checked in one run.
     phpVersion:
@@ -24,6 +23,14 @@ parameters:
 
     paths:
         - src
+
+        # One test class, so that UsesDatabaseTransactions is analysed at all. PHPStan reads a
+        # trait only in the context of a class using it, and nothing in src/ uses this one - it
+        # is opt-in, for consumers. Without a class here the trait is skipped silently and
+        # reported clean, which is how a redundant guard sat inside it unnoticed. The rest of
+        # integration/ stays out: it drives XenForo entities, whose columns are magic properties,
+        # and that noise would bury a finding like that one.
+        - integration/DatabaseTransactionsTest.php
 
     scanDirectories:
         - %env.XF_ROOT%/src/XF

@@ -3,7 +3,6 @@
 namespace Hampel\Testing\Concerns;
 
 use Mockery\MockInterface;
-use XF\Db\AbstractAdapter;
 
 /**
  * Wrap each test in a database transaction and roll it back afterwards, so tests can exercise
@@ -34,7 +33,8 @@ trait UsesDatabaseTransactions
 	{
 		$db = $this->app()->db();
 
-		if (!($db instanceof AbstractAdapter) || $db instanceof MockInterface)
+		// db() is declared to return a real adapter, so the mock is the only case left to test for
+		if ($db instanceof MockInterface)
 		{
 			throw new \LogicException(
 				'UsesDatabaseTransactions needs a real database connection - it cannot be '
