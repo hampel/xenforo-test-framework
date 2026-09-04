@@ -1,7 +1,7 @@
 CHANGELOG
 =========
 
-3.0.4 (unreleased)
+3.0.4 (2026-09-04)
 ------------------
 
 A maintenance release for the v3 line. Every fix here is a backport of one made in 4.0.0, limited to

@@ -438,7 +438,7 @@ use Composer, you can simply create a `composer.json` file with the following in
 ```json
 {
     "require-dev": {
-        "hampel/xenforo-test-framework": "^2.1",
+        "hampel/xenforo-test-framework": "^3.0",
         "nesbot/carbon": "^3.0"
     },
     "autoload-dev": {
