@@ -43,6 +43,10 @@ is absent in every clone, including CI. A missing directory does at least fail l
 the note on PHPUnit 12 below. `failOnEmptyTestSuite` covers the case that genuinely was silent: a run which finds no
 tests at all exits **0** by default, so a suite that has quietly stopped collecting anything reads as passing.
 
+You will most often meet that second flag when you mistype a `--filter`. A filter matching nothing used to print
+`No tests executed!` and exit 0, which looks a lot like a test that passed; it now exits 1. That is the same defect as a
+CI job silently testing nothing, just caught at the moment it is obvious rather than months later.
+
 ### PHPUnit 12 removes metadata in doc comments
 
 v4.0 widens the PHPUnit constraint to `^10.0|^11.0|^12.0`. For most addons this framework is the only reason PHPUnit is
