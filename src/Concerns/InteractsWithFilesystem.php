@@ -23,7 +23,11 @@ trait InteractsWithFilesystem
 		{
 			return new MemoryAdapter();
 		};
-		return $this->swap('config', $config);
+		$this->swap('config', $config);
+		$this->decacheFs();
+
+		// resolve out of the container - swap() hands back the config, not the adapter
+		return $this->app()->fs()->getFilesystem($fs)->getAdapter();
 	}
 
 	protected function assertFsHas($file)
@@ -51,7 +55,7 @@ trait InteractsWithFilesystem
 	 *
 	 * @return mixed
 	 */
-	protected function mockFs($fs, Closure $mock = null)
+	protected function mockFs($fs, ?Closure $mock = null)
 	{
 		$args = func_get_args();
 		array_shift($args);
@@ -62,6 +66,20 @@ trait InteractsWithFilesystem
 			return Mockery::mock(AdapterInterface::class, ...array_filter($args));
 		};
 		$this->swap('config', $config);
+		$this->decacheFs();
+
 		return $this->app()->fs()->getFilesystem($fs)->getAdapter();
+	}
+
+	/**
+	 * XF builds its filesystem mounts once, from the config as it stood at the time, and `fs` is its
+	 * own cached container entry - so swapping the config does not reach mounts that already exist.
+	 * Without this, a swapFs() after anything has touched the filesystem hands back the REAL local
+	 * adapter, and the test goes on to read and write the real data directory: the side effects the
+	 * helper exists to prevent, with nothing reported.
+	 */
+	private function decacheFs()
+	{
+		$this->app()->container()->decache('fs');
 	}
 }

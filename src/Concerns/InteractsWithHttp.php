@@ -23,10 +23,21 @@ trait InteractsWithHttp
 		$handlerStack = HandlerStack::create(new MockHandler($responseStack));
 		$handlerStack->push(Middleware::history($this->history));
 		$http = $this->app()->http();
+		$key = $untrusted ? 'clientUntrusted' : 'client';
 
-		return $this->swap([$http, $untrusted ? 'clientUntrusted' : 'client'], function ($c) use ($http, $handlerStack) {
+		$this->swap([$http, $key], function ($c) use ($http, $handlerStack) {
 			return $http->createClient(['handler' => $handlerStack]);
 		});
+
+		// XF builds `reader` and `metadataFetcher` once and they hold the clients by value, so
+		// without this a fake installed after either has already resolved - which includes any
+		// second fake in the same test - is swapped into a client nothing goes on to use.
+		$container = $http->container();
+		$container->decache('reader');
+		$container->decache('metadataFetcher');
+
+		// resolve out of the container - swap() hands back the closure, not the instance
+		return $container[$key];
 	}
 
 	/**

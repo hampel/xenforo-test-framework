@@ -12,9 +12,12 @@ trait InteractsWithSimpleCache
 	 */
 	protected function fakesSimpleCache()
 	{
-		return $this->swap('simpleCache', function () {
+		$this->swap('simpleCache', function () {
 			return new SimpleCache([]);
 		});
+
+		// resolve out of the container - swap() hands back the closure, not the instance
+		return $this->getSimpleCache();
 	}
 
 	/**

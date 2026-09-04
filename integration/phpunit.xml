@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  This package's own integration tests - NOT the tests/ scaffold. They need a XenForo install and
+  are skipped without one, so they can never run in CI.
+
+  failOnRisky is deliberately absent. XF::start() installs error and exception handlers and never
+  removes them; 4.0.0 restores them after each test and can therefore turn the flag on, but that
+  change is not part of this maintenance line.
+-->
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         backupGlobals="false"
+         backupStaticProperties="false"
+         bootstrap="../vendor/autoload.php"
+         cacheDirectory="../.phpunit.cache"
+         colors="true"
+         failOnDeprecation="true"
+         failOnNotice="true"
+         failOnWarning="true"
+         failOnPhpunitDeprecation="true"
+         failOnEmptyTestSuite="true">
+  <testsuites>
+    <testsuite name="Integration">
+      <directory suffix="Test.php">.</directory>
+    </testsuite>
+  </testsuites>
+</phpunit>

@@ -30,6 +30,17 @@
         "nesbot/carbon": "Gives better control when dealing with time.",
 		"league/flysystem-memory": "Required when swapping out filesystems"
     },
+	"require-dev": {
+		"league/flysystem-memory": "^1.0"
+	},
+	"autoload-dev": {
+		"psr-4": {
+			"Hampel\\Testing\\Integration\\": "integration/"
+		}
+	},
+	"scripts": {
+		"integration": "phpunit -c integration/phpunit.xml"
+	},
 	"autoload": {
 		"psr-4": {
 			"Hampel\\Testing\\": "src/"

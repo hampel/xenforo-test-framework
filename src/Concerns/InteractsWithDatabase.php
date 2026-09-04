@@ -12,7 +12,7 @@ trait InteractsWithDatabase
 	 *
 	 * @return mixed
 	 */
-	protected function mockDatabase(Closure $mock = null)
+	protected function mockDatabase(?Closure $mock = null)
 	{
 		$db = $this->mock('db', AbstractAdapter::class, $mock);
 		// need to set up the entity manager again, so we get the mocked database

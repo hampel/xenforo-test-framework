@@ -1,6 +1,53 @@
 CHANGELOG
 =========
 
+3.0.4 (unreleased)
+------------------
+
+A maintenance release for the v3 line. Every fix here is a backport of one made in 4.0.0, limited to
+helpers that exist in v3 - no new helpers, and no change to the PHP or PHPUnit requirements. If you can
+run PHP 8.3, prefer 4.x.
+
+* bugfix: fakesRegistry() failed with a fatal error - DataRegistry did not match the XenForo 2.3 method
+  signatures, so the class could not be declared. The helper has been unusable for the whole v3 line
+* bugfix: mail assertions failed with a TypeError once any mail had been sent - the test transport
+  assigned a string over the array the assertions count, which also meant only the last mail was kept
+* bugfix: fakesMail() did not disable mail queueing, so mail sent with queue() was enqueued as a
+  MailSend job and never reached the test transport - the assertions then reported "The expected mail
+  was not sent". enableMailQueue is a config.php value, not an option, and setOption() cannot reach it.
+  Mail sent with send() was unaffected, which is why this went unnoticed; queue() is what batch and job
+  code normally calls
+* bugfix: assertJobQueued() with a count called assertJobsQueuedTimes(), which does not exist
+* bugfix: assertExceptionLogged(), assertActionLogged() and assertChangeLogged() with a count passed
+  the count as the identifier, so they silently asserted something other than what was asked
+* bugfix: swapFs() and mockFs() returned the real local filesystem adapter, rather than the fake, if
+  anything had already resolved the filesystem. XenForo builds its mounts once and caches them under
+  `fs`, so rewriting the config did not reach them. A test in that position read and wrote the real
+  data directory - exactly the side effects the helpers exist to prevent - and nothing reported it
+* bugfix: a second fakesHttp() call in one test had no effect, because XenForo's cached `reader` still
+  held the first fake's client; the failure surfaced later as "Mock queue is empty". The same applied to
+  a first fake installed after the reader had resolved
+* bugfix: mockRepository() stored the mock under the identifier it was given, but getRepository()
+  normalises before looking one up. A spelling XenForo accepts everywhere else - 'XF:UserRepository', or
+  the full class name - therefore registered a mock nothing consulted: the real repository ran and the
+  unmet expectations were never reported
+* bugfix: mockService() built an untyped Mockery double when the short name resolved to a class that
+  does not exist, so a misspelled service name produced a test which passed while asserting against
+  nothing. It now throws a LogicException. The mock is also typed as the class XenForo would really have
+  built, resolved through the class alias map and the extension chain
+* bugfix: the fakes* helpers and swapFs() returned the closure handed to swap() rather than the object
+  the container builds from it, so the documented return type was never what came back
+* bugfix: Job\Manager::runByIds() returned null where an array was documented, and the docblocks
+  referenced a Hampel\Testing\Job\JobResult class which has never existed
+* bugfix: parameters are explicitly nullable, removing deprecation notices on PHP 8.4
+* docs: DOCS.md listed assertMailQueued(), assertMailQueuedTimes(), assertMailNotQueued() and
+  assertNoMailQueued(). None have existed since v3.0.0 removed the queue fake, and calling one is a
+  fatal. The fakesMail example also asserted against getTo() as a Swiftmailer `email => name` map; it
+  returns Symfony Address objects, so the example could never match
+* an integration test suite has been added covering every fix above. It needs a XenForo install
+  (`XF_ROOT=/srv/www/myforum composer integration`), skips without one, and is export-ignored so it
+  never reaches an addon
+
 3.0.3 (2024-12-30)
 ------------------
 

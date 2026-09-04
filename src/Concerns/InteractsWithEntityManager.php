@@ -21,7 +21,7 @@ trait InteractsWithEntityManager
 	 * @return Mockery\MockInterface
 	 * @throws \Exception
 	 */
-	protected function mockRepository($identifier, Closure $mock = null)
+	protected function mockRepository($identifier, ?Closure $mock = null)
 	{
 		$em = $this->app()->em();
 		if ($em instanceof Manager)
@@ -41,7 +41,7 @@ trait InteractsWithEntityManager
 	 * @return Mockery\MockInterface
 	 * @throws \Exception
 	 */
-	protected function mockFinder($shortName, Closure $mock = null)
+	protected function mockFinder($shortName, ?Closure $mock = null)
 	{
 		$em = $this->app()->em();
 		if ($em instanceof Manager)
@@ -62,7 +62,7 @@ trait InteractsWithEntityManager
 	 * @return Mockery\MockInterface
 	 * @throws \Exception
 	 */
-	protected function mockEntity($shortName, $inherit = true, Closure $mock = null)
+	protected function mockEntity($shortName, $inherit = true, ?Closure $mock = null)
 	{
 		$em = $this->app()->em();
 		if ($em instanceof Manager)

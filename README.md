@@ -12,11 +12,15 @@ Unit testing framework for XenForo
 The test framework is specific to the version of XenForo being run. Given this is a development tool, simply install the
 appropriate version of the test framework in your addon based on what version of XenForo you are developing on.
 
-|XenForo|Unit Test Framework|
-|-------|-------------------|
-|v2.1   |v1.x               |
-|v2.2   |v2.x               |
-|v2.3   |v3.x               |
+|XenForo|PHP  |Unit Test Framework|
+|-------|-----|-------------------|
+|v2.1   |     |v1.x               |
+|v2.2   |     |v2.x               |
+|v2.3   |8.1+ |v3.x               |
+|v2.3   |8.3+ |v4.x               |
+
+**v3.x is a maintenance line.** New helpers go into v4.x, which targets the same XenForo 2.3 but requires
+PHP 8.3. If you can run PHP 8.3, prefer v4.x. v3.x continues to receive fixes for anyone who cannot.
 
 ## Upgrading
 

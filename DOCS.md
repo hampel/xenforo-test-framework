@@ -722,6 +722,12 @@ functions.
 Allow us to assert that emails were (or were not) sent or queued as a result of executing our test code, 
 without side-effects (ie no emails actually get sent).
 
+Mail sent with `queue()` is captured as well as mail sent with `send()`, so the assertions below cover both.
+Before v3.0.4 it was not: queueing was switched off by setting an *option* named `enableMailQueue`, but that
+is a **config.php** value and XenForo has never had an option of that name, so `queue()` went on enqueuing a
+`MailSend` job the test transport never saw. Since batch and job code normally queues rather than sends, that
+was most of the mail an addon sends, and it failed as the misleading "The expected mail was not sent."
+
 ##### Parameters:
 
 none
@@ -732,10 +738,25 @@ none
 * `assertMailSentTimes`
 * `assertMailNotSent`
 * `assertNoMailSent`
-* `assertMailQueued`
-* `assertMailQueuedTimes`
-* `assertMailNotQueued`
-* `assertNoMailQueued`
+
+(There is no separate set of `assertMailQueued*` assertions. v3.0.0 removed the queue fake in favour of
+switching queueing off, so queued mail arrives through the same transport as sent mail. This documentation
+listed four such assertions until v3.0.4; they have not existed since v3.0.0 and calling one is a fatal.)
+
+##### What the assertions receive
+
+Captured mail is a `Symfony\Component\Mime\Email`. `getTo()` therefore returns an array of
+`Symfony\Component\Mime\Address` objects, not the `email => name` map Swiftmailer used before XenForo 2.2:
+
+```php
+$to = $mail->getTo();
+
+$to[0]->getAddress() == 'foo@example.com';   // not array_key_exists('foo@example.com', $to)
+$to[0]->getName()    == 'Foo';               // not $to['foo@example.com'] == 'Foo'
+```
+
+An assertion written in the old shape does not fail as a type error - it simply never matches, and reports
+"The expected mail was not sent." as though nothing had been sent at all.
 
 ##### Example: 
 
@@ -766,7 +787,10 @@ class MailTest extends TestCase
 		// alternatively, assert our mail was sent with specific attributes - return a truth test
 		$this->assertMailSent(function ($mail) use ($email) {
 			return $mail->getSubject() == "The subject from our mail template" 
-				   && array_key_exists($email, $mail->getTo());
+				   && in_array($email, array_map(
+						  function ($address) { return $address->getAddress(); },
+						  $mail->getTo()
+					  ));
 		});		
 	}
 }	

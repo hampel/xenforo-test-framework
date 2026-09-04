@@ -15,7 +15,7 @@ trait InteractsWithRegistry
 	 */
 	protected function fakesRegistry($preLoadData = true)
 	{
-		$registry = $this->swap('registry', function ($c) {
+		$this->swap('registry', function ($c) {
 			// turn off registry data caching when testing!
 			$registry = new DataRegistry($c['db'], null);
 			$registry->setFakeMode();
@@ -27,6 +27,7 @@ trait InteractsWithRegistry
 			$this->app()->preLoadData();
 		}
 
-		return $registry;
+		// resolve out of the container - swap() hands back the closure, not the instance
+		return $this->app()->registry();
 	}
 }
