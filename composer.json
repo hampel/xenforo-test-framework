@@ -51,8 +51,7 @@
 		"analyse": "XF_ROOT=${XF_ROOT:?set XF_ROOT to your XenForo root, eg XF_ROOT=/srv/www/myforum} phpstan analyse",
 		"integration": "phpunit -c integration/phpunit.xml",
 		"format": "php-cs-fixer fix",
-		"format:check": "php-cs-fixer fix --dry-run --diff",
-		"changelog:bbcode": "php bin/changelog-bbcode CHANGELOG.md"
+		"format:check": "php-cs-fixer fix --dry-run --diff"
 	},
 	"autoload": {
 		"psr-4": {

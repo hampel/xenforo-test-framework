@@ -192,27 +192,13 @@ in the same change**, and removed helpers stay listed struck-through with the re
 
 ## CHANGELOG
 
-Releases are announced as resource-update posts on xenforo.com, which take BBCode, so
-`composer changelog:bbcode` converts `CHANGELOG.md` for pasting:
-
-```bash
-composer changelog:bbcode                       # the whole file
-php bin/changelog-bbcode CHANGELOG.md 3.0.1     # 3.0.1 and everything newer
-php bin/changelog-bbcode ../other/CHANGELOG.md  # any file, any project
-```
-
-It prints to stdout deliberately. A generated `CHANGELOG.bbcode.txt` sitting beside the source
-would go stale the moment the changelog was edited, and would overwrite whatever had been tuned by
-hand for the last post; reading the source when you need it can do neither.
-
 **Mark up identifiers in `CHANGELOG.md` with backticks** - `` `fakesMail()` ``, `` `TypeError` ``,
-`` `enableMailQueue` ``. The converter only converts what the source marks up, so this is what
-decides whether a release post reads like documentation or like an email. It is worth doing for its
-own sake too, since `CHANGELOG.md` renders on GitHub and Packagist. The 3.0.4 entry was written
-without backticks and yields four code spans; 4.0.0's has eighty.
+`` `enableMailQueue` ``. It renders better on GitHub and Packagist, and releases are announced as
+BBCode resource-update posts on xenforo.com, converted mechanically from this file - a converter can
+only convert what the source marks up, so bare identifiers stay bare all the way to the post.
 
-`bin/` is `export-ignore`d and nothing in the repo is tracked executable, so invoke the script as
-`php bin/changelog-bbcode`, not `./bin/changelog-bbcode`.
+The difference is not marginal. The 3.0.4 entry was written without backticks and yields four code
+spans; 4.0.0's yields eighty.
 
 ## Style
 
