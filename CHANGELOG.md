@@ -4,93 +4,93 @@ CHANGELOG
 4.0.0 (unreleased)
 ------------------
 
-* new makeEntity() and createEntity() helpers for building entities with given values
-* new fakesHttpByUrl() - chooses the http response by request URL rather than by call order
-* new fakesEvents() - records code events and stops them reaching listeners, with
-  assertEventFired(), assertEventFiredTimes(), assertEventNotFired() and assertNoEventsFired()
-* new actingAs(), actingAsMember() and actingAsGuest() helpers - run a test as a given user,
+* new `makeEntity()` and `createEntity()` helpers for building entities with given values
+* new `fakesHttpByUrl()` - chooses the http response by request URL rather than by call order
+* new `fakesEvents()` - records code events and stops them reaching listeners, with
+  `assertEventFired()`, `assertEventFiredTimes()`, `assertEventNotFired()` and `assertNoEventsFired()`
+* new `actingAs()`, `actingAsMember()` and `actingAsGuest()` helpers - run a test as a given user,
   with permissions granted in memory rather than read from the database
-* new setVisitorPermissions(), setVisitorContentPermissions() and buildVisitor() helpers
-* new setConfig() helper - set a config.php value, which setOption() cannot do
-* new UsesDatabaseTransactions trait - wraps each test in a transaction and rolls it back, so
+* new `setVisitorPermissions()`, `setVisitorContentPermissions()` and `buildVisitor()` helpers
+* new `setConfig()` helper - set a `config.php` value, which `setOption()` cannot do
+* new `UsesDatabaseTransactions` trait - wraps each test in a transaction and rolls it back, so
   tests can exercise real entity saves without leaving anything behind
-* new assertDatabaseHas(), assertDatabaseMissing() and assertDatabaseCount() assertions
+* new `assertDatabaseHas()`, `assertDatabaseMissing()` and `assertDatabaseCount()` assertions
 * PHPUnit 11 and 12 are now supported
-* bugfix: fakesRegistry() failed with a fatal error - DataRegistry did not match the XenForo 2.3
+* bugfix: `fakesRegistry()` failed with a fatal error - `DataRegistry` did not match the XenForo 2.3
   method signatures
-* bugfix: mail assertions failed with a TypeError once any mail had been sent
-* bugfix: assertJobQueued() with a count called a method that does not exist
-* bugfix: assertExceptionLogged(), assertActionLogged() and assertChangeLogged() with a count
+* bugfix: mail assertions failed with a `TypeError` once any mail had been sent
+* bugfix: `assertJobQueued()` with a count called a method that does not exist
+* bugfix: `assertExceptionLogged()`, `assertActionLogged()` and `assertChangeLogged()` with a count
   asserted against the wrong value
-* bugfix: Job\Manager::runByIds() returned null where an array was documented
+* bugfix: `Job\Manager::runByIds()` returned null where an array was documented
 * bugfix: parameters are explicitly nullable, removing deprecation notices on PHP 8.4
-* bugfix: fakesHttpByUrl() ignored Guzzle's `sink`, so code downloading to a file - which is
+* bugfix: `fakesHttpByUrl()` ignored Guzzle's `sink`, so code downloading to a file - which is
   what XF\Http\Reader::getUntrusted($url, $limits, $saveTo) does - received the response and
   wrote nothing, while every request assertion still passed
-* bugfix: a second fakesHttp() or fakesHttpByUrl() call in one test had no effect, because
+* bugfix: a second `fakesHttp()` or `fakesHttpByUrl()` call in one test had no effect, because
   XenForo's cached `reader` still held the first fake's client; the failure surfaced later as
   "Mock queue is empty"
-* bugfix: every user built by buildVisitor() / actingAs* landed on permission combination id 1 -
+* bugfix: every user built by `buildVisitor()` / actingAs* landed on permission combination id 1 -
   the forum's real guest combination. Permissions granted to one built user therefore applied to
   all of them, and a permission the test never granted was read from the development forum rather
   than denied, so the same test could pass on one forum and fail on another. Each built user now
-  gets its own combination id; pass permission_combination_id yourself to opt out
-* bugfix: fakesEvents() recorded event arguments by reference, since XenForo fires extension
+  gets its own combination id; pass `permission_combination_id` yourself to opt out
+* bugfix: `fakesEvents()` recorded event arguments by reference, since XenForo fires extension
   points as `$app->fire('event', [&$args])` and copying an array preserves the references in it.
   An assertion therefore saw whatever the caller left in the variable after the event, not what
   was fired. Arguments are now recorded as they were at the moment of firing; objects are still
   recorded as the same instance
-* bugfix: fakesMail() did not disable mail queueing, so mail sent with queue() was enqueued as a
-  MailSend job and never reached the test transport - the assertions then reported "The expected
-  mail was not sent". enableMailQueue is a config.php value, not an option, and setOption() cannot
-  reach it. Mail sent with send() was unaffected, which is why this survived since 2024; queue() is
+* bugfix: `fakesMail()` did not disable mail queueing, so mail sent with `queue()` was enqueued as a
+  `MailSend` job and never reached the test transport - the assertions then reported "The expected
+  mail was not sent". `enableMailQueue` is a `config.php` value, not an option, and `setOption()` cannot
+  reach it. Mail sent with `send()` was unaffected, which is why this survived since 2024; `queue()` is
   what batch and job code normally calls. The package had no mail test at all - there is one now
-* bugfix: swapFs() and mockFs() returned the real local filesystem adapter, rather than the fake,
+* bugfix: `swapFs()` and `mockFs()` returned the real local filesystem adapter, rather than the fake,
   if anything had already resolved the filesystem. XenForo builds its mounts once and caches them
   under `fs`, so rewriting the config did not reach them. A test in that position read and wrote
   the real data directory - exactly the side effects the helpers exist to prevent - and nothing
   reported it
-* bugfix: mockRepository() stored the mock under the identifier it was given, but getRepository()
+* bugfix: `mockRepository()` stored the mock under the identifier it was given, but `getRepository()`
   normalises before looking one up. A spelling XenForo accepts everywhere else - 'XF:UserRepository',
   or the full class name - therefore registered a mock nothing consulted: the real repository ran and
   the unmet expectations were never reported. Identifiers are now normalised the same way XenForo
   normalises them
-* bugfix: mockService() built an untyped Mockery double when the short name resolved to a class that
+* bugfix: `mockService()` built an untyped Mockery double when the short name resolved to a class that
   does not exist, so a misspelled service name produced a test which passed while asserting against
-  nothing. It now throws a LogicException. The mock is also typed as the class XenForo would really
+  nothing. It now throws a `LogicException`. The mock is also typed as the class XenForo would really
   have built, resolved through the class alias map and the extension chain
-* assertErrorLogged() and assertErrorNotLogged() no longer require a message, matching
-  assertExceptionLogged() - omit it to assert that any error at all was, or was not, logged
+* `assertErrorLogged()` and `assertErrorNotLogged()` no longer require a message, matching
+  `assertExceptionLogged()` - omit it to assert that any error at all was, or was not, logged
 * error and exception handlers are restored after each test. This is what makes PHPUnit 11 and
-  12 support possible rather than a separate fix: XF::start() installs handlers and never
+  12 support possible rather than a separate fix: `XF::start()` installs handlers and never
   removes them, which PHPUnit 11 onwards reports as risky on every test that boots XenForo.
   PHPUnit 10 does not report it, so the symptom cannot be reproduced on 3.0.3
-* phpunit.xml now fails the suite on deprecations, notices, warnings, risky tests, PHPUnit's own
-  deprecations (failOnPhpunitDeprecation) and a run which executes no tests (failOnEmptyTestSuite).
+* `phpunit.xml` now fails the suite on deprecations, notices, warnings, risky tests, PHPUnit's own
+  deprecations (`failOnPhpunitDeprecation`) and a run which executes no tests (`failOnEmptyTestSuite`).
   The last one covers the only genuinely silent case: a suite that has stopped collecting tests
   exits 0 by default and reads as passing
-* the tests/Feature directory is included, which PHPUnit requires in order to run. It ships a
-  .gitkeep so that it survives being committed - git does not track empty directories, so a
-  tests/Feature you create by hand is absent in every clone, including CI. Commit the .gitkeep
-* the fakes* helpers and swapFs() now return the object they document, rather than the
+* the `tests/Feature` directory is included, which PHPUnit requires in order to run. It ships a
+  `.gitkeep` so that it survives being committed - git does not track empty directories, so a
+  `tests/Feature` you create by hand is absent in every clone, including CI. Commit the `.gitkeep`
+* the `fakes*` helpers and `swapFs()` now return the object they document, rather than the
   closure the container had not yet resolved
-* code style is now XenForo's own, applied with xenforo-ltd/xf-cs-fixer
-* league/flysystem-memory 2.0 and above are rejected - XenForo 2.3 ships Flysystem 1.x
+* code style is now XenForo's own, applied with `xenforo-ltd/xf-cs-fixer`
+* `league/flysystem-memory` 2.0 and above are rejected - XenForo 2.3 ships Flysystem 1.x
 
 **Breaking changes:**
 * minimum PHP version is now 8.3. If your addon pins `config.platform.php` below 8.3, Composer
   cannot install this package at all - the solve fails outright. Raising that pin is not
   dev-only in effect: it also lets Composer select **runtime** dependencies above the PHP
   version your addon declares, and those ship in your release zip. After raising it, check that
-  every package in composer.lock's `packages` array still satisfies your addon's own PHP floor,
+  every package in `composer.lock`'s `packages` array still satisfies your addon's own PHP floor,
   and cap any that do not
 * PHPUnit 12 is now allowed, and for most addons this package is the only thing that pins PHPUnit
   at all - so a composer update will select 12 where it used to select 10. PHPUnit 12 no longer
-  reads metadata from doc comments, so tests using @dataProvider, @depends, @covers or @group error
-  rather than run. Convert them to attributes (#[DataProvider] and friends, understood by 10, 11 and
-  12) or pin phpunit/phpunit yourself. PHPUnit 11 reports these as deprecations and still exits 0,
-  which is why the supplied phpunit.xml now sets failOnPhpunitDeprecation
-* phpunit.xml has been updated and should be re-copied into your addon
+  reads metadata from doc comments, so tests using `@dataProvider`, `@depends`, `@covers` or `@group` error
+  rather than run. Convert them to attributes (`#[DataProvider]` and friends, understood by 10, 11 and
+  12) or pin `phpunit/phpunit` yourself. PHPUnit 11 reports these as deprecations and still exits 0,
+  which is why the supplied `phpunit.xml` now sets `failOnPhpunitDeprecation`
+* `phpunit.xml` has been updated and should be re-copied into your addon
 * the files in tests/ have been restyled, so a diff against your own copies will show
   formatting changes as well as the changes described above
 
