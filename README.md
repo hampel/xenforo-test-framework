@@ -24,7 +24,8 @@ appropriate version of the test framework in your addon based on what version of
 
 **Unit Test Framework v4.0**
 
-`phpunit.xml` has been updated in v4.0 and you should copy the new version into your addon root:
+`phpunit.xml` has been updated in v4.0 and you should copy the new version into your addon root - or
+diff it against yours if you have customised it, since copying over the top discards your changes:
 
 ```bash
 $ cp vendor/hampel/xenforo-test-framework/phpunit.xml .

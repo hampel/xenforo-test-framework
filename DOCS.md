@@ -72,6 +72,12 @@ Users are built in memory and are never written to the database, so these work w
 `$permissions` is `group => [permission => value]`, matching the way XenForo caches global
 permissions. Anything not granted is denied, exactly as in production.
 
+**Check that your grant is load-bearing.** A test which only asserts that content is *denied* passes
+for the wrong reason, because a visitor with no permissions at all is also denied - so it would pass
+with the permission code deleted entirely. Two cheap controls settle it: remove the
+`setVisitorContentPermissions()` call and confirm the positive tests fail, and delete each guard from
+the code under test in turn and confirm exactly the one test that names it fails.
+
 ##### Example:
 
 ```php
@@ -529,6 +535,53 @@ Build an entity with the given values. `makeEntity` leaves it unsaved and touche
 
 `createEntity` writes real rows, so use it with `UsesDatabaseTransactions` unless you want them to
 outlive the test.
+
+**If your test classes already have a helper called `makeEntity` or `createEntity`, rename it.** Both
+are `protected` here, and PHP will not let a private method of the same name exist in a subclass - the
+class fails to load with `Access level to ... must be protected (as in class Hampel\Testing\TestCase)
+or weaker`, before any test runs. Check which one your helper matches before deleting it to inherit
+ours: one saves and one does not, and swapping a build-only helper for `createEntity` starts writing
+rows without any other sign that something changed.
+
+##### Setting an id on an unsaved entity
+
+`makeEntity` passes `values` to `bulkSet()`, which validates them - and a primary key is normally a
+**read-only** column, so passing one there throws
+`Column 'node_id' is read only, can only be set with forceSet`. Even where a key is writable,
+assigning one sends the entity to the finder for a uniqueness check, which wants a database.
+
+Use XenForo's `setTrusted()`, which casts the value and writes the column directly:
+
+```php
+$user = $this->makeEntity('XF:User', ['username' => 'Alice']);
+$user->setTrusted('user_id', 42);
+```
+
+##### Building a fixture that spans relations
+
+`makeEntity` builds one entity. Code under test frequently reaches through a relation -
+`$thread->Forum->Node->node_id` - and an unsaved entity has no database behind it to resolve that
+against. XenForo's own `hydrateRelation()` links entities in memory, so build each one, give it its
+id, and join them up:
+
+```php
+$node = $this->makeEntity('XF:Node', ['title' => 'Test node']);
+$node->setTrusted('node_id', 1);
+
+$forum = $this->makeEntity('XF:Forum');
+$forum->setTrusted('node_id', 1);
+
+$thread = $this->makeEntity('XF:Thread', ['node_id' => 1]);
+$thread->setTrusted('thread_id', 1);
+
+$forum->hydrateRelation('Node', $node);
+$thread->hydrateRelation('Forum', $forum);
+
+// $thread->Forum->Node->node_id now resolves, with no database at all
+```
+
+This is the shape a permission test usually needs, since the permission is generally checked against
+a node reached through the content entity.
 
 ##### Parameters:
 

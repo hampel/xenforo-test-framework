@@ -90,7 +90,15 @@ CHANGELOG
   rather than run. Convert them to attributes (`#[DataProvider]` and friends, understood by 10, 11 and
   12) or pin `phpunit/phpunit` yourself. PHPUnit 11 reports these as deprecations and still exits 0,
   which is why the supplied `phpunit.xml` now sets `failOnPhpunitDeprecation`
-* `phpunit.xml` has been updated and should be re-copied into your addon
+* `makeEntity()` and `createEntity()` are new **protected** methods on `TestCase`. If your test
+  classes already define a method of either name, PHP refuses to load them - a private helper cannot
+  narrow a protected parent - and the run dies at class load with `Access level to ...` before any
+  test executes. Rename yours. **Check which one you are matching before deleting yours to inherit
+  ours:** `createEntity()` saves and `makeEntity()` does not, so a local helper that only builds maps
+  to `makeEntity()`. Inheriting `createEntity()` in its place compiles, looks right, and silently
+  turns every in-memory build into a database write
+* `phpunit.xml` has been updated and should be re-copied into your addon - or diffed against yours if
+  you have customised it, since re-copying discards your changes. The diff is small
 * the files in tests/ have been restyled, so a diff against your own copies will show
   formatting changes as well as the changes described above
 
