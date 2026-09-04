@@ -86,7 +86,19 @@ trait InteractsWithContainer
 	{
 		$class = \XF::stringToClass($shortName, '\%s\Service\%s');
 
-		return $this->mockFactory('service', $class, $mock);
+		// Resolve the class the way XF's own service factory does, then insist it exists. Mockery
+		// will happily build an untyped double of a class name that resolves to nothing, so a
+		// misspelled short name would otherwise produce a test that passes while asserting against
+		// nothing at all. Resolving first also means the mock is typed as the class XF would really
+		// have built, so an add-on's own extension of the service is honoured - the same thing
+		// mockRepository() does.
+		$serviceClass = $this->app()->extendClass($class);
+		if (!$serviceClass || !class_exists($serviceClass))
+		{
+			throw new \LogicException("Could not find service '$class' for '$shortName'");
+		}
+
+		return $this->mockFactory('service', $serviceClass, $mock);
 	}
 
 	/**

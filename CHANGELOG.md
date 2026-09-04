@@ -39,14 +39,28 @@ CHANGELOG
   An assertion therefore saw whatever the caller left in the variable after the event, not what
   was fired. Arguments are now recorded as they were at the moment of firing; objects are still
   recorded as the same instance
+* bugfix: mockRepository() stored the mock under the identifier it was given, but getRepository()
+  normalises before looking one up. A spelling XenForo accepts everywhere else - 'XF:UserRepository',
+  or the full class name - therefore registered a mock nothing consulted: the real repository ran and
+  the unmet expectations were never reported. Identifiers are now normalised the same way XenForo
+  normalises them
+* bugfix: mockService() built an untyped Mockery double when the short name resolved to a class that
+  does not exist, so a misspelled service name produced a test which passed while asserting against
+  nothing. It now throws a LogicException. The mock is also typed as the class XenForo would really
+  have built, resolved through the class alias map and the extension chain
 * assertErrorLogged() and assertErrorNotLogged() no longer require a message, matching
   assertExceptionLogged() - omit it to assert that any error at all was, or was not, logged
 * error and exception handlers are restored after each test. This is what makes PHPUnit 11 and
   12 support possible rather than a separate fix: XF::start() installs handlers and never
   removes them, which PHPUnit 11 onwards reports as risky on every test that boots XenForo.
   PHPUnit 10 does not report it, so the symptom cannot be reproduced on 3.0.3
-* phpunit.xml now fails the suite on deprecations, notices, warnings and risky tests
-* the tests/Feature directory is included, which PHPUnit requires in order to run
+* phpunit.xml now fails the suite on deprecations, notices, warnings, risky tests, PHPUnit's own
+  deprecations (failOnPhpunitDeprecation) and a run which executes no tests (failOnEmptyTestSuite).
+  The last one covers the only genuinely silent case: a suite that has stopped collecting tests
+  exits 0 by default and reads as passing
+* the tests/Feature directory is included, which PHPUnit requires in order to run. It ships a
+  .gitkeep so that it survives being committed - git does not track empty directories, so a
+  tests/Feature you create by hand is absent in every clone, including CI. Commit the .gitkeep
 * the fakes* helpers and swapFs() now return the object they document, rather than the
   closure the container had not yet resolved
 * code style is now XenForo's own, applied with xenforo-ltd/xf-cs-fixer
@@ -59,6 +73,12 @@ CHANGELOG
   version your addon declares, and those ship in your release zip. After raising it, check that
   every package in composer.lock's `packages` array still satisfies your addon's own PHP floor,
   and cap any that do not
+* PHPUnit 12 is now allowed, and for most addons this package is the only thing that pins PHPUnit
+  at all - so a composer update will select 12 where it used to select 10. PHPUnit 12 no longer
+  reads metadata from doc comments, so tests using @dataProvider, @depends, @covers or @group error
+  rather than run. Convert them to attributes (#[DataProvider] and friends, understood by 10, 11 and
+  12) or pin phpunit/phpunit yourself. PHPUnit 11 reports these as deprecations and still exits 0,
+  which is why the supplied phpunit.xml now sets failOnPhpunitDeprecation
 * phpunit.xml has been updated and should be re-copied into your addon
 * the files in tests/ have been restyled, so a diff against your own copies will show
   formatting changes as well as the changes described above

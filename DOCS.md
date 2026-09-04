@@ -322,6 +322,20 @@ Mock a service factory builder in the container.
 * `shortName` - the short name of the service class to be mocked
 * `mock` - optional - the mock closure to define expectations on
 
+Three things about this helper are not obvious from its name, and all three have cost someone time:
+
+* **It replaces the container's entire `service` factory.** It does not mock only the service you
+  name - every `$app->service(...)` call for the rest of the test returns the same mock, whatever
+  short name is asked for. If the subject of your test is itself a service, resolve it *before*
+  calling `mockService()`, or you will be testing the mock.
+* **The short name must resolve to a class that exists**, and since v4.0 it throws a `LogicException`
+  if it does not. Before that, Mockery built an untyped double of a name that resolved to nothing,
+  every expectation on it was met, and the test passed while asserting against nothing at all.
+  Remember XenForo 2.3 renamed service classes with a `Service` suffix: `MyAddon:MessageEvent` wants
+  a `Service\MessageEvent`, and the class is most likely called `MessageEventService`.
+* **The mock is typed as the class XenForo would really have built** - resolved through the class
+  alias map and the extension chain, so an addon's own extension of the service is honoured.
+
 #### Example:
 
 ```php
@@ -433,6 +447,15 @@ Mock the database adapter.
 
 * `mock` - optional - the mock closure to define expectations on
 
+**Call it before `mockRepository()`, `mockFinder()` or `mockEntity()`.** Mocking the database
+rebuilds the entity manager so that it holds the mock, and the rebuilt manager does not carry over
+the repository, finder and entity mocks registered on the previous one. They are discarded without
+a word, and the real repository runs.
+
+Its `fetchAll` must also return an array rather than `null`. Rebuilding the entity manager re-runs
+the listener query behind `$addonsToLoad` through your mock, and a `null` there fails inside the
+framework rather than in your test.
+
 ##### Example: 
 
 ```php
@@ -466,6 +489,14 @@ Mock a repository.
 * `identifier` - the short class name for the repository 
 * `mock` - optional - the mock closure to define expectations on
 
+Any spelling `$app->repository()` accepts works here too, and reaches the same mock: `XF:User`,
+`XF:UserRepository`, or the full `\XF\Repository\UserRepository`. They are normalised to one
+identifier, the same way XenForo normalises before looking a repository up.
+
+Before v4.0 they were not, so a mock registered under one spelling was invisible to code asking for
+another: the real repository ran instead, and the unmet expectations were never reported. Note that
+a genuine typo - a `/` where a `\` belongs, say - is still a typo, and will still miss.
+
 ##### Example: 
 
 ```php
@@ -483,7 +514,7 @@ class RepoTest extends TestCase
 		});
 		
 		// execute some test code which causes the repository function to be executed, for example
-		$repo = $this->app()->repository('MyVendor/MyAddon:MyRepo');
+		$repo = $this->app()->repository('MyVendor\MyAddon:MyRepo');
 		$result = $repo->myRepoFunction('foo');	
 		
 		// check we got the expected response
@@ -799,8 +830,13 @@ none
 * `assertEventNotFired`
 * `assertNoEventsFired`
 
+Call it **before** the code under test resolves anything, the same ordering every other fake here
+needs: it swaps the container's `extension` key, and anything already holding the real one keeps it.
+
 Truth-test callbacks receive `($args, $hint)` - the arguments the event was fired with, and its
-hint. `getFiredEvents()` returns them all, each as `['event' => ..., 'args' => [...], 'hint' => ...]`.
+hint. Declaring only `$args` is fine, and is what most callbacks do; PHP does not require a closure
+to accept every argument it is passed. `getFiredEvents()` returns them all, each as
+`['event' => ..., 'args' => [...], 'hint' => ...]`.
 
 Arguments are recorded **as they were when the event fired**. This matters because XenForo's idiom
 for an extension point passes the argument by reference - `$app->fire('some_event', [&$map])` - and

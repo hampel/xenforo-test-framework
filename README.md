@@ -30,8 +30,40 @@ appropriate version of the test framework in your addon based on what version of
 $ cp vendor/hampel/xenforo-test-framework/phpunit.xml .
 ```
 
-It now fails the test suite on deprecations, notices, warnings and risky tests. If your addon has no `tests/Feature`
-directory, create one - PHPUnit will not run without it, since `phpunit.xml` declares a Feature test suite.
+It now fails the test suite on deprecations, notices, warnings, risky tests, PHPUnit's own deprecations, and a run that
+executes no tests at all.
+
+`phpunit.xml` declares a Feature test suite, so `tests/Feature` has to exist. If yours does not, take it from the
+scaffold rather than creating it by hand - v4.0 ships `tests/Feature/.gitkeep` precisely so the directory survives being
+committed. **Git does not track empty directories**, so a `tests/Feature` you `mkdir` yourself works on your machine and
+is absent in every clone, including CI. A missing directory does at least fail loudly: PHPUnit prints
+`Test directory ".../tests/Feature" not found` and exits **2** without running anything, on 10, 11 and 12 alike.
+
+`failOnPhpunitDeprecation` is the one most likely to turn a currently-green suite red, and that is what it is for - see
+the note on PHPUnit 12 below. `failOnEmptyTestSuite` covers the case that genuinely was silent: a run which finds no
+tests at all exits **0** by default, so a suite that has quietly stopped collecting anything reads as passing.
+
+### PHPUnit 12 removes metadata in doc comments
+
+v4.0 widens the PHPUnit constraint to `^10.0|^11.0|^12.0`. For most addons this framework is the only reason PHPUnit is
+installed at all, so that constraint is what chooses the version - and a `composer update` will now select 12 where it
+used to select 10.
+
+PHPUnit 12 no longer reads metadata from doc comments. If your tests use `@dataProvider`, `@depends`, `@covers`,
+`@group` or similar annotations, they stop working: the tests error rather than run. Convert them to attributes
+(`#[DataProvider]`, `#[Depends]`, `#[CoversClass]`, `#[Group]`), which are understood by 10, 11 and 12 - or pin
+`phpunit/phpunit` yourself in your addon's `composer.json`.
+
+This is worth doing before you upgrade rather than after, because of how the versions differ:
+
+| on | an `@dataProvider` test |
+|---|---|
+| PHPUnit 10 | runs, no complaint |
+| PHPUnit 11 | runs, reports `PHPUnit Deprecations: n` - and **exits 0** unless `failOnPhpunitDeprecation` is set |
+| PHPUnit 12 | errors, and the test does not run |
+
+The new `failOnPhpunitDeprecation="true"` in the supplied `phpunit.xml` is what turns the middle row into a failure you
+can act on while it is still cheap.
 
 The minimum PHP version is now 8.3. If your addon pins `config.platform.php` in `composer.json` below that, Composer
 cannot install v4.0 at all - the solve fails outright rather than falling back to an older release. Raising the pin is
@@ -479,12 +511,14 @@ the root of your addon.
 
 ```bash
 $ cd /srv/www/xenforo/src/addons/Vendorly/Addonista/
-$ cp vendor/hampel/xenforo-test-framework/tests .
+$ cp -r vendor/hampel/xenforo-test-framework/tests .
 ```
 
 Inside the tests directory, you'll find the following directories and files:
 
-* `/tests/Feature` this is a placeholder for future support for feature testing
+* `/tests/Feature` this is a placeholder for future support for feature testing. It contains only a `.gitkeep`,
+  which is there so the directory can be committed - git does not track empty directories, and `phpunit.xml`
+  refuses to run without this directory present. **Commit the `.gitkeep` along with the rest.**
 * `/tests/Unit` this is where all of your unit tests should go
 * `/tests/Unit/ExampleTest.php` this is a simple example test - edit or copy it as the basis for your own test classes
 * `/tests/CreatesApplication.php` this is the trait that boots our XenForo test framework. If you need to adjust the way we boot things, you can change this - but for most cases you should leave it as is
@@ -502,24 +536,30 @@ options - they tell PHPUnit where to find our unit tests.
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
-<phpunit backupGlobals="false"
-         backupStaticAttributes="false"
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/10.5/phpunit.xsd"
+         backupGlobals="false"
+         backupStaticProperties="false"
          bootstrap="vendor/autoload.php"
+         cacheDirectory=".phpunit.cache"
          colors="true"
-         convertErrorsToExceptions="true"
-         convertNoticesToExceptions="true"
-         convertWarningsToExceptions="true"
          processIsolation="false"
-         stopOnFailure="false">
-    <testsuites>
-        <testsuite name="Unit">
-            <directory suffix="Test.php">./tests/Unit</directory>
-        </testsuite>
+         stopOnFailure="false"
+         failOnDeprecation="true"
+         failOnRisky="true"
+         failOnNotice="true"
+         failOnWarning="true"
+         failOnPhpunitDeprecation="true"
+         failOnEmptyTestSuite="true">
+  <testsuites>
+    <testsuite name="Unit">
+      <directory suffix="Test.php">./tests/Unit</directory>
+    </testsuite>
 
-        <testsuite name="Feature">
-            <directory suffix="Test.php">./tests/Feature</directory>
-        </testsuite>
-    </testsuites>
+    <testsuite name="Feature">
+      <directory suffix="Test.php">./tests/Feature</directory>
+    </testsuite>
+  </testsuites>
 </phpunit>
 ```
 

@@ -11,7 +11,9 @@
          failOnDeprecation="true"
          failOnRisky="true"
          failOnNotice="true"
-         failOnWarning="true">
+         failOnWarning="true"
+         failOnPhpunitDeprecation="true"
+         failOnEmptyTestSuite="true">
   <testsuites>
     <testsuite name="Unit">
       <directory suffix="Test.php">./tests/Unit</directory>

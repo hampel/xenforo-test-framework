@@ -23,6 +23,17 @@ class Manager extends BaseManager
 	 */
 	public function mockRepository($identifier, ?\Closure $mock = null)
 	{
+		// getRepository() normalises the identifier before it looks in $this->repositories, so the
+		// mock has to be stored under the normalised key. Without this, a spelling XenForo accepts
+		// everywhere else - 'XF:UserRepository', or the full class name - registers a mock that
+		// nothing ever looks up: the real repository runs and every expectation goes unmet in
+		// silence. Mirror XF's own normalisation exactly, including its trailing-suffix trim.
+		$identifier = \XF::classToString($identifier, '%s\Repository\%s');
+		if (substr($identifier, -10) === 'Repository')
+		{
+			$identifier = substr($identifier, 0, -10);
+		}
+
 		$repositoryClass = \XF::stringToClass($identifier, '%s\Repository\%s');
 		$repositoryClass = $this->extension->extendClass($repositoryClass, '\XF\Mvc\Entity\Repository');
 		if (!$repositoryClass || !class_exists($repositoryClass))
