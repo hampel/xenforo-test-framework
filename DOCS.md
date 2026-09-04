@@ -744,6 +744,12 @@ and the read finds nothing. That fails in a way that looks like a bug in the cod
 such code against the real filesystem instead, writing to a namespaced path you delete in
 `tearDown()`.
 
+Both `swapFs()` and `mockFs()` discard XenForo's cached filesystem mounts, so they work whether or not
+anything has touched the filesystem already. Before v4.0 they did not: the mounts are built once from
+the config, and `fs` is its own cached container entry, so a swap after any filesystem access returned
+the **real local adapter**. The test then read and wrote the real data directory - the side effects the
+helper exists to prevent - and reported nothing wrong.
+
 Note also that `$fs->has()` does not reliably report **directories**, so the obvious
 `if ($fs->has($dir)) { $fs->deleteDir($dir); }` cleanup silently does nothing and leaks state into
 the next test. Call `deleteDir()` unconditionally inside a try/catch.
@@ -1130,6 +1136,32 @@ functions.
 Allow us to assert that emails were (or were not) sent as a result of executing our test code, without
 side-effects (ie no emails actually get sent). Mail queueing is disabled, so all mail goes via the test transport.
 
+Mail sent with `queue()` is captured as well as mail sent with `send()`. Before v4.0 it was not: queueing
+was switched off by setting an *option* named `enableMailQueue`, but that is a **config.php** value and
+XenForo has never had an option of that name, so `queue()` went on enqueuing a `MailSend` job which the
+test transport never saw. Since batch and job code normally queues rather than sends, that was most of
+the mail an addon sends, and it failed as the thoroughly misleading "The expected mail was not sent."
+
+Call it before the code under test resolves the mailer if you can, though it no longer matters: the
+queue flag and the transport are both constructor arguments of `XF\Mail\Mailer`, so `fakesMail()` has
+to discard an already-built mailer, and it does.
+
+##### What the assertions receive
+
+Captured mail is a `Symfony\Component\Mime\Email`. `getTo()` therefore returns an array of
+`Symfony\Component\Mime\Address` objects, not the `email => name` map Swiftmailer used before XenForo
+2.2:
+
+```php
+$to = $mail->getTo();
+
+$to[0]->getAddress() == 'foo@example.com';   // not array_key_exists('foo@example.com', $to)
+$to[0]->getName()    == 'Foo';               // not $to['foo@example.com'] == 'Foo'
+```
+
+An assertion written in the old shape does not fail as a type error - it simply never matches, and
+reports "The expected mail was not sent." as though nothing had been sent at all.
+
 ##### Parameters:
 
 none
@@ -1181,6 +1213,52 @@ class MailTest extends TestCase
 
 Refer to the `Hampel\Testing\Concerns\InteractsWithMail` trait for full details of available mail validation 
 functions.
+
+### setConfig
+Set a value in the application config - the values from `config.php`. **These are not options**, and the
+distinction matters more than it looks: `setOption()` on a config key writes somewhere nothing reads, and
+nothing reports it. That is what broke `fakesMail()` for two years.
+
+The two behave differently at runtime, too. An option is read on demand, so setting one takes effect
+whenever the code under test next looks. A config value is usually read **once**, where the container
+builds whatever consumes it, and the consumer then keeps the value rather than the config - so a config
+change only reaches something that has not been built yet.
+
+So call `setConfig()` before the code under test resolves anything. If the consuming container key may
+already exist, discard it as well:
+
+```php
+$this->setConfig('enableMailQueue', false);
+$this->app()->container()->decache('mailer');
+```
+
+Helpers in this package that change config already do that for you - `fakesMail()` decaches `mailer`,
+`swapFs()` and `mockFs()` decache `fs`.
+
+##### Parameters:
+
+* `key` - the config key to set
+* `value` - the value to set it to
+
+Returns the config array as swapped in.
+
+##### Example:
+
+```php
+<?php namespace Tests\Unit;
+
+use Tests\TestCase;
+
+class ConfigTest extends TestCase
+{
+	public function test_debug_mode()
+	{
+		$this->setConfig('debug', true);
+
+		$this->assertTrue($this->app()->config('debug'));
+	}
+}
+```
 
 ### setOptions / setOption
 Allow us to set arbitrary options to be returned when the application requests an option key, with no side effects - 

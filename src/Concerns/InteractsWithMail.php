@@ -17,13 +17,22 @@ trait InteractsWithMail
 	 */
 	protected function fakesMail()
 	{
-		// disable mail queueing
-		$this->setOption('enableMailQueue', false);
+		// Disable mail queueing. enableMailQueue is a config.php value, NOT an option - XenForo has
+		// never had an option of that name. It is read once, where the container builds `mailer`,
+		// and XF\Mail\Mailer keeps it as a plain bool. So setOption() wrote somewhere nothing reads,
+		// queue() went on enqueuing a MailSend job, and the transport saw nothing at all.
+		$this->setConfig('enableMailQueue', false);
 
 		$this->swap('mailer.transport', function (Container $c)
 		{
 			return new TestTransport();
 		});
+
+		// XF\Mail\Mailer takes both the transport and the queue flag as constructor arguments and
+		// keeps them by value, and `mailer` is its own cached container entry - so neither swap above
+		// reaches a mailer that has already been resolved. That includes a second fakesMail() in the
+		// same test, and any test that touched the mailer before calling this.
+		$this->app()->container()->decache('mailer');
 
 		return $this->getMailTransport();
 	}

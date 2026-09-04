@@ -387,29 +387,40 @@ container with our own objects.
 `swap()` simply replaces the code at a specific container key with an instance we supply.
 
 So if we have written a test harness which replaces certain functionality, we can just swap in our class in place of 
-the core one. We do exactly this in our `fakesMail()` helper - we replace the `mailer.transport` and `mailer.queue` 
-container keys with our own classes that logs mails that were sent by the application and lets us run assertions 
-against that log - but never actually sends mail.
+the core one. We do exactly this in our `fakesMail()` helper - we replace the `mailer.transport` container key with our
+own class that logs mails the application sent and lets us run assertions against that log, but never actually sends
+mail.
 
 ```php
     protected function fakesMail()
     {
-        $this->swap('mailer.transport', function (Container $c) {
-            return new Transport(
-                \Swift_DependencyContainer::getInstance()->lookup('transport.eventdispatcher')
-            );
+        // enableMailQueue is a config.php value, not an option - so mail sent with queue() goes
+        // straight to the transport rather than becoming a MailSend job we would never see
+        $this->setConfig('enableMailQueue', false);
+
+        $this->swap('mailer.transport', function (Container $c)
+        {
+            return new TestTransport();
         });
 
-        $this->swap('mailer.queue', function(Container $c)
-        {
-            return new Queue($c['db']);
-        });
+        // XF\Mail\Mailer takes both the transport and the queue flag as constructor arguments, and
+        // `mailer` is separately cached - so an already-built mailer would keep the real ones
+        $this->app()->container()->decache('mailer');
+
+        return $this->getMailTransport();
     }
 ```
-    
-In the above code, the `Transport` class we instantiate is actually a custom class I built which implements the
-`\Swift_Transport` interface and so accepts all the same calls that a normal Swift Transport class would, but just 
-stores them in an array rather than sending them.
+
+That last step is the part worth carrying away, because it is not specific to mail: **swapping a container key does not
+reach anything that has already been built from it.** XenForo caches resolved entries, and a resolved object holds the
+values it was constructed with, not the container. So a swap installed after its consumer exists lands somewhere nothing
+looks - silently, since the fake is genuinely in the container and merely unused. `fakesHttp()` has the same shape and
+discards `reader`; `swapFs()` discards `fs`.
+
+In the above code, the `TestTransport` class we instantiate is a custom class I built which extends Symfony Mailer's
+`AbstractTransport` and so accepts all the same calls a real transport would, but just stores the messages in an array
+rather than sending them. (XenForo used Swiftmailer before 2.2, which is why some older addon test code asserts against
+a `email => name` array where it now gets `Symfony\Component\Mime\Address` objects - see `DOCS.md`.)
 
 `mock()` takes that one step further and lets us swap the closure function with a mock object that we can declare 
 assertions on for testing purposes.
@@ -938,8 +949,9 @@ Use `fakesLogger()` instead.
 
 ### Don't mock `XF\Mail\Transport`
 
-Use `fakesMail()` instead. Note that mail queueing no longer exists as of v3.0 - `fakesMail()` disables it and everything
-goes via the test transport.
+Use `fakesMail()` instead. It switches XenForo's mail queue off rather than faking it, so mail sent with `queue()` goes
+through the test transport just as `send()` does, and there is no `MailSend` job to run. (v3.0 removed the queue *fake*
+that used to do this; the queue itself is XenForo's and is very much still there.)
 
 ### Don't mock `XF\SimpleCache`
 

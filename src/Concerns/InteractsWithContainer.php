@@ -41,6 +41,28 @@ trait InteractsWithContainer
 	}
 
 	/**
+	 * Set a value in the application config - the values from config.php, which are NOT options.
+	 *
+	 * The two are easy to confuse and fail differently: setOption() writes somewhere XenForo reads
+	 * on demand, while a config value is usually read ONCE, where the container builds whatever
+	 * consumes it, and the consumer then keeps the value rather than the config. So call this before
+	 * the code under test resolves anything - and if the consuming container key may already have
+	 * been built, decache it, the way fakesMail() decaches `mailer`.
+	 *
+	 * @param string $key - the config key to set
+	 * @param mixed $value - the value to set it to
+	 *
+	 * @return array - the config array as swapped in
+	 */
+	protected function setConfig($key, $value)
+	{
+		$config = $this->app()->config();
+		$config[$key] = $value;
+
+		return $this->swap('config', $config);
+	}
+
+	/**
 	 * Mock an instance of an object in the container.
 	 *
 	 * @param  mixed  $key - the container key to be swapped with a mock

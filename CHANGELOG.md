@@ -11,6 +11,7 @@ CHANGELOG
 * new actingAs(), actingAsMember() and actingAsGuest() helpers - run a test as a given user,
   with permissions granted in memory rather than read from the database
 * new setVisitorPermissions(), setVisitorContentPermissions() and buildVisitor() helpers
+* new setConfig() helper - set a config.php value, which setOption() cannot do
 * new UsesDatabaseTransactions trait - wraps each test in a transaction and rolls it back, so
   tests can exercise real entity saves without leaving anything behind
 * new assertDatabaseHas(), assertDatabaseMissing() and assertDatabaseCount() assertions
@@ -39,6 +40,16 @@ CHANGELOG
   An assertion therefore saw whatever the caller left in the variable after the event, not what
   was fired. Arguments are now recorded as they were at the moment of firing; objects are still
   recorded as the same instance
+* bugfix: fakesMail() did not disable mail queueing, so mail sent with queue() was enqueued as a
+  MailSend job and never reached the test transport - the assertions then reported "The expected
+  mail was not sent". enableMailQueue is a config.php value, not an option, and setOption() cannot
+  reach it. Mail sent with send() was unaffected, which is why this survived since 2024; queue() is
+  what batch and job code normally calls. The package had no mail test at all - there is one now
+* bugfix: swapFs() and mockFs() returned the real local filesystem adapter, rather than the fake,
+  if anything had already resolved the filesystem. XenForo builds its mounts once and caches them
+  under `fs`, so rewriting the config did not reach them. A test in that position read and wrote
+  the real data directory - exactly the side effects the helpers exist to prevent - and nothing
+  reported it
 * bugfix: mockRepository() stored the mock under the identifier it was given, but getRepository()
   normalises before looking one up. A spelling XenForo accepts everywhere else - 'XF:UserRepository',
   or the full class name - therefore registered a mock nothing consulted: the real repository ran and

@@ -122,6 +122,36 @@ Everything else works by **swapping container keys**. `Concerns\InteractsWithCon
 the primitive; `mock()`/`spy()`/`mockFactory()`/`mockService()` wrap it with Mockery. `swap()` also
 accepts `[$subcontainerKeyOrObject, $key]` to reach into an `XF\SubContainer\AbstractSubContainer`.
 
+### A swap does not reach anything already built from the key — decache the consumer
+
+This is the single most productive bug in the package: **four** shipped instances of it, all found
+by consumers rather than by any check here, and every one of them silent. Assume any new fake has it
+until you have written the test that proves otherwise.
+
+`XF\Container::set()` clears the cache for **its own key only**. A resolved entry that was
+constructed from that key keeps the *value* it was handed, not the container, so it never sees the
+swap. The fake is genuinely installed, nothing consults it, and the test reports a plain assertion
+failure that reads like a bug in the code under test:
+
+| swap | held by value in | fixed by |
+|---|---|---|
+| `client`, `clientUntrusted` | `reader`, `metadataFetcher` | `decache('reader')`, `decache('metadataFetcher')` |
+| `mailer.transport`, `config['enableMailQueue']` | `mailer` | `decache('mailer')` |
+| `config['fsAdapters'][…]` | `fs` | `decache('fs')` |
+
+Two consequences worth stating separately, because each cost someone a session:
+
+- **A second fake of the same thing in one test is the same bug**, seen from the other end — the
+  first fake resolved the consumer, so the second one lands nowhere. Every fake wants a
+  `test_a_second_fake_replaces_the_first`.
+- **The filesystem case is not merely a silent pass.** `swapFs()` returned the real `LocalFsAdapter`,
+  so the test then wrote to the forum's actual `data/` directory. A fake that quietly stops being a
+  fake is worse than no fake. `integration/FilesystemResolveOrderTest` demonstrates it and cleans up
+  after itself, because running it without the fix really does write that file.
+
+To find the consumer: grep XenForo's `App.php` for the key you are swapping and see which other
+container closure reads it.
+
 `Hampel\Testing\TestCase` composes the `Concerns\*` traits and drives the lifecycle:
 
 - `setUp()` → `refreshApplication()` (wrapped in output-buffer save/restore, because XenForo boot
@@ -141,8 +171,11 @@ The `src/` classes outside `Concerns/` are the fakes and subclasses that get swa
   **persist across tests in a run**. Re-extending a class per test is what it exists to prevent;
   making these instance state will reintroduce the bug 3.0.2 fixed.
 - **`Job\Manager` and `Mail\TestTransport`** track queued jobs / sent mail in memory for the
-  corresponding `assert*` helpers. Mail queueing is switched off (`enableMailQueue` option) rather
-  than faked, so everything goes through `TestTransport` — 3.0.0 removed the old queue fake.
+  corresponding `assert*` helpers. Mail queueing is switched off rather than faked, so everything
+  goes through `TestTransport` — 3.0.0 removed the old queue fake. `enableMailQueue` is a
+  **config.php value, not an option**; `fakesMail()` set an option of that name from 2024 until
+  4.0.0, which did nothing at all, and `queue()` kept enqueuing `MailSend` jobs the transport never
+  saw.
 
 Naming convention across the concerns, worth preserving: `fakes*()` installs an in-memory
 implementation with assertion helpers, `mock*()` installs a Mockery double, `set*()` mutates state
