@@ -97,7 +97,7 @@ suite cannot execute is the whole argument for keeping it green.
 ### The dependency checks do not apply either — do not add them
 
 `composer-require-checker` and a dev-free PHPStan run are the standard way to catch a package
-calling a class it never declared. Both report the same 27 symbols here, and **every one of them
+calling a class it never declared. The checker reports 33 symbols here, and **every one of them
 is undeclarable rather than undeclared**:
 
 - `XF\*` and XenForo's global helpers (`utf8_substr`) come from XenForo itself, which is licensed
@@ -108,10 +108,22 @@ is undeclarable rather than undeclared**:
   a duplicate of one of these actually costs.
 - `Carbon\*` is genuinely optional and is in `suggest`.
 
-So neither check can ever be green, and whitelisting all 27 silences the check rather than
-configuring it. A permanently red CI job is worse than no job, which is why there is no
-`dependencies` workflow. The equivalent coverage comes from PHPStan reading XenForo's source
-directly.
+So neither check can ever be green. A whitelist file is the usual remedy for that, and it is the
+wrong one here, for a reason specific to this package: **the list would have to grow every time a
+new XenForo class is used**, which is most of what changing this code consists of. Raising PHPStan
+by two levels added `XF\Repository\UserRepository` and `League\Flysystem\Filesystem` in a single
+commit; both are supplied by the forum, both belong on the whitelist, and both would have turned
+the job red first. A check answered by extending its own exclusion list trains the reflex that a
+new symbol needs silencing rather than checking, which is the opposite of what it is for.
+
+The extension half does not rescue it either. `composer-require-checker` is the only thing that
+catches an undeclared `ext-*`, and that is a real failure mode for most packages — but this one
+runs only inside a XenForo installation, and XenForo's own requirements already guarantee
+`ext-json`, `ext-mbstring`, `ext-pcre`, `ext-intl` and a dozen more.
+
+So there is no `dependencies` workflow. The equivalent coverage comes from PHPStan reading
+XenForo's source directly, which is also the only check here that can resolve those 33 symbols
+rather than merely tolerating them.
 
 ## Version compatibility is the release axis
 
