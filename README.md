@@ -52,9 +52,13 @@ CI job silently testing nothing, just caught at the moment it is obvious rather 
 **`failOnEmptyTestSuite` fires on an empty run, not an empty suite**, and there is no flag that does the latter. So if
 your Unit suite passes, a Feature suite collecting nothing still exits 0 - and so does one holding a feature test
 PHPUnit never picked up, because the file is named `SomethingFeature.php` rather than `SomethingTest.php`, or sits in
-the wrong directory. Nothing in `phpunit.xml` will tell you. When you add your first feature test, run
-`vendor/bin/phpunit --testsuite Feature` once and check the count is what you expect; after that the suite is no longer
-empty and the flag has nothing to say about it either way.
+the wrong directory. Nothing in `phpunit.xml` will tell you.
+
+When you add your first feature test, run `vendor/bin/phpunit --testsuite Feature` once and **read the count, not the
+exit code**. The example test above means that suite always collects something, so the command exits 0 whether or not
+your own test was picked up - `OK (1 test, 1 assertion)` where you expected two is the only thing that tells you. (An
+empty `tests/Feature` does make that command exit 1, but only until you put anything in it at all, which is the first
+thing you do.)
 
 ### PHPUnit 12 removes metadata in doc comments
 

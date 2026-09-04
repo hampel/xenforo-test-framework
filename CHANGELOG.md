@@ -14,7 +14,10 @@ CHANGELOG
   directory in git exactly as the `.gitkeep` did, and additionally shows where feature tests go, the
   same way `tests/Unit/ExampleTest.php` does. It guards nothing: `failOnEmptyTestSuite` fires on an
   empty run rather than an empty suite, so a Feature suite that collects nothing - or that holds a
-  test PHPUnit never picked up - still exits 0 while the Unit suite passes. The README says so now
+  test PHPUnit never picked up - still exits 0 while the Unit suite passes. It also removes the one
+  signal the `.gitkeep` gave: `--testsuite Feature` exited 1 on an empty directory and exits 0 once
+  anything is in it. The README says both, and says to read the count from that command rather than
+  its exit code
 * the 3.0.4 and 3.0.5 entries are included below - those releases were cut on the 3.x branch and
   their entries had not reached this one
 
