@@ -1,6 +1,18 @@
 CHANGELOG
 =========
 
+4.0.1 (2026-09-05)
+------------------
+
+* docs: the README listed `isolateAddon` among the available helpers. It was removed in 3.0.0 and
+  calling it is a fatal - use the `$addonsToLoad` property in `tests/TestCase.php` instead
+* docs: the README's helper lists did not mention anything added in 4.0.0. `actingAs()` and the
+  visitor helpers, `makeEntity()` / `createEntity()`, `fakesEvents()`, `fakesHttpByUrl()`,
+  `setConfig()`, `UsesDatabaseTransactions` and the database assertions are all listed now
+* docs: the README notes that `swapFs()` needs `league/flysystem-memory` in your own `require-dev`
+* the 3.0.4 and 3.0.5 entries are included below - those releases were cut on the 3.x branch and
+  their entries had not reached this one
+
 4.0.0 (2026-09-05)
 ------------------
 

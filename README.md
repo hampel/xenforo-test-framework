@@ -462,7 +462,9 @@ We also have fake systems which log interactions with the subsystem and then all
 * `fakesMail`
 * `fakesSimpleCache`
 * `fakesRegistry`
-* `fakesHttp`
+* `fakesHttp` - and `fakesHttpByUrl`, which picks the response by request URL rather than by the
+order the calls happen in
+* `fakesEvents` - records the code events your addon fires and stops them reaching any listener
 
 Finally, we have some special helper functions for specific purposes:
 
@@ -473,9 +475,19 @@ options repository. It restores options after each test is executed - keeping to
 * `setTestTime` lets us set the application execution time (`\XF::$time`) to a known specific time (optionally using the
 Carbon library), so that we can test functions that rely on time intervals or comparisons.
 * `swapFs` lets us swap the filesystem from _local_ to _memory_ so that we can make non-persistent changes to the 
-filesystem and avoid side effects
-* `isolateAddon` lets us force XenForo to only load class extensions and code event listeners for our addon, thus 
-avoiding potential conflicts or unexpected code paths from other addons installed on our dev server
+filesystem and avoid side effects. This one needs `league/flysystem-memory: ^1.0` in your own `require-dev`
+* `setConfig` sets a value in `config.php`, which options cannot reach - `setOption` writes somewhere else entirely
+* `actingAs`, `actingAsMember` and `actingAsGuest` run the code under test as a given visitor, with
+`setVisitorPermissions` and `setVisitorContentPermissions` granting permissions in memory rather than reading them
+from the database
+* `makeEntity` and `createEntity` build an entity with the values you give it - `makeEntity` touches no database,
+`createEntity` saves
+* `UsesDatabaseTransactions` is a trait you opt into per test class: it wraps each test in a transaction and rolls it
+back, so tests can exercise real entity saves without leaving anything behind. `assertDatabaseHas`,
+`assertDatabaseMissing` and `assertDatabaseCount` then assert against rows that are really there
+
+`isolateAddon()` was removed in v3.0.0. Use the `$addonsToLoad` property in your `tests/TestCase.php` instead - it does
+the same job, for the whole test class rather than per test.
 
 ## 8. Installing the Framework
 
