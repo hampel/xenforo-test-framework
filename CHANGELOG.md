@@ -23,6 +23,11 @@ CHANGELOG
 * bugfix: `assertExceptionLogged()`, `assertActionLogged()` and `assertChangeLogged()` with a count
   asserted against the wrong value
 * bugfix: `Job\Manager::runByIds()` returned null where an array was documented
+* bugfix: `DataRegistry::delete()` called a cache method Symfony's `AdapterInterface` does not
+  declare, so deleting a registry key fataled whenever the registry had been constructed with a
+  cache. It now calls `deleteItems()`, as XenForo itself does
+* `Job\Manager::runQueue()`, `runUnique()` and `runJobEntry()` return `null` explicitly, and the
+  docblocks on `_enqueue()` and `setOptions()` name the parameters those methods actually take
 * bugfix: parameters are explicitly nullable, removing deprecation notices on PHP 8.4
 * bugfix: `fakesHttpByUrl()` ignored Guzzle's `sink`, so code downloading to a file - which is
   what XF\Http\Reader::getUntrusted($url, $limits, $saveTo) does - received the response and

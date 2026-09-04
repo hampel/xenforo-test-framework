@@ -19,7 +19,7 @@ trait InteractsWithOptions
 	/**
 	 * Set an array of options key=>value pairs
 	 *
-	 * @param  array  $options
+	 * @param  array  $newOptions
 	 * @return array
 	 */
 	protected function setOptions(array $newOptions)

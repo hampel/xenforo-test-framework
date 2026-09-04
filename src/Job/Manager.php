@@ -26,6 +26,8 @@ class Manager extends BaseManager
 	 */
 	public function runQueue($manual, $maxRunTime)
 	{
+		// a deliberate no-op: the fake records what was queued and never runs it
+		return null;
 	}
 
 	/**
@@ -46,6 +48,8 @@ class Manager extends BaseManager
 	 */
 	public function runUnique($key, $maxRunTime)
 	{
+		// a deliberate no-op: the fake records what was queued and never runs it
+		return null;
 	}
 
 	public function runById($id, $maxRunTime)
@@ -65,6 +69,8 @@ class Manager extends BaseManager
 	 */
 	public function runJobEntry(array $job, $maxRunTime)
 	{
+		// a deliberate no-op: the fake records what was queued and never runs it
+		return null;
 	}
 
 	public function handleShutdown()
@@ -128,12 +134,7 @@ class Manager extends BaseManager
 	}
 
 	/**
-	 * @param string|null $uniqueId
-	 * @param string $jobClass
-	 * @param array $params
-	 * @param bool $manual
-	 * @param int|null $runTime
-	 * @param bool $blocking If auto, this job can be set as blocking which will change the UI for the triggerer
+	 * @param JobParams $jobParams
 	 *
 	 * @return int|null ID of the enqueued job (or null if an error happened)
 	 */

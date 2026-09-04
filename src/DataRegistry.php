@@ -54,10 +54,9 @@ class DataRegistry extends BaseDataRegistry
 
 		if ($this->cache)
 		{
-			foreach ($keys AS $key)
-			{
-				$this->cache->delete($this->getCacheId($key));
-			}
+			// deleteItems(), as XF itself uses - Symfony's cache AdapterInterface has no delete()
+			$cacheIds = array_map([$this, 'getCacheId'], $keys);
+			$this->cache->deleteItems($cacheIds);
 		}
 
 		foreach ($keys AS $key)

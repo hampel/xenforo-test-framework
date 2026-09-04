@@ -3,6 +3,7 @@
 namespace Hampel\Testing\Integration;
 
 use Hampel\Testing\DataRegistry;
+use Symfony\Component\Cache\Adapter\AdapterInterface;
 
 /**
  * Each of these reproduces a bug that shipped in 3.0.3 and was fixed in 4.0.0. Run against
@@ -24,6 +25,23 @@ class RegressionTest extends TestCase
 
 		$registry->delete('integrationProbe');
 		$this->assertNull($registry->get('integrationProbe'));
+	}
+
+	/**
+	 * delete() called $cache->delete() per key. Symfony's cache AdapterInterface - which is what
+	 * XF\DataRegistry declares and type-hints - has no delete(); XF itself calls deleteItems().
+	 * It went unnoticed because fakesRegistry() always passes a null cache so the branch never
+	 * runs, and because some adapters (ArrayAdapter) happen to have a delete() anyway.
+	 */
+	public function test_delete_uses_the_cache_method_the_interface_actually_has()
+	{
+		$cache = \Mockery::mock(AdapterInterface::class);
+		$cache->shouldReceive('deleteItems')->once()->with(\Mockery::type('array'));
+
+		$registry = new DataRegistry($this->app()->db(), $cache);
+		$registry->setFakeMode();
+
+		$registry->delete('integrationProbe');
 	}
 
 	/** 3.0.3: TypeError - doSend() assigned a string over the array the assertions count */
