@@ -35,10 +35,11 @@ It now fails the test suite on deprecations, notices, warnings, risky tests, PHP
 executes no tests at all.
 
 `phpunit.xml` declares a Feature test suite, so `tests/Feature` has to exist. If yours does not, take it from the
-scaffold rather than creating it by hand - v4.0 ships `tests/Feature/.gitkeep` precisely so the directory survives being
-committed. **Git does not track empty directories**, so a `tests/Feature` you `mkdir` yourself works on your machine and
-is absent in every clone, including CI. A missing directory does at least fail loudly: PHPUnit prints
-`Test directory ".../tests/Feature" not found` and exits **2** without running anything, on 10, 11 and 12 alike.
+scaffold rather than creating it by hand - it ships `tests/Feature/ExampleTest.php`, which keeps the directory in git as
+well as showing where feature tests go. **Git does not track empty directories**, so a `tests/Feature` you `mkdir`
+yourself works on your machine and is absent in every clone, including CI. A missing directory does at least fail
+loudly: PHPUnit prints `Test directory ".../tests/Feature" not found` and exits **2** without running anything, on 10,
+11 and 12 alike.
 
 `failOnPhpunitDeprecation` is the one most likely to turn a currently-green suite red, and that is what it is for - see
 the note on PHPUnit 12 below. `failOnEmptyTestSuite` covers the case that genuinely was silent: a run which finds no
@@ -47,6 +48,13 @@ tests at all exits **0** by default, so a suite that has quietly stopped collect
 You will most often meet that second flag when you mistype a `--filter`. A filter matching nothing used to print
 `No tests executed!` and exit 0, which looks a lot like a test that passed; it now exits 1. That is the same defect as a
 CI job silently testing nothing, just caught at the moment it is obvious rather than months later.
+
+**`failOnEmptyTestSuite` fires on an empty run, not an empty suite**, and there is no flag that does the latter. So if
+your Unit suite passes, a Feature suite collecting nothing still exits 0 - and so does one holding a feature test
+PHPUnit never picked up, because the file is named `SomethingFeature.php` rather than `SomethingTest.php`, or sits in
+the wrong directory. Nothing in `phpunit.xml` will tell you. When you add your first feature test, run
+`vendor/bin/phpunit --testsuite Feature` once and check the count is what you expect; after that the suite is no longer
+empty and the flag has nothing to say about it either way.
 
 ### PHPUnit 12 removes metadata in doc comments
 
@@ -544,9 +552,10 @@ $ cp -r vendor/hampel/xenforo-test-framework/tests .
 
 Inside the tests directory, you'll find the following directories and files:
 
-* `/tests/Feature` this is a placeholder for future support for feature testing. It contains only a `.gitkeep`,
-  which is there so the directory can be committed - git does not track empty directories, and `phpunit.xml`
-  refuses to run without this directory present. **Commit the `.gitkeep` along with the rest.**
+* `/tests/Feature` this is where feature tests go, if you write any
+* `/tests/Feature/ExampleTest.php` a placeholder, the same shape as the Unit one. It is also what keeps the directory
+  in git: git does not track empty directories, and `phpunit.xml` refuses to run at all without this directory. If you
+  delete it without putting a feature test in its place, commit a `.gitkeep` instead
 * `/tests/Unit` this is where all of your unit tests should go
 * `/tests/Unit/ExampleTest.php` this is a simple example test - edit or copy it as the basis for your own test classes
 * `/tests/CreatesApplication.php` this is the trait that boots our XenForo test framework. If you need to adjust the way we boot things, you can change this - but for most cases you should leave it as is
