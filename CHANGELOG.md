@@ -1,7 +1,7 @@
 CHANGELOG
 =========
 
-4.0.0 (unreleased)
+4.0.0 (2026-09-05)
 ------------------
 
 * new `makeEntity()` and `createEntity()` helpers for building entities with given values
