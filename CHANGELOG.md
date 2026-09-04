@@ -28,8 +28,12 @@ CHANGELOG
   cache. It now calls `deleteItems()`, as XenForo itself does
 * `Job\Manager::runQueue()`, `runUnique()` and `runJobEntry()` return `null` explicitly, and the
   docblocks on `_enqueue()` and `setOptions()` name the parameters those methods actually take
-* `swapFs()`, `mockFs()` and `buildVisitor()` throw a `LogicException` if XenForo hands back a
-  filesystem or repository of an unexpected type, rather than fatalling on an undefined method
+* `swapFs()`, `mockFs()`, `fakesRegistry()` and `buildVisitor()` throw a `LogicException` if
+  XenForo hands back a filesystem, registry or repository of an unexpected type, rather than
+  fatalling on an undefined method
+* `setOptions()` is documented as returning `XF\Options`, which is what it has always returned;
+  the docblock said `array`. `swap()` is documented as taking and returning `mixed`, which
+  covers the closures and the config array it has always accepted
 * `app()` is documented as returning `Hampel\Testing\App`, which is the class the framework boots
 * bugfix: parameters are explicitly nullable, removing deprecation notices on PHP 8.4
 * bugfix: `fakesHttpByUrl()` ignored Guzzle's `sink`, so code downloading to a file - which is

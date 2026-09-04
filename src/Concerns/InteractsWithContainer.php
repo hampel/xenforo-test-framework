@@ -11,9 +11,10 @@ trait InteractsWithContainer
 	 * Register an instance of an object in the container.
 	 *
 	 * @param  mixed  $key - the container key to be swapped
-	 * @param  object  $instance - the object or closure to swap in
+	 * @param  mixed  $instance - the value to swap in: an object, a closure the container will
+	 *                            resolve, or a plain value such as the config array
 	 *
-	 * @return object - the instance or closure that was swapped in
+	 * @return mixed - the value that was swapped in
 	 */
 	protected function swap($key, $instance)
 	{
@@ -59,7 +60,9 @@ trait InteractsWithContainer
 		$config = $this->app()->config();
 		$config[$key] = $value;
 
-		return $this->swap('config', $config);
+		$this->swap('config', $config);
+
+		return $config;
 	}
 
 	/**

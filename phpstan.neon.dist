@@ -6,10 +6,16 @@
 #     XF_ROOT=/srv/www/myforum composer analyse
 #
 # Copy this file to phpstan.neon (gitignored) to hard-code your own path.
+includes:
+    # Teaches PHPStan that Mockery::mock(Foo::class) is a Foo as well as a MockInterface.
+    # Without it the helpers here look like they return the wrong type to their own callers.
+    - vendor/phpstan/phpstan-mockery/extension.neon
+
 parameters:
-    # Level 3 wants six return types corrected first - the fakes* helpers and swapFs()
-    # document a concrete class where the container hands back something looser.
-    level: 2
+    # Level 4 is nine errors away, and they are a different kind: always-true conditions and
+    # dead branches, plus one false positive - it counts UsesDatabaseTransactions as used zero
+    # times, because the only things that use it are consumers' test classes.
+    level: 3
 
     # The range the package declares support for, checked in one run.
     phpVersion:

@@ -2,6 +2,8 @@
 
 namespace Hampel\Testing\Concerns;
 
+use XF\Options;
+
 trait InteractsWithOptions
 {
 	private $originalOptions = [];
@@ -20,7 +22,7 @@ trait InteractsWithOptions
 	 * Set an array of options key=>value pairs
 	 *
 	 * @param  array  $newOptions
-	 * @return array
+	 * @return Options - XenForo's live options object, so it can be mutated further
 	 */
 	protected function setOptions(array $newOptions)
 	{

@@ -30,6 +30,16 @@ trait InteractsWithRegistry
 		}
 
 		// resolve out of the container - swap() hands back the closure, not the instance
-		return $this->app()->registry();
+		$registry = $this->app()->registry();
+
+		if (!($registry instanceof DataRegistry))
+		{
+			throw new \LogicException(
+				'Expected the registry to be a ' . DataRegistry::class . ', got '
+				. get_class($registry)
+			);
+		}
+
+		return $registry;
 	}
 }

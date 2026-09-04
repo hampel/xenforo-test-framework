@@ -28,7 +28,18 @@ trait InteractsWithFilesystem
 		$this->swap('config', $config);
 		$this->decacheFs();
 
-		return $this->adapterFor($fs);
+		// resolve out of the container - swap() hands back the config, not the adapter
+		$adapter = $this->adapterFor($fs);
+
+		if (!($adapter instanceof MemoryAdapter))
+		{
+			throw new \LogicException(
+				"Expected '$fs' to be swapped for a " . MemoryAdapter::class . ', got '
+				. get_class($adapter)
+			);
+		}
+
+		return $adapter;
 	}
 
 	protected function assertFsHas($file)

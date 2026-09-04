@@ -37,6 +37,7 @@
 		"league/flysystem-memory": "^1.0",
 		"nesbot/carbon": "^2.0|^3.0",
 		"phpstan/phpstan": "^2.1.22",
+		"phpstan/phpstan-mockery": "^2.0",
 		"xenforo-ltd/xf-cs-fixer": "^1.2"
 	},
 	"autoload-dev": {
