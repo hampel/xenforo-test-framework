@@ -37,8 +37,10 @@ XF_ROOT=/srv/www/myforum composer integration
 ```
 
 Without `XF_ROOT`, or with one that has no `src/XF.php`, every test **skips** and the run exits 0
-— so it can sit in the repository without breaking anyone who has no forum. It can never run in
-CI for the same reason PHPStan cannot.
+— so it can sit in the repository without breaking anyone who has no forum. It does not run in CI,
+for the same reason PHPStan does not: XenForo's source is licensed and no public workflow can
+fetch it. Read that as a licensing decision rather than a technical impossibility — a workflow
+holding license credentials could provision a real forum, and the tooling for that is improving.
 
 Two things in there are load-bearing and easy to undo by accident:
 
