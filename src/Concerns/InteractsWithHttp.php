@@ -100,6 +100,22 @@ trait InteractsWithHttp
 	{
 		$handlerStack->push(Middleware::history($this->history));
 
+		// Guzzle's real handlers return the rewound sink as the body. Both fakes instead return a
+		// body they have already read to the end - to write it to the sink, which XF's reader
+		// always sets - so without this getContents() sees an empty string. That is how XF core
+		// reads a response; a (string) cast seeks to the start first, which is why it never showed.
+		$handlerStack->push(Middleware::mapResponse(function (ResponseInterface $response)
+		{
+			$body = $response->getBody();
+
+			if ($body->isSeekable())
+			{
+				$body->rewind();
+			}
+
+			return $response;
+		}), 'rewind_body');
+
 		$http = $this->app()->http();
 		$key = $untrusted ? 'clientUntrusted' : 'client';
 
@@ -125,6 +141,9 @@ trait InteractsWithHttp
 	 * XF\Http\Reader::getUntrusted($url, $limits, $saveTo) relies on it to download to a file.
 	 * A fake that skips it delivers the response and writes nothing, which looks like a bug in
 	 * the code under test.
+	 *
+	 * Reading the body to write it leaves the stream at its end. installHttpFake() rewinds it on
+	 * the way back out - for this fake and for MockHandler, which does the same thing.
 	 *
 	 * @param ResponseInterface $response
 	 * @param array $options - the Guzzle request options

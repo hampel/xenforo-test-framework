@@ -1,6 +1,19 @@
 CHANGELOG
 =========
 
+4.0.2 (unreleased)
+------------------
+
+* bugfix: a faked response reached the caller with its body already read, so
+  `$response->getBody()->getContents()` returned an empty string under both `fakesHttp()` and
+  `fakesHttpByUrl()`. XenForo's `XF\Http\Reader` always gives Guzzle a sink - `php://temp` when you
+  pass no `$saveTo` - and both fakes read the body to the end to write it there; Guzzle's own
+  `MockHandler`, behind `fakesHttp()`, has the identical code. Real Guzzle returns the rewound sink
+  as the body, so production was never affected. `getContents()` is how XenForo core reads a
+  response, so an add-on reading one the same way could not be tested through either fake. A
+  `(string)` cast was unaffected, because it seeks to the start before reading - which is also why
+  nothing here caught it
+
 4.0.1 (2026-09-05)
 ------------------
 
