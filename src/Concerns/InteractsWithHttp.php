@@ -4,6 +4,7 @@ use GuzzleHttp\Client;
 use GuzzleHttp\Handler\MockHandler;
 use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Middleware;
+use Psr\Http\Message\ResponseInterface;
 use PHPUnit\Framework\Assert as PHPUnit;
 
 trait InteractsWithHttp
@@ -22,6 +23,22 @@ trait InteractsWithHttp
 	{
 		$handlerStack = HandlerStack::create(new MockHandler($responseStack));
 		$handlerStack->push(Middleware::history($this->history));
+
+		// Guzzle's real handlers return the rewound sink as the body. MockHandler instead returns a
+		// body it has already read to the end - to write it to the sink, which XF's reader always
+		// sets - so without this getContents() sees an empty string. That is how XF core reads a
+		// response; a (string) cast seeks to the start first, which is why it never showed.
+		$handlerStack->push(Middleware::mapResponse(function (ResponseInterface $response) {
+			$body = $response->getBody();
+
+			if ($body->isSeekable())
+			{
+				$body->rewind();
+			}
+
+			return $response;
+		}), 'rewind_body');
+
 		$http = $this->app()->http();
 		$key = $untrusted ? 'clientUntrusted' : 'client';
 
