@@ -1,7 +1,7 @@
 CHANGELOG
 =========
 
-4.0.2 (unreleased)
+4.0.2 (2026-09-10)
 ------------------
 
 * bugfix: a faked response reached the caller with its body already read, so
