@@ -58,6 +58,24 @@ class RouteDispatchTest extends TestCase
 		$this->assertReplyIsError($this->dispatch('options', 'admin'), 403);
 	}
 
+	public function test_an_api_route_returns_an_api_result()
+	{
+		$reply = $this->dispatch('me', 'api');
+
+		$this->assertReplyIsApiResult($reply);
+		$this->assertNotNull($this->replyApiResult($reply));
+	}
+
+	/**
+	 * An api route whose scope the key does not carry. XF::apiKey() never returns null - it builds
+	 * a fallback key that is not a super user - so this is the un-bypassed shape, and it is the
+	 * api equivalent of the admin permission case above.
+	 */
+	public function test_an_api_route_outside_the_keys_scope_is_refused()
+	{
+		$this->assertReplyIsError($this->dispatch('users', 'api'), 403);
+	}
+
 	public function test_an_admin_route_without_an_admin_visitor_fails_loudly()
 	{
 		$this->actingAsMember();

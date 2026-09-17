@@ -3,6 +3,7 @@
 namespace Hampel\Testing\Concerns;
 
 use PHPUnit\Framework\Assert as PHPUnit;
+use XF\Api\Mvc\Reply\ApiResult;
 use XF\Http\Request;
 use XF\Mvc\Dispatcher;
 use XF\Mvc\Reply\AbstractReply;
@@ -277,6 +278,36 @@ trait InteractsWithRoutes
 	}
 
 	/**
+	 * Assert that the reply is an api result - what an api route returns instead of a view.
+	 *
+	 * @param AbstractReply $reply
+	 *
+	 * @return void
+	 */
+	protected function assertReplyIsApiResult(AbstractReply $reply)
+	{
+		PHPUnit::assertInstanceOf(ApiResult::class, $reply, $this->describeReply($reply));
+	}
+
+	/**
+	 * The rendered body of an api reply, for asserting on the fields a client will actually see.
+	 *
+	 * Note that rendering is not recursive: a nested entity comes back as another result object
+	 * needing its own render(), rather than as data.
+	 *
+	 * @param AbstractReply $reply
+	 *
+	 * @return mixed
+	 */
+	protected function replyApiResult(AbstractReply $reply)
+	{
+		$this->assertReplyIsApiResult($reply);
+
+		/** @var ApiResult $reply */
+		return $reply->getApiResult()->render();
+	}
+
+	/**
 	 * Assert that the reply is a simple message, as returned by an action with nothing to render.
 	 *
 	 * @param AbstractReply $reply
@@ -320,6 +351,10 @@ trait InteractsWithRoutes
 		else if ($reply instanceof View)
 		{
 			$description .= ' rendering template ' . var_export($reply->getTemplateName(), true);
+		}
+		else if ($reply instanceof ApiResult)
+		{
+			$description .= ' carrying an api result';
 		}
 
 		return $description;

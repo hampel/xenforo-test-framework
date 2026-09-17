@@ -251,6 +251,8 @@ $this->assertReplyTemplate($reply, 'option_group_list');
 Reroutes are resolved for you, so a route that reroutes returns the reply at the end of the chain
 rather than the `Reroute` that got you there.
 
+An api route returns an `ApiResult` rather than a view - see `assertReplyIsApiResult()` below.
+
 **An admin route needs a visitor with `is_admin` set**, and `dispatch()` throws if there is not one.
 XenForo's admin controllers assert it and reroute to the login form, which arrives as an ordinary
 view with a 200 response - so without that check a test would assert against the login page and
@@ -301,6 +303,30 @@ $reply = $this->dispatch('options', 'admin');
 $this->assertReplyParam($reply, 'groups');
 $this->assertCount(5, $this->replyParam($reply, 'groups'));
 ```
+
+### assertReplyIsApiResult / replyApiResult
+Assert that a reply is an api result - what an api route returns instead of a view - and read the
+body a client would see.
+
+##### Parameters:
+
+* `reply` - as returned by `dispatch($routePath, 'api')`
+
+##### Example:
+
+```php
+$reply = $this->dispatch('me', 'api');
+
+$this->assertReplyIsApiResult($reply);
+$this->assertSame('Admin', $this->replyApiResult($reply)->me->username);
+```
+
+Rendering is **not recursive**: a nested entity comes back as another result object needing its own
+`render()` rather than as data.
+
+`XF::apiKey()` never returns null - XenForo builds a fallback key which is not a super user - so a
+dispatch with no key set up is the un-bypassed shape rather than an error. A route whose scope that
+key does not carry returns an error with a 403, which is how a test shows an api scope is enforced.
 
 ### assertReplyIsRedirect / assertReplyIsError / assertReplyIsMessage
 Assert that a reply is a redirect, an error or a plain message.

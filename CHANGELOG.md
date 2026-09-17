@@ -7,7 +7,8 @@ CHANGELOG
 * new: `dispatch()` runs one of your routes the way XenForo does and returns the reply its
   controller produced, with `assertReplyIsView()`, `assertReplyTemplate()`,
   `assertReplyViewClass()`, `assertReplyParam()`, `replyParam()`, `assertReplyIsRedirect()`,
-  `assertReplyIsError()` and `assertReplyIsMessage()` to assert against it. Public, admin and api
+  `assertReplyIsError()`, `assertReplyIsMessage()`, `assertReplyIsApiResult()` and
+  `replyApiResult()` to assert against it. Public, admin and api
   routes are all reachable and reroutes are resolved for you. **This is the only way to cover an
   action's own access checks**: a controller invoked directly never runs `preDispatch()`, which is
   where XenForo's own `xf-make:controller` stub puts them, so an action tested that way is tested
