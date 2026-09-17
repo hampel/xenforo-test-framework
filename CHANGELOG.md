@@ -19,6 +19,9 @@ CHANGELOG
 * `dispatch()` does not render the page, so asserting on HTML - that a template modification
   applied, or that a phrase resolved rather than showing a raw key - is not supported yet. Nor is
   `POST`, because XenForo asserts a valid CSRF token for anything that is not a `GET`
+* docs: `DOCS.md` still said you cannot unit test code which calls `save()` on an entity, and
+  offered `mockEntity($name, false)` as the way round it. `UsesDatabaseTransactions` answered that
+  in 4.0.0 and the README was updated at the time; this file was missed
 
 4.0.3 (2026-09-17)
 ------------------

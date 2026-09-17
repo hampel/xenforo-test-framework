@@ -826,11 +826,14 @@ class EntityTest extends TestCase
 
 _Warning:_ while we can mock an entity, we cannot stop it from interacting with the database because the `save()` method
 on the base Entity class is marked `final` - meaning that our mocks can't actually stop that method from executing by 
-overriding it. Basically, you cannot unit test code which calls `save()` on an entity - running your unit tests will cause side effects
-from database updates.
+overriding it.
 
-_Solution:_ provided that we don't set type expectations for our entities, we can bypass this issue by creating a fake
-mock class that does not inherit from our base entity class - thus avoiding the final save method. The 2nd parameter to
+_Solution:_ add the `UsesDatabaseTransactions` trait to your test class. The `save()` still runs and still reaches the
+database, but the transaction is rolled back when the test finishes, so nothing it wrote outlives the test. That tests
+the query you actually wrote rather than your mock of it.
+
+Without that trait you can still dodge the final method instead: provided that we don't set type expectations for our
+entities, we can create a fake mock class that does not inherit from our base entity class. The 2nd parameter to
 `mockEntity` can be set to `false` to disable inheritance.
 
 ### fakesErrors
