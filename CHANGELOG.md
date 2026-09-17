@@ -1,6 +1,18 @@
 CHANGELOG
 =========
 
+4.0.3 (unreleased)
+------------------
+
+* bugfix: a user built by `buildVisitor()` - and so by `actingAsMember()` and `actingAsGuest()` -
+  inherited an administrator record from the forum the tests run against. XenForo's guest user
+  pre-hydrates `Option`, `Profile` and `Privacy` but not `Admin`, so that relation lazy-loaded by
+  `user_id`, and `actingAsMember()` defaults to `user_id` 1. A built user with `is_admin` set
+  therefore reported whatever admin permissions your own forum grants at that id, so a route or
+  service guarded by `assertAdminPermission()` passed without the test granting anything, and the
+  same test could fail on someone else's forum. `hasAdminPermission()` is now always false for a
+  built user; pass a user you loaded yourself to `actingAs()` if you need a real administrator
+
 4.0.2 (2026-09-10)
 ------------------
 

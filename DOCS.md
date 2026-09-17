@@ -184,6 +184,16 @@ reason it works that way:
 Pass `permission_combination_id` yourself to opt out: `['permission_combination_id' => 1]` reads
 the forum's real guest permissions.
 
+**A built user has no `Admin` record**, so `hasAdminPermission()` is always false for one. XenForo's
+guest user pre-hydrates `Option`, `Profile` and `Privacy` but not `Admin`, so that relation used to
+lazy-load by `user_id` - and since `actingAsMember()` defaults to user 1, a built user with
+`is_admin` set inherited whatever administrator record your own forum has at that id. An
+`assertAdminPermission()` check then passed without the test granting anything, and the same test
+could fail on someone else's forum.
+
+If you need a real administrator, pass one to `actingAs()` that you loaded yourself; granting admin
+permissions to a built user is not supported.
+
 One piece of XenForo behaviour is deliberately preserved: `User::getPermissionCombinationId()`
 ignores the stored id for any user whose `user_state` is not `valid`, returning the guest
 combination instead. A user built as `moderated` therefore shares permissions with guests, exactly

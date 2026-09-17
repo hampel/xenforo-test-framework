@@ -172,7 +172,16 @@ trait InteractsWithVisitor
 			);
 		}
 
-		return $repository->getGuestUser($username, $manipulator);
+		$user = $repository->getGuestUser($username, $manipulator);
+
+		// XenForo pre-hydrates Option, Profile and Privacy from its guest defaults but not Admin, so
+		// that relation would lazy-load by user_id and find whatever administrator record the forum
+		// has at that id - user 1 on most forums. With is_admin set, hasAdminPermission() then
+		// answers from the forum rather than from the test. Hydrating it keeps a built user
+		// self-contained, the same reason each one gets its own permission combination id.
+		$user->hydrateRelation('Admin', null);
+
+		return $user;
 	}
 
 	private function rememberVisitor()

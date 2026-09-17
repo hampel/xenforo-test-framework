@@ -37,6 +37,41 @@ class VisitorPermissionIsolationTest extends TestCase
 		$this->assertFalse($bob->hasNodePermission(1, 'view'));
 	}
 
+	/**
+	 * Admin is the one relation XenForo's guest user does not pre-hydrate, so it lazy-loaded by
+	 * user_id and found whatever administrator record the forum has at that id - and
+	 * actingAsMember() defaults to user 1, which is usually the owner.
+	 */
+	public function test_a_built_admin_does_not_inherit_the_forums_admin_record()
+	{
+		$userId = 1;
+
+		if (!$this->app()->db()->fetchOne('SELECT COUNT(*) FROM xf_admin WHERE user_id = ?', $userId))
+		{
+			$this->markTestSkipped("this forum has no xf_admin row for user $userId, so it cannot show the leak");
+		}
+
+		$admin = $this->actingAsMember(['user_id' => $userId, 'is_admin' => true]);
+
+		$this->assertNull($admin->Admin);
+		$this->assertFalse($admin->hasAdminPermission('option'));
+	}
+
+	/** and the fix must not reach a real user the test loaded for itself */
+	public function test_a_real_user_keeps_its_own_admin_record()
+	{
+		$user = $this->app()->em()->find('XF:User', 1);
+
+		if (!$user || !$user->Admin)
+		{
+			$this->markTestSkipped('this forum has no administrator at user_id 1');
+		}
+
+		$this->actingAs($user);
+
+		$this->assertNotNull(\XF::visitor()->Admin);
+	}
+
 	public function test_a_permission_that_was_never_granted_is_denied()
 	{
 		// 'view' is granted to guests on most forums, so on combination id 1 this returned true
