@@ -1,7 +1,7 @@
 CHANGELOG
 =========
 
-4.0.3 (unreleased)
+4.0.3 (2026-09-17)
 ------------------
 
 * bugfix: a user built by `buildVisitor()` - and so by `actingAsMember()` and `actingAsGuest()` -
