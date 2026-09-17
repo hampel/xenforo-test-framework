@@ -8,7 +8,9 @@ CHANGELOG
   controller produced, with `assertReplyIsView()`, `assertReplyTemplate()`,
   `assertReplyViewClass()`, `assertReplyParam()`, `replyParam()`, `assertReplyIsRedirect()`,
   `assertReplyIsError()`, `assertReplyIsMessage()`, `assertReplyIsApiResult()` and
-  `replyApiResult()` to assert against it. Public, admin and api
+  `replyApiResult()`, `replyErrors()` and an optional message argument to `assertReplyIsError()` to
+  assert against it. Parameters the route reads are passed as the third argument - the router takes
+  a route path whole, so criteria cannot go in it. Public, admin and api
   routes are all reachable and reroutes are resolved for you. **This is the only way to cover an
   action's own access checks**: a controller invoked directly never runs `preDispatch()`, which is
   where XenForo's own `xf-make:controller` stub puts them, so an action tested that way is tested
@@ -17,9 +19,13 @@ CHANGELOG
   administrator record `buildVisitor()` withholds. XenForo reads admin permissions from the user's
   `Admin` relation rather than from the permission combination `setVisitorPermissions()` writes, so
   they need their own helper
+* new: `actingAsApiKey()` runs api dispatches as a given api key, and restores `\XF::$apiKey`
+  afterwards - a static nothing else resets, so a key set by hand leaks into every later test
 * `dispatch()` does not render the page, so asserting on HTML - that a template modification
-  applied, or that a phrase resolved rather than showing a raw key - is not supported yet. Nor is
-  `POST`, because XenForo asserts a valid CSRF token for anything that is not a `GET`
+  applied, or that a phrase resolved rather than showing a raw key - is not supported yet
+* a `POST` route dispatches but only as far as the refusal: XenForo asserts a CSRF token in
+  `preDispatch()` for anything that is not a `GET`, so an action opening with `assertPostOnly()`
+  returns a 405. Sending a `POST` is not supported yet
 * docs: `DOCS.md` still said you cannot unit test code which calls `save()` on an entity, and
   offered `mockEntity($name, false)` as the way round it. `UsesDatabaseTransactions` answered that
   in 4.0.0 and the README was updated at the time; this file was missed

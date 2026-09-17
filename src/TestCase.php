@@ -162,6 +162,11 @@ abstract class TestCase extends BaseTestCase
 			$this->setUpOptions();
 		}
 
+		if (isset($uses[Concerns\InteractsWithRoutes::class]))
+		{
+			$this->setUpRoutes();
+		}
+
 		if (isset($uses[Concerns\InteractsWithTime::class]))
 		{
 			$this->setUpTime();

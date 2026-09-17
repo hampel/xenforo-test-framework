@@ -496,8 +496,10 @@ from the database
 `createEntity` saves
 * `dispatch` runs one of your routes the way XenForo does and hands back the reply its controller produced, with
 `assertReplyIsView`, `assertReplyTemplate`, `assertReplyViewClass`, `assertReplyParam`, `replyParam`,
-`assertReplyIsRedirect`, `assertReplyIsError` and `assertReplyIsMessage` to assert against it. This is the only way to
-cover an action's own access checks, because a controller invoked directly never runs `preDispatch()`
+`assertReplyIsRedirect`, `assertReplyIsError`, `assertReplyIsMessage`, `assertReplyIsApiResult`, `replyApiResult` and
+`replyErrors` to assert against it. Parameters the route reads are passed as the third argument. This is the only way
+to cover an action's own access checks, because a controller invoked directly never runs `preDispatch()`
+* `actingAsApiKey` runs api dispatches as a given api key, and restores `\XF::$apiKey` afterwards
 * `setVisitorAdminPermissions` grants admin permissions to a built visitor, which come from a different place to the
 ones `setVisitorPermissions` writes
 * `UsesDatabaseTransactions` is a trait you opt into per test class: it wraps each test in a transaction and rolls it
@@ -755,8 +757,11 @@ checks - so an action tested that way is tested with its authorisation skipped.
 What it does not cover is the **rendered page**. The reply names a template rather than producing HTML, so asserting
 that a template modification applied, or that a phrase resolved rather than showing a raw key, still needs a human for
 now. Nor does it cover anything needing the real front controller - `index.php`'s bootstrap order, session cookies, web
-server rewrites - or JavaScript and visual appearance. `POST` routes are not supported yet either, because XenForo
-asserts a CSRF token for anything that is not a `GET`.
+server rewrites - or JavaScript and visual appearance.
+
+A `POST` route dispatches, but only as far as the refusal: XenForo asserts a CSRF token in `preDispatch()` for anything
+that is not a `GET`, so an action opening with `assertPostOnly()` returns a 405 rather than running. Sending a real
+`POST` is not supported yet.
  
 ### Database queries
 

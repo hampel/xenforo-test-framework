@@ -88,6 +88,55 @@ class RouteDispatchTest extends TestCase
 		$this->dispatch('options', 'admin');
 	}
 
+	public function test_input_reaches_the_request_a_controller_reads()
+	{
+		// dispatch() swaps its request into the container, so this is the one a controller got
+		$this->dispatch('no-such-route-xyz', 'public', ['user_id' => 7, 'email' => 'a@b.test']);
+
+		$request = $this->app()->request();
+
+		$this->assertSame(7, $request->filter('user_id', 'uint'));
+		$this->assertSame('a@b.test', $request->filter('email', 'str'));
+	}
+
+	/**
+	 * Reported by the HelpSpot add-on's trial of 4.1.0: putting criteria in the route path looks
+	 * like the obvious thing to try, and the router takes the whole string as the path.
+	 */
+	public function test_a_query_string_in_the_route_path_does_not_work()
+	{
+		$this->assertReplyIsError($this->dispatch('help/terms?foo=1'), 404);
+	}
+
+	public function test_an_error_can_be_matched_on_its_message_not_only_its_code()
+	{
+		$reply = $this->dispatch('users', 'api');
+
+		$this->assertReplyIsError($reply, 403, 'user:read');
+		$this->assertNotEmpty($this->replyErrors($reply));
+	}
+
+	/**
+	 * Two guards denying with the same code is the case that makes a code-only assertion lie, so
+	 * this asserts which one fired. Without a key the scope guard refuses; with a super-user key
+	 * the scope passes and the visitor's own permissions refuse instead.
+	 */
+	public function test_c_acting_as_an_api_key_changes_which_guard_refuses()
+	{
+		$this->assertReplyIsError($this->dispatch('users', 'api'), 403, 'scope');
+
+		$this->actingAsMember();
+		$this->actingAsApiKey();
+
+		$this->assertReplyIsError($this->dispatch('users', 'api'), 403, 'permission');
+	}
+
+	public function test_d_the_api_key_is_restored_for_the_next_test()
+	{
+		// XF::$apiKey is a static nothing else resets, so the concern restores it in teardown
+		$this->assertFalse(\XF::apiKey()->is_super_user);
+	}
+
 	public function test_an_unknown_route_type_is_rejected()
 	{
 		$this->expectException(\LogicException::class);

@@ -4,6 +4,7 @@ namespace Hampel\Testing\Concerns;
 
 use PHPUnit\Framework\Assert as PHPUnit;
 use XF\Api\Mvc\Reply\ApiResult;
+use XF\Entity\ApiKey;
 use XF\Http\Request;
 use XF\Mvc\Dispatcher;
 use XF\Mvc\Reply\AbstractReply;
@@ -13,6 +14,7 @@ use XF\Mvc\Reply\Redirect;
 use XF\Mvc\Reply\Reroute;
 use XF\Mvc\Reply\View;
 use XF\Mvc\RouteMatch;
+use XF\Phrase;
 
 trait InteractsWithRoutes
 {
@@ -29,6 +31,70 @@ trait InteractsWithRoutes
 		'api' => ['Api', 'router.api'],
 	];
 
+	/** @var bool */
+	private $apiKeyActing = false;
+
+	protected function setUpRoutes()
+	{
+		$this->beforeApplicationDestroyed(function ()
+		{
+			$this->restoreApiKey();
+		});
+	}
+
+	/**
+	 * Run api dispatches as a given api key.
+	 *
+	 * \XF::$apiKey is a static that nothing otherwise resets, so a key set by hand leaks into
+	 * every later test in the run. This restores it in teardown.
+	 *
+	 * Two fields decide what the guards make of a key, and neither is guessable: is_super_user
+	 * drives the key_type getter that assertSuperUserKey() reads, and allow_all_scopes
+	 * short-circuits hasScope() ahead of the scopes array.
+	 *
+	 * @param array $values - columns for the key, eg ['is_super_user' => true]
+	 *
+	 * @return ApiKey
+	 */
+	protected function actingAsApiKey(array $values = [])
+	{
+		$key = $this->makeEntity('XF:ApiKey', $values + [
+			'api_key' => 'test-' . bin2hex(random_bytes(8)),
+			'is_super_user' => true,
+			'allow_all_scopes' => true,
+			'user_id' => \XF::visitor()->user_id,
+		]);
+
+		if (!($key instanceof ApiKey))
+		{
+			throw new \LogicException(
+				'Expected XF:ApiKey to resolve to a ' . ApiKey::class
+				. ', got ' . get_class($key)
+			);
+		}
+
+		\XF::setApiKey($key);
+		$this->apiKeyActing = true;
+
+		return $key;
+	}
+
+	/**
+	 * A super-user key alone does not make \XF::isApiBypassingPermissions() true - that also needs
+	 * api_bypass_permissions on the request, which dispatch() cannot send. An endpoint relying on
+	 * the bypass is not reachable this way.
+	 *
+	 * @return void
+	 */
+	private function restoreApiKey()
+	{
+		if ($this->apiKeyActing)
+		{
+			$this->destroyProperty(\XF::class, 'apiKey');
+			$this->apiKeyActing = false;
+		}
+	}
+
 	/**
 	 * Dispatch a route and return the reply its controller produced, without rendering it.
 	 *
@@ -38,10 +104,11 @@ trait InteractsWithRoutes
 	 *
 	 * @param string $routePath - as it appears after the ? in a URL, eg 'help/terms'
 	 * @param string $type - 'public', 'admin' or 'api'
+	 * @param array $input - GET parameters the route reads, as $_GET would carry them
 	 *
 	 * @return AbstractReply
 	 */
-	protected function dispatch($routePath, $type = 'public')
+	protected function dispatch($routePath, $type = 'public', array $input = [])
 	{
 		[$classType, $routerKey] = $this->routeTypeConfig($type);
 
@@ -61,7 +128,7 @@ trait InteractsWithRoutes
 		// controller class that does not exist, and dispatching gives 'invalid_controller'.
 		$this->swap('app.classType', $classType);
 
-		$request = $this->buildDispatchRequest($routePath);
+		$request = $this->buildDispatchRequest($routePath, $input);
 		$this->swap('request', function () use ($request)
 		{
 			return $request;
@@ -111,10 +178,11 @@ trait InteractsWithRoutes
 	 * which under PHPUnit describe no request at all.
 	 *
 	 * @param string $routePath
+	 * @param array $input
 	 *
 	 * @return Request
 	 */
-	private function buildDispatchRequest($routePath)
+	private function buildDispatchRequest($routePath, array $input = [])
 	{
 		$container = $this->app()->container();
 		// XF\Options is an ArrayObject, so this reads the option without going through the magic
@@ -122,16 +190,21 @@ trait InteractsWithRoutes
 		// public controller's assertCanonicalBaseUrl() redirects and every reply is a Redirect.
 		$host = parse_url((string) $this->app()->options()['boardUrl'], PHP_URL_HOST) ?: 'localhost';
 
+		// the route path cannot carry the parameters - the router takes the whole string as the
+		// path, so 'thing?id=1' is a 404 - which is why they come in as an array instead
+		$queryString = http_build_query($input);
+
 		$request = new Request(
 			$container['inputFilterer'],
-			[],
+			$input,
 			[],
 			[],
 			[
 				'REQUEST_METHOD' => 'GET',
-				'REQUEST_URI' => '/index.php?' . $routePath,
+				'REQUEST_URI' => '/index.php?' . $routePath
+					. ($queryString !== '' ? '&' . $queryString : ''),
 				'SCRIPT_NAME' => '/index.php',
-				'QUERY_STRING' => '',
+				'QUERY_STRING' => $queryString,
 				'HTTP_HOST' => $host,
 				// a public controller's assertIpNotBanned() throws 'Invalid string IP' on an
 				// empty one, which is what a CLI request has
@@ -267,7 +340,7 @@ trait InteractsWithRoutes
 	 *
 	 * @return void
 	 */
-	protected function assertReplyIsError(AbstractReply $reply, $code = null)
+	protected function assertReplyIsError(AbstractReply $reply, $code = null, $message = null)
 	{
 		PHPUnit::assertInstanceOf(Error::class, $reply, $this->describeReply($reply));
 
@@ -275,6 +348,38 @@ trait InteractsWithRoutes
 		{
 			PHPUnit::assertSame($code, $reply->getResponseCode(), $this->describeReply($reply));
 		}
+
+		if ($message !== null)
+		{
+			PHPUnit::assertStringContainsString(
+				$message,
+				implode(' ', $this->replyErrors($reply)),
+				$this->describeReply($reply)
+			);
+		}
+	}
+
+	/**
+	 * The error messages a reply carries, rendered as plain text.
+	 *
+	 * Worth reaching for whenever more than one guard denies with the same status code: two
+	 * different refusals are both a 403, so a test that asserts only the code passes whichever
+	 * fired - and keeps passing when the guard it meant to cover is deleted.
+	 *
+	 * @param AbstractReply $reply
+	 *
+	 * @return array
+	 */
+	protected function replyErrors(AbstractReply $reply)
+	{
+		PHPUnit::assertInstanceOf(Error::class, $reply, $this->describeReply($reply));
+
+		/** @var Error $reply */
+		return array_map(function ($error)
+		{
+			// XenForo's errors are usually phrases; 'raw' keeps the text unescaped
+			return $error instanceof Phrase ? $error->render('raw') : (string) $error;
+		}, $reply->getErrors());
 	}
 
 	/**

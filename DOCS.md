@@ -235,6 +235,7 @@ invoked that way is tested with its authorisation skipped.
 
 * `routePath` - the route as it appears after the `?` in a URL, eg `help/terms`
 * `type` - optional - `public` (the default), `admin` or `api`
+* `input` - optional - the `GET` parameters the route reads, as `$_GET` would carry them
 
 ##### Example:
 
@@ -263,8 +264,18 @@ parameters the controller passed, which is what most assertions want and is far 
 rendering. Asserting on the HTML itself - that a template modification applied, or that a phrase
 resolved rather than showing a raw key - is not supported yet.
 
-**`POST` is not supported yet** either: XenForo asserts a valid CSRF token for anything that is not
-a `GET`, and a test has no cookie to build one from.
+**Criteria go in `input`, not in the route path.** The router takes the whole string as the path, so
+`dispatch('helpspot/user?user_id=1')` is a 404 rather than a lookup:
+
+```php
+$reply = $this->dispatch('helpspot/user', 'api', ['user_id' => 1]);
+```
+
+**`POST` routes dispatch, but only as far as the refusal.** XenForo asserts a valid CSRF token in
+`preDispatch()` for anything that is not a `GET`, and a test has no cookie to build one from, so an
+action opening with `assertPostOnly()` returns a 405 - `This action is available via POST only.`
+The dispatch itself is not refused; the happy path is unreachable. Sending a `POST` is not
+supported yet.
 
 ### assertReplyIsView / assertReplyTemplate / assertReplyViewClass
 Assert that a reply is a view, optionally rendering a given template or using a given view class.
@@ -340,6 +351,7 @@ guard actually guards.
 * `reply` - as returned by `dispatch()`
 * `url` - optional, for `assertReplyIsRedirect`
 * `code` - optional http response code, for `assertReplyIsError`
+* `message` - optional, for `assertReplyIsError` - matched as a substring of the error text
 
 ##### Example:
 
@@ -350,6 +362,41 @@ $this->assertReplyIsError($this->dispatch('no-such-route'), 404);
 $this->actingAsMember(['is_admin' => true]);
 $this->assertReplyIsError($this->dispatch('options', 'admin'), 403);
 ```
+
+**Assert the message whenever more than one guard denies with the same code.** Two different
+refusals are both a 403, so a test asserting only the code passes whichever fired - and keeps
+passing when the guard it meant to cover is deleted. `replyErrors($reply)` returns the messages as
+plain text if you want to assert on them yourself.
+
+### actingAsApiKey
+Run api dispatches as a given api key.
+
+`XF::apiKey()` never returns null - XenForo builds a fallback key which is not a super user - so
+without this an api dispatch is the un-bypassed shape.
+
+##### Parameters:
+
+* `values` - optional - columns for the key
+
+##### Example:
+
+```php
+$this->actingAsMember();
+$this->actingAsApiKey();                              // a super-user key with all scopes
+$this->actingAsApiKey(['is_super_user' => false]);    // one that is not
+```
+
+Two fields decide what the guards make of a key, and neither is guessable: `is_super_user` drives
+the `key_type` getter that `assertSuperUserKey()` reads, and `allow_all_scopes` short-circuits
+`hasScope()` ahead of the `scopes` array.
+
+**`\XF::$apiKey` is a static that nothing else resets**, so a key set by hand leaks into every
+later test in the run. This restores it in teardown, which is the reason to prefer it over calling
+`\XF::setApiKey()` yourself.
+
+**A super-user key does not bypass permissions.** `XF::isApiBypassingPermissions()` also needs
+`api_bypass_permissions` on the request, which `dispatch()` cannot send - so an endpoint relying on
+the bypass is not reachable this way, and the visitor's own permissions still apply.
 
 ### swap
 Register an instance of an object in the container.
