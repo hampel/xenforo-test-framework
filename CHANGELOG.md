@@ -1,6 +1,25 @@
 CHANGELOG
 =========
 
+4.1.0 (unreleased)
+------------------
+
+* new: `dispatch()` runs one of your routes the way XenForo does and returns the reply its
+  controller produced, with `assertReplyIsView()`, `assertReplyTemplate()`,
+  `assertReplyViewClass()`, `assertReplyParam()`, `replyParam()`, `assertReplyIsRedirect()`,
+  `assertReplyIsError()` and `assertReplyIsMessage()` to assert against it. Public, admin and api
+  routes are all reachable and reroutes are resolved for you. **This is the only way to cover an
+  action's own access checks**: a controller invoked directly never runs `preDispatch()`, which is
+  where XenForo's own `xf-make:controller` stub puts them, so an action tested that way is tested
+  with its authorisation skipped
+* new: `setVisitorAdminPermissions()` grants admin permissions to a built user, by giving it the
+  administrator record `buildVisitor()` withholds. XenForo reads admin permissions from the user's
+  `Admin` relation rather than from the permission combination `setVisitorPermissions()` writes, so
+  they need their own helper
+* `dispatch()` does not render the page, so asserting on HTML - that a template modification
+  applied, or that a phrase resolved rather than showing a raw key - is not supported yet. Nor is
+  `POST`, because XenForo asserts a valid CSRF token for anything that is not a `GET`
+
 4.0.3 (2026-09-17)
 ------------------
 

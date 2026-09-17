@@ -2,6 +2,7 @@
 
 namespace Hampel\Testing\Concerns;
 
+use XF\Entity\Admin;
 use XF\Entity\User;
 use XF\Repository\UserRepository;
 
@@ -151,6 +152,50 @@ trait InteractsWithVisitor
 	 *
 	 * @return User
 	 */
+	/**
+	 * Grant admin permissions to a built user, by giving it the administrator record that
+	 * buildVisitor() deliberately withholds.
+	 *
+	 * XenForo reads admin permissions from the user's Admin relation, not from the permission
+	 * combination that setVisitorPermissions() writes, so this is a separate helper. Pass
+	 * ['is_super_admin' => true] in $values for a super administrator, who has every permission
+	 * regardless of what is granted here.
+	 *
+	 * @param User $user - must already have is_admin set
+	 * @param array $permissions - permission id => bool, as XenForo caches them
+	 * @param array $values - optional extra columns for the administrator record
+	 *
+	 * @return Admin - the record now hydrated onto the user
+	 */
+	protected function setVisitorAdminPermissions(User $user, array $permissions, array $values = [])
+	{
+		if (!$user->is_admin)
+		{
+			throw new \LogicException(
+				'Admin permissions only apply to a user with is_admin set, because'
+				. " User::hasAdminPermission() checks that first - build it with"
+				. " actingAsMember(['is_admin' => true])."
+			);
+		}
+
+		$admin = $this->makeEntity('XF:Admin', $values + ['permission_cache' => $permissions]);
+
+		if (!($admin instanceof Admin))
+		{
+			throw new \LogicException(
+				'Expected XF:Admin to resolve to a ' . Admin::class . ', got ' . get_class($admin)
+			);
+		}
+
+		// user_id is the primary key, and assigning one normally sends the entity to the finder
+		// for a uniqueness check against a database the test may not have
+		$admin->setTrusted('user_id', $user->user_id);
+
+		$user->hydrateRelation('Admin', $admin);
+
+		return $admin;
+	}
+
 	protected function buildVisitor(array $values = [], $username = null)
 	{
 		$values += [

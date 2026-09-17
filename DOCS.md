@@ -191,14 +191,139 @@ lazy-load by `user_id` - and since `actingAsMember()` defaults to user 1, a buil
 `assertAdminPermission()` check then passed without the test granting anything, and the same test
 could fail on someone else's forum.
 
-If you need a real administrator, pass one to `actingAs()` that you loaded yourself; granting admin
-permissions to a built user is not supported.
+If you need a real administrator, either pass one to `actingAs()` that you loaded yourself, or grant
+the permissions with `setVisitorAdminPermissions()` below.
 
 One piece of XenForo behaviour is deliberately preserved: `User::getPermissionCombinationId()`
 ignores the stored id for any user whose `user_state` is not `valid`, returning the guest
 combination instead. A user built as `moderated` therefore shares permissions with guests, exactly
 as it would in production - so granting permissions to one has no effect. `actingAsMember()` sets
 `user_state` to `valid`, so the usual path is unaffected.
+
+### setVisitorAdminPermissions
+Grant admin permissions to a built user, by giving it the administrator record `buildVisitor()`
+deliberately withholds.
+
+XenForo reads admin permissions from the user's `Admin` relation, not from the permission
+combination `setVisitorPermissions()` writes, so this is a separate helper.
+
+##### Parameters:
+
+* `user` - must already have `is_admin` set, because `User::hasAdminPermission()` checks that first
+* `permissions` - permission id => bool, as XenForo caches them
+* `values` - optional - extra columns for the administrator record
+
+##### Example:
+
+```php
+$admin = $this->actingAsMember(['is_admin' => true]);
+$this->setVisitorAdminPermissions($admin, ['option' => true]);
+```
+
+Pass `['is_super_admin' => true]` in `values` for a super administrator, who has every permission
+regardless of what is granted here.
+
+### dispatch
+Dispatch a route the way XenForo does, and return the reply its controller produced.
+
+**This is the only way to cover an action's own access checks.** A controller built directly and
+called with `$controller->actionIndex(...)` never runs `preDispatch()`, and XenForo's own
+`xf-make:controller` stub puts setup and access checks in `preDispatchController()` - so an action
+invoked that way is tested with its authorisation skipped.
+
+##### Parameters:
+
+* `routePath` - the route as it appears after the `?` in a URL, eg `help/terms`
+* `type` - optional - `public` (the default), `admin` or `api`
+
+##### Example:
+
+```php
+$reply = $this->dispatch('help/terms');
+
+$admin = $this->actingAsMember(['is_admin' => true]);
+$this->setVisitorAdminPermissions($admin, ['option' => true]);
+$reply = $this->dispatch('options', 'admin');
+
+$this->assertReplyTemplate($reply, 'option_group_list');
+```
+
+Reroutes are resolved for you, so a route that reroutes returns the reply at the end of the chain
+rather than the `Reroute` that got you there.
+
+**An admin route needs a visitor with `is_admin` set**, and `dispatch()` throws if there is not one.
+XenForo's admin controllers assert it and reroute to the login form, which arrives as an ordinary
+view with a 200 response - so without that check a test would assert against the login page and
+never know.
+
+**It does not render the page.** The reply carries the template name, the view class and the
+parameters the controller passed, which is what most assertions want and is far cheaper than
+rendering. Asserting on the HTML itself - that a template modification applied, or that a phrase
+resolved rather than showing a raw key - is not supported yet.
+
+**`POST` is not supported yet** either: XenForo asserts a valid CSRF token for anything that is not
+a `GET`, and a test has no cookie to build one from.
+
+### assertReplyIsView / assertReplyTemplate / assertReplyViewClass
+Assert that a reply is a view, optionally rendering a given template or using a given view class.
+
+##### Parameters:
+
+* `reply` - as returned by `dispatch()`
+* `template` or `viewClass` - for the second and third
+
+##### Example:
+
+```php
+$reply = $this->dispatch('options', 'admin');
+
+$this->assertReplyIsView($reply);
+$this->assertReplyTemplate($reply, 'option_group_list');
+$this->assertReplyViewClass($reply, 'XF:Option\GroupList');
+```
+
+When a dispatch does not produce the view you expected, the failure message says what it did
+produce - including an error reply's own text, which is usually the answer.
+
+### assertReplyParam / replyParam
+Assert that a view reply passed a given parameter to its template, and read it.
+
+##### Parameters:
+
+* `reply` - as returned by `dispatch()`
+* `key` - the parameter name
+
+##### Example:
+
+```php
+$reply = $this->dispatch('options', 'admin');
+
+$this->assertReplyParam($reply, 'groups');
+$this->assertCount(5, $this->replyParam($reply, 'groups'));
+```
+
+### assertReplyIsRedirect / assertReplyIsError / assertReplyIsMessage
+Assert that a reply is a redirect, an error or a plain message.
+
+A route that does not exist arrives as an error with a 404, and a route whose permission check
+refuses the visitor as an error with a 403 - so `assertReplyIsError()` is how a test shows that a
+guard actually guards.
+
+##### Parameters:
+
+* `reply` - as returned by `dispatch()`
+* `url` - optional, for `assertReplyIsRedirect`
+* `code` - optional http response code, for `assertReplyIsError`
+
+##### Example:
+
+```php
+$this->assertReplyIsError($this->dispatch('no-such-route'), 404);
+
+// an administrator without the permission the controller asserts
+$this->actingAsMember(['is_admin' => true]);
+$this->assertReplyIsError($this->dispatch('options', 'admin'), 403);
+```
 
 ### swap
 Register an instance of an object in the container.

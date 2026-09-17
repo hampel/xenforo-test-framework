@@ -494,6 +494,12 @@ filesystem and avoid side effects. This one needs `league/flysystem-memory: ^1.0
 from the database
 * `makeEntity` and `createEntity` build an entity with the values you give it - `makeEntity` touches no database,
 `createEntity` saves
+* `dispatch` runs one of your routes the way XenForo does and hands back the reply its controller produced, with
+`assertReplyIsView`, `assertReplyTemplate`, `assertReplyViewClass`, `assertReplyParam`, `replyParam`,
+`assertReplyIsRedirect`, `assertReplyIsError` and `assertReplyIsMessage` to assert against it. This is the only way to
+cover an action's own access checks, because a controller invoked directly never runs `preDispatch()`
+* `setVisitorAdminPermissions` grants admin permissions to a built visitor, which come from a different place to the
+ones `setVisitorPermissions` writes
 * `UsesDatabaseTransactions` is a trait you opt into per test class: it wraps each test in a transaction and rolls it
 back, so tests can exercise real entity saves without leaving anything behind. `assertDatabaseHas`,
 `assertDatabaseMissing` and `assertDatabaseCount` then assert against rows that are really there
@@ -737,12 +743,20 @@ limitations which used to be listed here have largely gone away in v4.0 - see `U
 
 ### Controllers
 
-Controllers may look simple on the surface, but there is a large amount of scaffolding involved to make them run.
-Session data, routing data, request data, validators - all need to be configured before we could effectively unit test
-a controller. 
+Controllers used to be out of reach here: session data, routing data, request data and validators all have to be
+configured before one will run. As of v4.1.0 `dispatch()` does that configuring for you - it runs a route in process
+and hands back the reply the controller produced, for public, admin and api routes alike. See DOCS.md.
 
-If we had a library which made it easy to make simple HTTP requests against our XenForo test system and test the 
-responses, we could use feature tests - but we don't have that yet.
+What that covers is the controller's own behaviour: which view it returned, the parameters it passed to the template,
+and whether its access checks refuse the wrong visitor. That last one matters more than it sounds, because a controller
+invoked directly never runs `preDispatch()` - which is where XenForo's own generated controllers put their access
+checks - so an action tested that way is tested with its authorisation skipped.
+
+What it does not cover is the **rendered page**. The reply names a template rather than producing HTML, so asserting
+that a template modification applied, or that a phrase resolved rather than showing a raw key, still needs a human for
+now. Nor does it cover anything needing the real front controller - `index.php`'s bootstrap order, session cookies, web
+server rewrites - or JavaScript and visual appearance. `POST` routes are not supported yet either, because XenForo
+asserts a CSRF token for anything that is not a `GET`.
  
 ### Database queries
 
@@ -887,15 +901,15 @@ Feature and integration tests are important too - but right now we are focused o
 
 ### Keep your controllers thin
 
-If you find yourself wondering why you can't unit test your controller - it's probably a good sign you're doing it 
-wrong.
-
 Controllers are just coordinators - they are invoked by the routing engine based on the URL requested, and are 
 responsible for validating the request, causing the correct logic to be executed based on that request, and then 
 returning a response.
 
-You can't test logic in your controller. Logic and algorthims should be contained in repositories or services. 
-Sub-containers are also useful places to hold related logic.
+`dispatch()` runs one for you and hands back its reply, so a thin controller is straightforward to cover: which view it
+returned, what it passed to the template, and whether its access checks refuse the wrong visitor. What stays awkward is
+*logic* living in the controller - the more there is, the more you are testing it through a route dispatch instead of
+directly. Logic and algorithms should be contained in repositories or services. Sub-containers are also useful places
+to hold related logic.
 
 The same applies to console commands and jobs - keep them as simple as possible and place your logic in repositories, 
 services or sub-containers.
