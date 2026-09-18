@@ -1,7 +1,7 @@
 CHANGELOG
 =========
 
-4.1.0 (unreleased)
+4.1.0 (2026-09-18)
 ------------------
 
 * new: `dispatch()` runs one of your routes the way XenForo does and returns the reply its
