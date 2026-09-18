@@ -1,7 +1,7 @@
 CHANGELOG
 =========
 
-4.2.0 (unreleased)
+4.2.0 (2026-09-19)
 ------------------
 
 * new: `renderTemplate()` renders a template to HTML with no web server, and `renderReply()` renders
