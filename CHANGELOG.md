@@ -14,6 +14,9 @@ CHANGELOG
   exist - renders as an **empty string with no error**, so an `assertDontSee()` against one would
   pass while testing nothing. `renderTemplate()` throws instead, and it requires the `type:title`
   form rather than guessing the type
+* new: `assertTemplateModificationApplied()` asserts a template modification is matching something,
+  by reading its apply count. XenForo logs a modification that matches nothing as status `ok`, so
+  the status cannot tell you one has silently stopped applying - only the count can
 * rendering covers the template, not the whole page: navigation, header and footer come from
   XenForo's own app classes rather than from the template
 

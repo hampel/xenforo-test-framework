@@ -73,6 +73,36 @@ class TemplateRenderTest extends TestCase
 		$this->renderTemplate('admin:login');
 	}
 
+	public function test_an_unknown_template_modification_is_reported_as_missing()
+	{
+		$this->expectException(AssertionFailedError::class);
+		$this->expectExceptionMessage('No template modification with the key');
+
+		$this->assertTemplateModificationApplied('no_such_modification_xyz');
+	}
+
+	/**
+	 * A modification logged as applying at least once. Skips rather than passing vacuously on a
+	 * forum with no add-on modifications, since without one this proves nothing either way.
+	 */
+	public function test_a_modification_that_applies_is_recognised()
+	{
+		$key = $this->app()->db()->fetchOne(
+			'SELECT m.modification_key
+				FROM xf_template_modification m
+				INNER JOIN xf_template_modification_log l ON l.modification_id = m.modification_id
+				WHERE l.apply_count > 0
+				LIMIT 1'
+		);
+
+		if (!$key)
+		{
+			$this->markTestSkipped('this forum has no template modification that applies');
+		}
+
+		$this->assertTemplateModificationApplied($key);
+	}
+
 	public function test_the_expected_value_is_escaped_the_way_a_template_escapes_it()
 	{
 		$html = '<p>Posted by Bob&#039;s account &amp; friends</p>';

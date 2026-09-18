@@ -113,6 +113,57 @@ trait InteractsWithTemplates
 	}
 
 	/**
+	 * Assert that a template modification is actually matching something.
+	 *
+	 * More direct than looking for its effect in rendered HTML, and it works for a modification
+	 * whose insertion has no distinctive markup to search for.
+	 *
+	 * **XenForo logs a modification that matches nothing as `ok`.** The status only says the
+	 * modification ran, not that its `find` still matches - so a modification silently stopped
+	 * applying by a XenForo upgrade stays `ok` with an apply count of zero. The count is the part
+	 * that answers the question.
+	 *
+	 * @param string $modificationKey - as in `_output/template_modifications/`
+	 *
+	 * @return void
+	 */
+	protected function assertTemplateModificationApplied($modificationKey)
+	{
+		$db = $this->app()->db();
+
+		$modification = $db->fetchRow(
+			'SELECT modification_id, type, template, enabled
+				FROM xf_template_modification
+				WHERE modification_key = ?',
+			$modificationKey
+		);
+
+		if (!$modification)
+		{
+			PHPUnit::fail(
+				"No template modification with the key '$modificationKey' exists in this forum."
+				. ' These assertions read what the forum has, so the add-on has to be installed'
+				. ' and its data imported - an edit to _output/ alone is invisible here.'
+			);
+		}
+
+		$applied = (int) $db->fetchOne(
+			'SELECT SUM(apply_count) FROM xf_template_modification_log WHERE modification_id = ?',
+			$modification['modification_id']
+		);
+
+		PHPUnit::assertGreaterThan(
+			0,
+			$applied,
+			"Template modification '$modificationKey' on {$modification['type']}:"
+			. "{$modification['template']} applied 0 times"
+			. ($modification['enabled'] ? '' : ' (and it is disabled)')
+			. " - its find no longer matches. XenForo logs that as status 'ok', so only the apply"
+			. ' count shows it.'
+		);
+	}
+
+	/**
 	 * Assert that rendered output contains the given text.
 	 *
 	 * @param string $html - as returned by renderTemplate() or renderReply()

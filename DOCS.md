@@ -406,6 +406,11 @@ Render a template to HTML, with no web server.
 This covers the two checks a reply cannot: that a **template modification** actually applied, and
 that a **phrase resolved** rather than rendering as a raw key.
 
+**These assertions read what the forum has, not what your working copy has.** An edit to
+`_output/` is invisible until `xf-dev:import`, and a template modification only exists once the
+add-on is installed — XenForo applies modifications when it compiles the template. That is the
+opposite of what a test author expects, so check it first when a render surprises you.
+
 ##### Parameters:
 
 * `template` - `type:title`, eg `public:thread_view`. XenForo stores three types: `public`, `admin`
@@ -453,7 +458,6 @@ Assert on rendered output.
 
 ```php
 $this->assertSee($html, "Bob's thread");            // matches Bob&#039;s thread
-$this->assertDontSee($html, 'whatsnewdigest_');     // a phrase key, not a phrase
 $this->assertSeeInOrder($html, ['First', 'Second']);
 $this->assertSee($html, '<div class="block">', false);
 ```
@@ -465,6 +469,47 @@ $this->assertSee($html, '<div class="block">', false);
 **`assertDontSee()` is the one to write carefully.** It passes against an empty string, so it is
 only meaningful once something has rendered — which is why a template that cannot be found throws
 rather than returning nothing.
+
+**To check a phrase resolved, name the key — never the prefix.** A phrase XenForo cannot find
+renders as its own key, so the absence of a specific key is meaningful. The absence of your add-on's
+whole prefix is not: field names and CSS classes carry it too. Measured on a real add-on, its
+preference field renders as `name="option[whatsnewdigest_email]"`, so `assertDontSee($html,
+'whatsnewdigest_')` fails against perfectly correct output.
+
+```php
+// a phrase resolved: its text is present, and its key is not
+$this->assertSee($html, 'Email me a digest');
+$this->assertDontSee($html, 'whatsnewdigest_preference_label');
+```
+
+**Always pair the negative with the positive.** If the block stops rendering altogether, the
+absence assertion still passes — the positive is the half that catches it.
+
+### assertTemplateModificationApplied
+Assert that a template modification is actually matching something.
+
+More direct than hunting for its effect in the HTML, and it works for a modification whose
+insertion has no distinctive markup to search for.
+
+##### Parameters:
+
+* `modificationKey` - as in `_output/template_modifications/`
+
+##### Example:
+
+```php
+$this->assertTemplateModificationApplied('whatsnewdigest_helper_account');
+```
+
+**XenForo logs a modification that matches nothing as `ok`.** The status only records that the
+modification ran, not that its `find` still matches — so one silently broken by a XenForo upgrade
+stays `ok` with an apply count of zero. The count is what answers the question, and this reads the
+count.
+
+**A modification that inserts an `<xf:include>` does not put the included template's name in the
+output** — the include renders the included markup instead. So asserting on the included template's
+name finds nothing, however correct the modification is. Assert on the markup it produces, or use
+this.
 
 ### assertSeeText / assertDontSeeText / textOf
 Assert on the text of rendered output, ignoring the markup.
