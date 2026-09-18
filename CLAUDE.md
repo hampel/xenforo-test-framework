@@ -208,6 +208,39 @@ Naming convention across the concerns, worth preserving: `fakes*()` installs an 
 implementation with assertion helpers, `mock*()` installs a Mockery double, `set*()` mutates state
 that is restored in teardown.
 
+### The other recurring defect: an assertion that passes when the thing is absent
+
+**Six defects across five releases have been the same shape** — a check that passes because what it
+was testing was *missing*, rather than because it was *correct*. It is worth naming because this
+package invites it: almost everything here installs a fake, and a fake that silently fails to
+install produces a green test rather than a red one.
+
+| the check | what made it pass | fixed in |
+|---|---|---|
+| a test asserting on a mocked service | `mockService()` built an untyped double for a class that does not exist | 4.0.0 |
+| a whole suite | a suite that collects no tests exits 0 — `failOnEmptyTestSuite` now catches it | 4.0.0 |
+| `hasPermission()` on a built user | every built user landed on the real guest permission combination | 4.0.0 |
+| `hasAdminPermission()` on a built user | it inherited the test forum's own administrator record | 4.0.3 |
+| `assertReplyIsError($reply, 403)` | two different guards both deny with 403, so it passed whichever fired | 4.1.0 |
+| `assertDontSee($html, …)` | a template XenForo cannot find renders as an empty string, with no error | 4.2.0 |
+
+Two rules follow, and both are cheap:
+
+- **A helper that can return "nothing" must refuse instead of returning it.** That is why
+  `renderTemplate()` throws for a template that does not exist, and why `mockService()` throws for
+  a class that does not exist. Returning the empty value is the defect, not the caller's handling
+  of it.
+- **Every negative assertion needs a positive beside it.** `assertDontSee()` proves nothing on its
+  own; assert that the expected text *is* there in the same render. A consumer's trial mutation-
+  tested this and found that deleting the whole rendered block was caught by the positive half
+  only. The same applies to a permission test that asserts only denial — see the two controls in
+  `DOCS.md` under `setVisitorPermissions`.
+
+**When adding a fake, write `test_a_second_fake_replaces_the_first` and a test that fails without
+the fake.** Both catch this shape, and they catch what static analysis structurally cannot: every
+defect in the table above was invisible to PHPStan, because a green-but-empty assertion is
+well-typed.
+
 ## Documentation
 
 - `README.md` — the tutorial: theory, installation, `build.json` cleanup, limitations, testing tips.
