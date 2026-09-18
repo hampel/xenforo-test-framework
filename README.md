@@ -500,6 +500,9 @@ from the database
 `replyErrors` to assert against it. Parameters the route reads are passed as the third argument. This is the only way
 to cover an action's own access checks, because a controller invoked directly never runs `preDispatch()`
 * `actingAsApiKey` runs api dispatches as a given api key, and restores `\XF::$apiKey` afterwards
+* `renderTemplate` renders a template to HTML with no web server, and `renderReply` renders the one a dispatched reply
+named, with `assertSee`, `assertDontSee`, `assertSeeText`, `assertDontSeeText` and `assertSeeInOrder` to assert on the
+output
 * `setVisitorAdminPermissions` grants admin permissions to a built visitor, which come from a different place to the
 ones `setVisitorPermissions` writes
 * `UsesDatabaseTransactions` is a trait you opt into per test class: it wraps each test in a transaction and rolls it
@@ -754,9 +757,9 @@ and whether its access checks refuse the wrong visitor. That last one matters mo
 invoked directly never runs `preDispatch()` - which is where XenForo's own generated controllers put their access
 checks - so an action tested that way is tested with its authorisation skipped.
 
-What it does not cover is the **rendered page**. The reply names a template rather than producing HTML, so asserting
-that a template modification applied, or that a phrase resolved rather than showing a raw key, still needs a human for
-now. Nor does it cover anything needing the real front controller - `index.php`'s bootstrap order, session cookies, web
+As of v4.2.0 it covers the rendered template too: pass the reply to `renderReply()`, or render any template directly
+with `renderTemplate()`, and assert on the HTML with `assertSee()` and friends. What is still out of reach is the
+**whole page** - navigation, header and footer come from XenForo's own app classes rather than from the template. Nor does it cover anything needing the real front controller - `index.php`'s bootstrap order, session cookies, web
 server rewrites - or JavaScript and visual appearance.
 
 A `POST` route dispatches, but only as far as the refusal: XenForo asserts a CSRF token in `preDispatch()` for anything
@@ -799,8 +802,13 @@ difficulty testing in some circumstances.
 
 ### UI changes & template modifications
 
-We cannot validate that certain code causes the UI to change, such as changes to views or template modifications. That's
-more of a feature test level operation rather than unit testing anyway.
+This used to be out of reach entirely. As of v4.2.0 `renderTemplate()` renders a template to HTML with no web server,
+so a template modification applying, and a phrase resolving rather than showing a raw key, are both assertable - see
+`assertSee()` in DOCS.md. Note the modification has to be **installed** in the forum the tests run against, not merely
+present in your working copy, because XenForo applies modifications when it compiles the template.
+
+What remains a human job is the whole page rather than the template - navigation, header and footer - along with
+anything about appearance, and JavaScript behaviour.
 
 ### Data in the database
 

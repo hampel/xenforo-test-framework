@@ -27,6 +27,7 @@ abstract class TestCase extends BaseTestCase
 	use Concerns\InteractsWithRequest;
 	use Concerns\InteractsWithRoutes;
 	use Concerns\InteractsWithSimpleCache;
+	use Concerns\InteractsWithTemplates;
 	use Concerns\InteractsWithTime;
 	use Concerns\InteractsWithVisitor;
 	use Concerns\UsesReflection;

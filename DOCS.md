@@ -261,8 +261,10 @@ never know.
 
 **It does not render the page.** The reply carries the template name, the view class and the
 parameters the controller passed, which is what most assertions want and is far cheaper than
-rendering. Asserting on the HTML itself - that a template modification applied, or that a phrase
-resolved rather than showing a raw key - is not supported yet.
+rendering. To assert on the HTML itself - that a template modification applied, or that a phrase
+resolved rather than showing a raw key - pass the reply to `renderReply()` below. That renders the
+template, not the whole page: navigation, header and footer come from XenForo's own app classes
+rather than from the template.
 
 **Criteria go in `input`, not in the route path.** The router takes the whole string as the path, so
 `dispatch('helpspot/user?user_id=1')` is a 404 rather than a lookup:
@@ -397,6 +399,92 @@ later test in the run. This restores it in teardown, which is the reason to pref
 **A super-user key does not bypass permissions.** `XF::isApiBypassingPermissions()` also needs
 `api_bypass_permissions` on the request, which `dispatch()` cannot send - so an endpoint relying on
 the bypass is not reachable this way, and the visitor's own permissions still apply.
+
+### renderTemplate / renderReply
+Render a template to HTML, with no web server.
+
+This covers the two checks a reply cannot: that a **template modification** actually applied, and
+that a **phrase resolved** rather than rendering as a raw key.
+
+##### Parameters:
+
+* `template` - `type:title`, eg `public:thread_view`. XenForo stores three types: `public`, `admin`
+  and `email`
+* `params` - optional - the parameters the template reads
+
+`renderReply($reply)` takes a reply from `dispatch()` instead, and renders the template it named
+with the parameters it passed. The reply carries a bare title, so the type comes from the app class
+type `dispatch()` set — call it from the same test that dispatched.
+
+##### Example:
+
+```php
+$html = $this->renderTemplate('public:thread_view', ['thread' => $thread]);
+$this->assertSee($html, 'Reply to thread');
+
+// or straight from a dispatch
+$reply = $this->dispatch('options', 'admin');
+$this->assertSee($this->renderReply($reply), 'Option groups');
+```
+
+**The type is not guessed for you, and a name XenForo cannot find is refused.** A missing title, the
+wrong type, or a type that does not exist all render as an **empty string with no error** — measured
+on 2.3.12 — so an `assertDontSee()` against one would pass while testing nothing. Both cases throw a
+`LogicException` instead.
+
+**A template modification has to be installed in the forum the tests run against**, not merely
+present in your working copy: XenForo applies modifications when it compiles the template, so what
+renders here is what the forum has.
+
+**This renders the template, not the page.** There is no navigation, header or footer around it —
+those come from XenForo's `Pub` and `Admin` app classes rather than from the template. Assertions
+about a page's furniture still want a browser, or a request against a real forum.
+
+### assertSee / assertDontSee / assertSeeInOrder
+Assert on rendered output.
+
+##### Parameters:
+
+* `html` - as returned by `renderTemplate()` or `renderReply()`
+* `value`, or `values` for `assertSeeInOrder`
+* `escape` - optional, default `true`
+
+##### Example:
+
+```php
+$this->assertSee($html, "Bob's thread");            // matches Bob&#039;s thread
+$this->assertDontSee($html, 'whatsnewdigest_');     // a phrase key, not a phrase
+$this->assertSeeInOrder($html, ['First', 'Second']);
+$this->assertSee($html, '<div class="block">', false);
+```
+
+**The expected value is escaped by default**, because a template escapes what it outputs —
+`XF::escapeString()` is `htmlspecialchars($value, ENT_QUOTES, 'utf-8')`, and this matches it. Pass
+`false` to match raw markup instead.
+
+**`assertDontSee()` is the one to write carefully.** It passes against an empty string, so it is
+only meaningful once something has rendered — which is why a template that cannot be found throws
+rather than returning nothing.
+
+### assertSeeText / assertDontSeeText / textOf
+Assert on the text of rendered output, ignoring the markup.
+
+Tags are stripped and entities decoded first, so this matches what a reader sees rather than what
+the template emitted — and text split across a tag boundary still matches.
+
+##### Parameters:
+
+* `html`
+* `value`
+
+##### Example:
+
+```php
+// passes against <p>Bob&#039;s <b>thread</b></p>
+$this->assertSeeText($html, "Bob's thread");
+```
+
+`textOf($html)` returns that text, for asserting on it yourself.
 
 ### swap
 Register an instance of an object in the container.

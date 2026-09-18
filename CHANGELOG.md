@@ -1,6 +1,22 @@
 CHANGELOG
 =========
 
+4.2.0 (unreleased)
+------------------
+
+* new: `renderTemplate()` renders a template to HTML with no web server, and `renderReply()` renders
+  the one a dispatched reply named, with `assertSee()`, `assertDontSee()`, `assertSeeText()`,
+  `assertDontSeeText()`, `assertSeeInOrder()` and `textOf()` to assert on the output. This covers
+  the two checks a reply cannot: that a **template modification** applied, and that a **phrase
+  resolved** rather than rendering as a raw key. The expected value is escaped by default, matching
+  `XF::escapeString()`
+* a template name XenForo cannot find - a missing title, the wrong type, or a type that does not
+  exist - renders as an **empty string with no error**, so an `assertDontSee()` against one would
+  pass while testing nothing. `renderTemplate()` throws instead, and it requires the `type:title`
+  form rather than guessing the type
+* rendering covers the template, not the whole page: navigation, header and footer come from
+  XenForo's own app classes rather than from the template
+
 4.1.0 (2026-09-18)
 ------------------
 
