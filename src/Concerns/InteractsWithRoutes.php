@@ -137,7 +137,15 @@ trait InteractsWithRoutes
 		$dispatcher = new Dispatcher($this->app(), $request);
 		$dispatcher->setRouter($this->app()->container($routerKey));
 
-		return $this->resolveReply($dispatcher, $dispatcher->route($routePath), $routePath);
+		$reply = $this->resolveReply($dispatcher, $dispatcher->route($routePath), $routePath);
+
+		// XF\Mvc\Dispatcher::dispatchLoop() triggers the run-once queue, and resolveReply() does not
+		// go through it - so without this, deferred work a controller queued during the dispatch
+		// never runs. Entity postSave cache rebuilds are the common case. Rethrows, so a failure in
+		// deferred work fails the test rather than being logged and swallowed.
+		\XF::triggerRunOnce(true);
+
+		return $reply;
 	}
 
 	/**

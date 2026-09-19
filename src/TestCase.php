@@ -211,6 +211,11 @@ abstract class TestCase extends BaseTestCase
 				$this->app()->db()->closeConnection();
 			}
 
+			// \XF::$runOnce is a static nothing else clears, and a closure left in it is bound to
+			// the app this teardown is about to destroy. Discarded rather than triggered: running it
+			// here would execute deferred work after a transaction has already rolled back.
+			$this->setStaticProperty(\XF::class, 'runOnce', []);
+
 			$this->destroyProperty(\XF::class, 'app');
 		}
 

@@ -56,4 +56,19 @@ trait UsesReflection
 		$reflectionClass = new \ReflectionClass($class);
 		$reflectionClass->setStaticPropertyValue($property, null);
 	}
+
+	/**
+	 * Set a static property to a given value, where null is not the right empty value.
+	 *
+	 * @param string $class
+	 * @param string $property
+	 * @param mixed $value
+	 *
+	 * @return void
+	 */
+	protected function setStaticProperty($class, $property, $value)
+	{
+		$reflectionClass = new \ReflectionClass($class);
+		$reflectionClass->setStaticPropertyValue($property, $value);
+	}
 }
