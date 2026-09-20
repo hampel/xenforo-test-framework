@@ -210,7 +210,7 @@ that is restored in teardown.
 
 ### The other recurring defect: an assertion that passes when the thing is absent
 
-**Six defects across five releases have been the same shape** — a check that passes because what it
+**Seven defects across six releases have been the same shape** — a check that passes because what it
 was testing was *missing*, rather than because it was *correct*. It is worth naming because this
 package invites it: almost everything here installs a fake, and a fake that silently fails to
 install produces a green test rather than a red one.
@@ -223,6 +223,7 @@ install produces a green test rather than a red one.
 | `hasAdminPermission()` on a built user | it inherited the test forum's own administrator record | 4.0.3 |
 | `assertReplyIsError($reply, 403)` | two different guards both deny with 403, so it passed whichever fired | 4.1.0 |
 | `assertDontSee($html, …)` | a template XenForo cannot find renders as an empty string, with no error | 4.2.0 |
+| `assertDontSee($html, …)`, again | a template that *fails while rendering* also returns an empty string — the templater catches everything, logs it and carries on | 4.2.1 |
 
 Two rules follow, and both are cheap:
 
@@ -230,6 +231,10 @@ Two rules follow, and both are cheap:
   `renderTemplate()` throws for a template that does not exist, and why `mockService()` throws for
   a class that does not exist. Returning the empty value is the defect, not the caller's handling
   of it.
+- **Check every route to "nothing", not the one you thought of.** The last two rows are the same
+  helper: 4.2.0 guarded the name it could not find and shipped, and the identical empty string
+  coming out of a template that *failed* went unguarded for a release. When something can return
+  nothing, enumerate the ways — `grep` the upstream class for what it does in its `catch`.
 - **Every negative assertion needs a positive beside it.** `assertDontSee()` proves nothing on its
   own; assert that the expected text *is* there in the same render. A consumer's trial mutation-
   tested this and found that deleting the whole rendered block was caught by the positive half

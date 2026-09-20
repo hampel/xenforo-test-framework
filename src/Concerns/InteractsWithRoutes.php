@@ -246,12 +246,13 @@ trait InteractsWithRoutes
 	 * Assert that the reply is a view - what a controller returns when it renders a page.
 	 *
 	 * @param AbstractReply $reply
+	 * @param string|null $message - added to the failure, for a test that dispatches several routes
 	 *
 	 * @return void
 	 */
-	protected function assertReplyIsView(AbstractReply $reply)
+	protected function assertReplyIsView(AbstractReply $reply, $message = null)
 	{
-		PHPUnit::assertInstanceOf(View::class, $reply, $this->describeReply($reply));
+		PHPUnit::assertInstanceOf(View::class, $reply, $this->replyFailure($reply, $message));
 	}
 
 	/**
@@ -259,15 +260,20 @@ trait InteractsWithRoutes
 	 *
 	 * @param AbstractReply $reply
 	 * @param string $template
+	 * @param string|null $message
 	 *
 	 * @return void
 	 */
-	protected function assertReplyTemplate(AbstractReply $reply, $template)
+	protected function assertReplyTemplate(AbstractReply $reply, $template, $message = null)
 	{
-		$this->assertReplyIsView($reply);
+		$this->assertReplyIsView($reply, $message);
 
 		/** @var View $reply */
-		PHPUnit::assertSame($template, $reply->getTemplateName());
+		PHPUnit::assertSame(
+			$template,
+			$reply->getTemplateName(),
+			$this->replyFailure($reply, $message)
+		);
 	}
 
 	/**
@@ -275,15 +281,20 @@ trait InteractsWithRoutes
 	 *
 	 * @param AbstractReply $reply
 	 * @param string $viewClass
+	 * @param string|null $message
 	 *
 	 * @return void
 	 */
-	protected function assertReplyViewClass(AbstractReply $reply, $viewClass)
+	protected function assertReplyViewClass(AbstractReply $reply, $viewClass, $message = null)
 	{
-		$this->assertReplyIsView($reply);
+		$this->assertReplyIsView($reply, $message);
 
 		/** @var View $reply */
-		PHPUnit::assertSame($viewClass, $reply->getViewClass());
+		PHPUnit::assertSame(
+			$viewClass,
+			$reply->getViewClass(),
+			$this->replyFailure($reply, $message)
+		);
 	}
 
 	/**
@@ -291,15 +302,20 @@ trait InteractsWithRoutes
 	 *
 	 * @param AbstractReply $reply
 	 * @param string $key
+	 * @param string|null $message
 	 *
 	 * @return void
 	 */
-	protected function assertReplyParam(AbstractReply $reply, $key)
+	protected function assertReplyParam(AbstractReply $reply, $key, $message = null)
 	{
-		$this->assertReplyIsView($reply);
+		$this->assertReplyIsView($reply, $message);
 
 		/** @var View $reply */
-		PHPUnit::assertArrayHasKey($key, $reply->getParams());
+		PHPUnit::assertArrayHasKey(
+			$key,
+			$reply->getParams(),
+			$this->replyFailure($reply, $message)
+		);
 	}
 
 	/**
@@ -319,21 +335,41 @@ trait InteractsWithRoutes
 	}
 
 	/**
-	 * Assert that the reply is a redirect, optionally to a given url.
+	 * Assert that the reply is a redirect, optionally to a given url and of a given kind.
+	 *
+	 * **A redirect reply has no http status of its own**, so getResponseCode() answers 200 whether
+	 * it is permanent or not - the code is chosen later, by the renderer, which maps permanent to
+	 * a 301 and temporary to a 303. Assert the type rather than the code.
 	 *
 	 * @param AbstractReply $reply
 	 * @param string|null $url - optional
+	 * @param string|null $type - optional, 'permanent' or 'temporary'
+	 * @param string|null $message
 	 *
 	 * @return void
 	 */
-	protected function assertReplyIsRedirect(AbstractReply $reply, $url = null)
+	protected function assertReplyIsRedirect(AbstractReply $reply, $url = null, $type = null, $message = null)
 	{
-		PHPUnit::assertInstanceOf(Redirect::class, $reply, $this->describeReply($reply));
+		PHPUnit::assertInstanceOf(Redirect::class, $reply, $this->replyFailure($reply, $message));
 
+		/** @var Redirect $reply */
 		if ($url !== null)
 		{
-			/** @var Redirect $reply */
-			PHPUnit::assertSame($url, $reply->getUrl());
+			PHPUnit::assertSame($url, $reply->getUrl(), $this->replyFailure($reply, $message));
+		}
+
+		if ($type !== null)
+		{
+			$known = [Redirect::PERMANENT, Redirect::TEMPORARY];
+
+			if (!in_array($type, $known, true))
+			{
+				throw new \LogicException(
+					"Unknown redirect type '$type' - expected one of " . implode(', ', $known)
+				);
+			}
+
+			PHPUnit::assertSame($type, $reply->getType(), $this->replyFailure($reply, $message));
 		}
 	}
 
@@ -345,24 +381,31 @@ trait InteractsWithRoutes
 	 *
 	 * @param AbstractReply $reply
 	 * @param int|null $code - optional http response code
+	 * @param string|null $errorText - optional, matched as a substring of the error text. Named
+	 *                                 $message before 4.2.1; positional calls are unaffected
+	 * @param string|null $message - added to the failure, for a test that dispatches several routes
 	 *
 	 * @return void
 	 */
-	protected function assertReplyIsError(AbstractReply $reply, $code = null, $message = null)
+	protected function assertReplyIsError(AbstractReply $reply, $code = null, $errorText = null, $message = null)
 	{
-		PHPUnit::assertInstanceOf(Error::class, $reply, $this->describeReply($reply));
+		PHPUnit::assertInstanceOf(Error::class, $reply, $this->replyFailure($reply, $message));
 
 		if ($code !== null)
 		{
-			PHPUnit::assertSame($code, $reply->getResponseCode(), $this->describeReply($reply));
+			PHPUnit::assertSame(
+				$code,
+				$reply->getResponseCode(),
+				$this->replyFailure($reply, $message)
+			);
 		}
 
-		if ($message !== null)
+		if ($errorText !== null)
 		{
 			PHPUnit::assertStringContainsString(
-				$message,
+				$errorText,
 				implode(' ', $this->replyErrors($reply)),
-				$this->describeReply($reply)
+				$this->replyFailure($reply, $message)
 			);
 		}
 	}
@@ -394,12 +437,13 @@ trait InteractsWithRoutes
 	 * Assert that the reply is an api result - what an api route returns instead of a view.
 	 *
 	 * @param AbstractReply $reply
+	 * @param string|null $message
 	 *
 	 * @return void
 	 */
-	protected function assertReplyIsApiResult(AbstractReply $reply)
+	protected function assertReplyIsApiResult(AbstractReply $reply, $message = null)
 	{
-		PHPUnit::assertInstanceOf(ApiResult::class, $reply, $this->describeReply($reply));
+		PHPUnit::assertInstanceOf(ApiResult::class, $reply, $this->replyFailure($reply, $message));
 	}
 
 	/**
@@ -424,12 +468,28 @@ trait InteractsWithRoutes
 	 * Assert that the reply is a simple message, as returned by an action with nothing to render.
 	 *
 	 * @param AbstractReply $reply
+	 * @param string|null $message
 	 *
 	 * @return void
 	 */
-	protected function assertReplyIsMessage(AbstractReply $reply)
+	protected function assertReplyIsMessage(AbstractReply $reply, $message = null)
 	{
-		PHPUnit::assertInstanceOf(Message::class, $reply, $this->describeReply($reply));
+		PHPUnit::assertInstanceOf(Message::class, $reply, $this->replyFailure($reply, $message));
+	}
+
+	/**
+	 * A failure message carrying both what the caller said and what the reply actually was.
+	 *
+	 * @param AbstractReply $reply
+	 * @param string|null $message
+	 *
+	 * @return string
+	 */
+	private function replyFailure(AbstractReply $reply, $message)
+	{
+		$description = $this->describeReply($reply);
+
+		return $message === null || $message === '' ? $description : "$message - $description";
 	}
 
 	/**
@@ -442,7 +502,10 @@ trait InteractsWithRoutes
 	 */
 	private function describeReply(AbstractReply $reply)
 	{
-		$description = 'got ' . get_class($reply) . ' (' . $reply->getResponseCode() . ')';
+		// a redirect's code is not its own - the renderer picks 301 or 303 from the type later -
+		// so printing getResponseCode()'s 200 beside it would be the misreading this avoids
+		$description = 'got ' . get_class($reply)
+			. ($reply instanceof Redirect ? '' : ' (' . $reply->getResponseCode() . ')');
 
 		if ($reply instanceof Error)
 		{
@@ -459,7 +522,7 @@ trait InteractsWithRoutes
 		}
 		else if ($reply instanceof Redirect)
 		{
-			$description .= ' to ' . $reply->getUrl();
+			$description .= ' (' . $reply->getType() . ') to ' . $reply->getUrl();
 		}
 		else if ($reply instanceof View)
 		{

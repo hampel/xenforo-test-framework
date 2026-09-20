@@ -500,9 +500,15 @@ from the database
 `replyErrors` to assert against it. Parameters the route reads are passed as the third argument. This is the only way
 to cover an action's own access checks, because a controller invoked directly never runs `preDispatch()`
 * `actingAsApiKey` runs api dispatches as a given api key, and restores `\XF::$apiKey` afterwards
-* `renderTemplate` renders a template to HTML with no web server, and `renderReply` renders the one a dispatched reply
-named, with `assertSee`, `assertDontSee`, `assertSeeText`, `assertDontSeeText` and `assertSeeInOrder` to assert on the
-output
+* `renderTemplate` renders a template to HTML with no web server, `renderMacro` renders one macro out of a template,
+and `renderReply` renders the template a dispatched reply named, with `assertSee`, `assertDontSee`, `assertSeeText`,
+`assertDontSeeText` and `assertSeeInOrder` to assert on the output
+* `assertTemplateModificationApplied` says whether a template modification is still matching anything - XenForo logs
+one that matches nothing as `ok`, so only its apply count answers the question
+* `assertNoTemplateErrors` asserts that nothing the test rendered raised an error. XenForo logs a template error and
+carries on rendering, so a render can fail and still produce the markup a test asserts on
+* `pageParam` reads back what a rendered template set with `<xf:title>` and friends, which never appear in the
+template's own output
 * `setVisitorAdminPermissions` grants admin permissions to a built visitor, which come from a different place to the
 ones `setVisitorPermissions` writes
 * `UsesDatabaseTransactions` is a trait you opt into per test class: it wraps each test in a transaction and rolls it
@@ -759,12 +765,17 @@ checks - so an action tested that way is tested with its authorisation skipped.
 
 As of v4.2.0 it covers the rendered template too: pass the reply to `renderReply()`, or render any template directly
 with `renderTemplate()`, and assert on the HTML with `assertSee()` and friends. What is still out of reach is the
-**whole page** - navigation, header and footer come from XenForo's own app classes rather than from the template. Nor does it cover anything needing the real front controller - `index.php`'s bootstrap order, session cookies, web
+**whole page** - navigation, header and footer come from XenForo's own app classes rather than from the template. The
+values the template set for that wrapper are readable with `pageParam()`, so a page title is assertable even though the
+markup around it is not. Nor does it cover anything needing the real front controller - `index.php`'s bootstrap order, session cookies, web
 server rewrites - or JavaScript and visual appearance.
 
 A `POST` route dispatches, but only as far as the refusal: XenForo asserts a CSRF token in `preDispatch()` for anything
 that is not a `GET`, so an action opening with `assertPostOnly()` returns a 405 rather than running. Sending a real
 `POST` is not supported yet.
+
+A public route also needs the visitor to hold `general.view`, which a built visitor does not - every public controller
+asserts it, so a public dispatch refuses with a 403 until the test grants it. See `dispatch()` in DOCS.md.
  
 ### Database queries
 
@@ -809,6 +820,21 @@ present in your working copy, because XenForo applies modifications when it comp
 
 What remains a human job is the whole page rather than the template - navigation, header and footer - along with
 anything about appearance, and JavaScript behaviour.
+
+### Code which checks what kind of application is running
+
+This framework boots the base `XF\App`, not `XF\Pub\App` or `XF\Admin\App`. Those classes carry the page wrapper,
+which is what puts the whole page out of reach - but the consequence worth knowing is narrower and easier to miss:
+**your own code that asks which application is running takes the other branch here.**
+
+The usual shape is a `templater_global_data` listener opening with `if ($app instanceof \XF\Pub\App)`. That is false
+under a test, so the body never runs, and a test written against it passes while asserting nothing. `dispatch()` swaps
+the `app.classType` container key rather than the application object, because all three routers live on the base app
+and a subclass was not needed for routing.
+
+There is no way around it from here. What you can do is make the check something a test can reach - `$app->container(
+'app.classType') === 'Pub'` sees what `dispatch()` set - or move the body into a method the test calls directly, which
+is worth doing anyway for anything with logic in it.
 
 ### Data in the database
 
@@ -1096,6 +1122,36 @@ method, then why does it exist?
 
 If you find yourself wishing you could test that private method directly, then take a look at your code structure and 
 see if you can instead encapsulate that method into a separate class that has a public interface that can be tested.
+
+### Subclassing a XenForo class in a test file
+
+If you need a stub or a fake that extends a XenForo class - or one of your own add-on's classes, which XenForo loads
+through the same autoloader - **declare it inside a test method, not at the top of the test file**:
+
+```php
+public function test_the_handler_reports_what_it_did()
+{
+    $handler = new class extends \MyVendor\MyAddon\Handler\Something
+    {
+        public function fetch()
+        {
+            return ['one', 'two'];
+        }
+    };
+
+    $this->assertCount(2, $handler->fetch());
+}
+```
+
+At file scope it cannot work, and the failure is worse than it looks. PHPUnit loads every test file while it is
+building the suite, **before any test runs**, so XenForo has not booted and its autoloader is not registered. The
+parent class does not exist yet, and what you get is `Class "XF\Entity\User" not found` with a stack trace through
+`TestSuiteLoader` - the whole run stops, not just that test, and nothing points at the class declaration as the cause.
+
+An anonymous class is the shortest fix. If the class has to have a name - because something in the test refers to it by
+one - put it in a file PHPUnit does not collect (anything not ending in `Test.php`, `tests/Support/` is a reasonable
+home) and `require_once` it from inside the test method. A named class cannot be declared inside a method: PHP refuses
+with `Class declarations may not be nested`.
 
 ### Don't treat your test code as unimportant
 

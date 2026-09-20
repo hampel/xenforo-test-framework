@@ -8,6 +8,12 @@ use XF\Mvc\Reply\View;
 
 trait InteractsWithTemplates
 {
+	/**
+	 * What XF\Template\Templater::handleTemplateException() renders in place of a template that
+	 * threw, when the forum is in debug mode. Outside debug mode it renders an empty string.
+	 */
+	private const RENDER_ERROR_MARKUP = '<h3>Template Compilation Error</h3>';
+
 	/** app.classType => the template type XenForo stores templates under */
 	private const TEMPLATE_TYPES = [
 		'Pub' => 'public',
@@ -37,7 +43,10 @@ trait InteractsWithTemplates
 			);
 		}
 
-		$html = (string) $this->app()->templater()->renderTemplate($template, $params);
+		$templater = $this->app()->templater();
+		$errorsBefore = count($templater->getTemplateErrors());
+
+		$html = (string) $templater->renderTemplate($template, $params);
 
 		if ($html === '')
 		{
@@ -48,7 +57,155 @@ trait InteractsWithTemplates
 			$this->requireTemplateExists($template);
 		}
 
+		$this->requireRenderSucceeded($errorsBefore, $html, $template);
+
 		return $html;
+	}
+
+	/**
+	 * Render one macro out of a template, with the arguments a caller would pass it.
+	 *
+	 * Worth reaching for when the markup you care about is a macro an add-on adds to a template,
+	 * or when rendering the whole template needs parameters the test has no reason to build.
+	 *
+	 * @param string $template - `type:title`, the template the macro is declared in
+	 * @param string $macro - the macro's name, as in `<xf:macro name="...">`
+	 * @param array $arguments - the macro's arguments, by name
+	 *
+	 * @return string
+	 */
+	protected function renderMacro($template, $macro, array $arguments = [])
+	{
+		if (strpos($template, ':') === false)
+		{
+			throw new \LogicException(
+				"Template '$template' needs its type - 'public:$template' or 'admin:$template'."
+				. ' A macro named in a template XenForo cannot find renders as an empty string'
+				. ' rather than failing, so the type is not guessed for you.'
+			);
+		}
+
+		$templater = $this->app()->templater();
+		$errorsBefore = count($templater->getTemplateErrors());
+
+		$html = (string) $templater->renderMacro($template, $macro, $arguments);
+
+		// A macro that does not exist renders as an empty string, exactly as a missing template
+		// does - but XenForo records 'Macro ... is unknown' while doing it, which is what this
+		// reads. There is no empty-render check beyond that: a macro rendering nothing for the
+		// arguments it was given is ordinary.
+		$this->requireRenderSucceeded($errorsBefore, $html, "$template::$macro");
+
+		return $html;
+	}
+
+	/**
+	 * A page parameter the rendered template set, eg the title from `<xf:title>`.
+	 *
+	 * These do not appear in the rendered HTML, because the markup around them belongs to the page
+	 * wrapper rather than to the template - so this is how a test asserts on one. Call it after a
+	 * render; the values accumulate on the templater as each template sets them.
+	 *
+	 * The names are XenForo's own: `pageTitle` for `<xf:title>`, `pageDescription` for
+	 * `<xf:description>`, `pageAction` for `<xf:pageaction>` and `pageH1` for `<xf:h1>`.
+	 *
+	 * @param string $name
+	 *
+	 * @return string|null - null if the render never set it
+	 */
+	protected function pageParam($name)
+	{
+		$params = $this->app()->templater()->pageParams;
+
+		// XenForo stores these pre-escaped, as objects rather than strings
+		return isset($params[$name]) ? (string) $params[$name] : null;
+	}
+
+	/**
+	 * Refuse a render that XenForo swallowed entirely.
+	 *
+	 * **The templater catches everything.** A template that raises a PHP error, names a macro or a
+	 * template that does not exist, or throws part way through is logged and rendering carries on -
+	 * so the failure arrives as output rather than as a failure.
+	 *
+	 * This refuses only the case where nothing came back, because that is the one where an assertion
+	 * is testing nothing: assertDontSee() passes against an empty string, and assertSee() fails
+	 * pointing at the wrong cause. **A render that errored and still produced markup is returned**,
+	 * deliberately - it is much the commoner case, a test asserting on markup that is really there
+	 * passes for a good enough reason, and failing it here would turn working suites red on a patch
+	 * release. assertNoTemplateErrors() is the opt-in for that.
+	 *
+	 * The exception half is separate and only fires in debug mode: a template that *throws* renders
+	 * as the exception's markup, which is never output worth asserting against. Without debug mode
+	 * it renders as an empty string, which the first half catches.
+	 *
+	 * @param int $errorsBefore - how many errors the templater had recorded before the render
+	 * @param string $html
+	 * @param string $describe - the template or macro, for the message
+	 *
+	 * @return void
+	 */
+	private function requireRenderSucceeded($errorsBefore, $html, $describe)
+	{
+		if (strpos($html, self::RENDER_ERROR_MARKUP) !== false)
+		{
+			throw new \LogicException(
+				"Rendering '$describe' threw, and XenForo rendered the exception as markup instead of"
+				. ' failing: ' . trim(strip_tags($html))
+			);
+		}
+
+		if ($html !== '')
+		{
+			return;
+		}
+
+		$errors = array_slice($this->app()->templater()->getTemplateErrors(), $errorsBefore);
+
+		if ($errors)
+		{
+			throw new \LogicException(
+				"Rendering '$describe' produced nothing, because it raised " . count($errors)
+				. ' error(s) that XenForo logged rather than raised: '
+				. implode('; ', array_map([$this, 'describeTemplateError'], $errors))
+			);
+		}
+	}
+
+	/**
+	 * Assert that no template this test rendered raised an error.
+	 *
+	 * The strict form of the guard above, and opt-in for the reason given there: **a template
+	 * missing a parameter it reads usually renders most of its markup anyway.** Measured on 2.3.12:
+	 * rendering 400 core templates with no parameters raised an error in 103 of them, and 101 of
+	 * those still produced over 50 characters - so failing every one would break tests that assert
+	 * on markup which is really there.
+	 *
+	 * Reach for it when you want the render to be right rather than merely to contain what you
+	 * asserted, which for a template of your own rendered with its controller's parameters is a
+	 * reasonable thing to want.
+	 *
+	 * @return void
+	 */
+	protected function assertNoTemplateErrors()
+	{
+		$errors = $this->app()->templater()->getTemplateErrors();
+
+		PHPUnit::assertSame(
+			[],
+			array_map([$this, 'describeTemplateError'], $errors),
+			'XenForo logs a template error and carries on rendering, so these did not fail the render'
+		);
+	}
+
+	/**
+	 * @param array $error - as XF\Template\Templater::getTemplateErrors() records it
+	 *
+	 * @return string
+	 */
+	private function describeTemplateError(array $error)
+	{
+		return $error['error'] . ' in ' . $error['template'];
 	}
 
 	/**

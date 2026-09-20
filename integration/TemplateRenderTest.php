@@ -135,4 +135,141 @@ class TemplateRenderTest extends TestCase
 		$this->expectException(AssertionFailedError::class);
 		$this->assertSeeInOrder($html, ['beta', 'alpha']);
 	}
+
+	/**
+	 * The templater catches everything a template does wrong, logs it and renders an empty string.
+	 * So the reason the assertion below fails is recorded on the templater rather than thrown, and
+	 * without the guard the test gets '' and assertDontSee() passes on it.
+	 */
+	public function test_a_template_that_fails_while_rendering_is_refused()
+	{
+		$this->makeTemplate('probe_broken', '<xf:set var="$x" value="" />{{ $x.doesNotExist() }}');
+
+		$this->expectException(\LogicException::class);
+		$this->expectExceptionMessage('Cannot call method doesNotExist');
+
+		$this->renderTemplate('public:probe_broken');
+	}
+
+	public function test_a_template_that_renders_cleanly_raises_nothing()
+	{
+		$this->makeTemplate('probe_clean', '<p>hello</p>');
+
+		$this->assertSee($this->renderTemplate('public:probe_clean'), 'hello');
+	}
+
+	public function test_a_macro_renders()
+	{
+		$this->makeTemplate(
+			'probe_macros',
+			'<xf:macro name="greeting" arg-who="world"><p>hello {$who}</p></xf:macro>'
+		);
+
+		$html = $this->renderMacro('public:probe_macros', 'greeting', ['who' => 'Bob']);
+
+		$this->assertSee($html, 'hello Bob');
+	}
+
+	/** a macro that does not exist renders as an empty string, the same way a template does */
+	public function test_a_macro_that_does_not_exist_is_refused()
+	{
+		$this->makeTemplate('probe_macros', '<xf:macro name="greeting"><p>hi</p></xf:macro>');
+
+		$this->expectException(\LogicException::class);
+		$this->expectExceptionMessage('is unknown');
+
+		$this->renderMacro('public:probe_macros', 'no_such_macro', []);
+	}
+
+	public function test_a_macro_needs_its_template_type()
+	{
+		$this->expectException(\LogicException::class);
+		$this->expectExceptionMessage('needs its type');
+
+		$this->renderMacro('probe_macros', 'greeting', []);
+	}
+
+	/**
+	 * A page title never appears in the rendered template - the markup around it belongs to the
+	 * page wrapper - so reading it back is the only way to assert on one.
+	 */
+	public function test_the_page_parameters_a_template_set_are_readable()
+	{
+		$this->makeTemplate('probe_titled', '<xf:title>Members of the board</xf:title><p>body</p>');
+
+		$html = $this->renderTemplate('public:probe_titled');
+
+		$this->assertSee($html, 'body');
+		$this->assertDontSee($html, 'Members of the board');
+		$this->assertSame('Members of the board', $this->pageParam('pageTitle'));
+	}
+
+	public function test_a_page_parameter_the_render_never_set_is_null()
+	{
+		$this->makeTemplate('probe_untitled', '<p>body</p>');
+		$this->renderTemplate('public:probe_untitled');
+
+		$this->assertNull($this->pageParam('pageAction'));
+	}
+
+	/**
+	 * A template usually renders most of its markup even when part of it fails, so refusing every
+	 * render that logged an error would fail tests that assert on markup which is really there.
+	 * That case is left to assertNoTemplateErrors(), and this pins both halves of the decision.
+	 */
+	public function test_a_render_that_errors_but_still_produces_markup_is_returned()
+	{
+		$this->makeTemplate(
+			'probe_partial',
+			'<p>kept</p><xf:set var="$x" value="" />{{ $x.doesNotExist() }}<p>also kept</p>'
+		);
+
+		$html = $this->renderTemplate('public:probe_partial');
+
+		$this->assertSee($html, 'kept');
+		$this->assertSee($html, 'also kept');
+	}
+
+	public function test_the_strict_assertion_catches_the_same_render()
+	{
+		$this->makeTemplate(
+			'probe_partial',
+			'<p>kept</p><xf:set var="$x" value="" />{{ $x.doesNotExist() }}'
+		);
+
+		$this->renderTemplate('public:probe_partial');
+
+		$this->expectException(AssertionFailedError::class);
+
+		$this->assertNoTemplateErrors();
+	}
+
+	public function test_the_strict_assertion_passes_on_a_clean_render()
+	{
+		$this->makeTemplate('probe_clean', '<p>hello</p>');
+
+		$this->renderTemplate('public:probe_clean');
+
+		$this->assertNoTemplateErrors();
+	}
+
+	/**
+	 * Templates are created here rather than assumed of the forum, so the tests do not depend on
+	 * what a core template happens to contain. The transaction takes them away again.
+	 *
+	 * @param string $title
+	 * @param string $content
+	 *
+	 * @return void
+	 */
+	private function makeTemplate($title, $content)
+	{
+		$this->createEntity('XF:Template', [
+			'type' => 'public',
+			'title' => $title,
+			'style_id' => 0,
+			'template' => $content,
+			'addon_id' => '',
+		]);
+	}
 }

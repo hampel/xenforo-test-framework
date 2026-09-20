@@ -3,6 +3,7 @@
 namespace Hampel\Testing\Integration;
 
 use Hampel\Testing\Concerns\UsesDatabaseTransactions;
+use PHPUnit\Framework\AssertionFailedError;
 use XF\Mvc\Reply\Reroute;
 
 /**
@@ -143,5 +144,54 @@ class RouteDispatchTest extends TestCase
 		$this->expectExceptionMessage("Unknown route type 'install'");
 
 		$this->dispatch('index', 'install');
+	}
+
+	/**
+	 * A redirect reply carries no http status of its own - getResponseCode() answers 200 whether it
+	 * is permanent or not, because the renderer chooses 301 or 303 from the type much later. So a
+	 * test asserting the code cannot tell the two apart, and the type is what to assert.
+	 */
+	public function test_a_redirect_is_recognised_by_its_type_not_its_code()
+	{
+		$reply = $this->dispatch('help/terms');
+
+		$this->assertReplyIsRedirect($reply, null, 'permanent');
+		$this->assertSame(200, $reply->getResponseCode(), 'the reply carries no redirect status');
+	}
+
+	public function test_the_wrong_redirect_type_fails()
+	{
+		$this->expectException(AssertionFailedError::class);
+
+		$this->assertReplyIsRedirect($this->dispatch('help/terms'), null, 'temporary');
+	}
+
+	public function test_an_unknown_redirect_type_is_rejected()
+	{
+		$this->expectException(\LogicException::class);
+		$this->expectExceptionMessage('Unknown redirect type');
+
+		$this->assertReplyIsRedirect($this->dispatch('help/terms'), null, 'permenant');
+	}
+
+	/**
+	 * Without a message of its own the failure says only what the reply was, which in a test that
+	 * dispatches several routes does not say which one.
+	 */
+	public function test_a_message_of_the_callers_own_reaches_the_failure()
+	{
+		try
+		{
+			$this->assertReplyIsView($this->dispatch('help/terms'), 'the terms page');
+		}
+		catch (AssertionFailedError $e)
+		{
+			$this->assertStringContainsString('the terms page', $e->getMessage());
+			$this->assertStringContainsString('Redirect', $e->getMessage());
+
+			return;
+		}
+
+		$this->fail('expected the assertion to fail');
 	}
 }

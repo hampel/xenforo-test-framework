@@ -1,6 +1,55 @@
 CHANGELOG
 =========
 
+4.2.1 (unreleased)
+------------------
+
+* fix: `dispatch()` never ran the work a controller deferred. XenForo drains its run-once queue in
+  `XF\Mvc\Dispatcher::dispatchLoop()`, and `dispatch()` resolves reroutes in its own loop instead -
+  deliberately, because `dispatchLoop()` catches every controller exception and rolls the
+  transaction back with it. So anything queued through `\XF::runOnce()` was simply dropped, and an
+  entity `postSave()` rebuilding a cache is the common case. The queue now runs after the dispatch,
+  rethrowing, so a failure there fails the test rather than being logged and swallowed
+* fix: `\XF::$runOnce` is a static nothing reset, so a closure left in the queue by one test ran
+  during the next one, bound to the application the first test had. It is discarded in teardown
+* fix: **a template that failed while rendering came back as an empty string.** XenForo's templater
+  catches everything a template does wrong - a PHP error, a macro or an included template that does
+  not exist, an exception part way through - logs it, and carries on. Where that left nothing, the
+  failure arrived as output rather than as a failure: an `assertDontSee()` passed on it while
+  `renderTemplate()`'s own guard found the template present and said nothing. It now throws, naming
+  what went wrong. A template that *throws* is also caught when `$config['debug'] = true`, where
+  XenForo renders the exception as markup
+* a render that errored and **still produced markup is returned unchanged**, deliberately: it is
+  much the commoner case - 103 of 400 core templates rendered with no parameters raised an error on
+  2.3.12, and 101 of those still produced markup - and failing them would turn working suites red
+  on a patch release. New `assertNoTemplateErrors()` is the opt-in for the stricter guarantee
+* new: `renderMacro()` renders one macro out of a template, with the arguments a caller would pass
+  it - for markup that lives in a macro, or where rendering the whole template would need
+  parameters the test has no reason to build. A macro that does not exist renders as an empty
+  string, so that is refused too
+* new: `pageParam()` reads back what a rendered template set with `<xf:title>`, `<xf:description>`,
+  `<xf:h1>` or `<xf:pageaction>`. None of them appear in the template's own output - the markup
+  around them belongs to the page wrapper - so reading one back is the only way to assert on it
+* `assertReplyIsRedirect()` takes a `type`, `permanent` or `temporary`. **A redirect reply carries
+  no http status of its own**: `getResponseCode()` answers `200` either way, because the code is
+  chosen later by the renderer, which maps permanent to a `301` and temporary to a `303`. So a test
+  asserting the code could not tell the two apart, and the failure message no longer prints that
+  `200` beside a redirect as though it meant something
+* every reply assertion takes an optional `message` as its last argument, added to the failure. In
+  a test that dispatches several routes the description says what the reply was but not which route
+  produced it, which is the part you need
+* **`assertReplyIsError()`'s third parameter is now named `$errorText`**, since `$message` is the
+  failure message everywhere else in the family. Positional calls are unaffected; a call passing it
+  by name has to change
+* docs: a public route needs the visitor to hold `general.view`, which a built visitor does not, so
+  a public `dispatch()` refuses with a `403` until the test grants it
+* docs: this framework boots the base `XF\App`, so your own code asking which application is
+  running takes the other branch - a `templater_global_data` listener opening with
+  `if ($app instanceof \XF\Pub\App)` never runs its body here
+* docs: a class extending a XenForo class cannot be declared at test file scope. PHPUnit loads
+  every test file while building the suite, before XenForo has booted, so the parent does not exist
+  yet and the whole run stops with `Class "..." not found`
+
 4.2.0 (2026-09-19)
 ------------------
 

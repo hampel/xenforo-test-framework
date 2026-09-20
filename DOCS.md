@@ -264,7 +264,21 @@ parameters the controller passed, which is what most assertions want and is far 
 rendering. To assert on the HTML itself - that a template modification applied, or that a phrase
 resolved rather than showing a raw key - pass the reply to `renderReply()` below. That renders the
 template, not the whole page: navigation, header and footer come from XenForo's own app classes
-rather than from the template.
+rather than from the template - though `pageParam()` reads back the title and the other values the
+template set for it.
+
+**A public route needs `general.view`**, and a built visitor has no permissions at all — so a public
+dispatch refuses with a 403 until the test grants it. XenForo asserts it in `preDispatchController()`
+for every public controller, which is the same guard a guest without view permission meets:
+
+```php
+$member = $this->actingAsMember();
+$this->setVisitorPermissions($member, ['general' => ['view' => true]]);
+
+$reply = $this->dispatch('members');
+```
+
+Admin and api routes do not go through it; they have their own guards.
 
 **Criteria go in `input`, not in the route path.** The router takes the whole string as the path, so
 `dispatch('helpspot/user?user_id=1')` is a 404 rather than a lookup:
@@ -352,8 +366,10 @@ guard actually guards.
 
 * `reply` - as returned by `dispatch()`
 * `url` - optional, for `assertReplyIsRedirect`
+* `type` - optional, for `assertReplyIsRedirect` - `permanent` or `temporary`
 * `code` - optional http response code, for `assertReplyIsError`
-* `message` - optional, for `assertReplyIsError` - matched as a substring of the error text
+* `errorText` - optional, for `assertReplyIsError` - matched as a substring of the error text
+* `message` - optional, last on every one of them - added to the failure
 
 ##### Example:
 
@@ -363,12 +379,30 @@ $this->assertReplyIsError($this->dispatch('no-such-route'), 404);
 // an administrator without the permission the controller asserts
 $this->actingAsMember(['is_admin' => true]);
 $this->assertReplyIsError($this->dispatch('options', 'admin'), 403);
+
+$this->assertReplyIsRedirect($this->dispatch('help/terms'), null, 'permanent');
 ```
 
-**Assert the message whenever more than one guard denies with the same code.** Two different
+**Assert the error text whenever more than one guard denies with the same code.** Two different
 refusals are both a 403, so a test asserting only the code passes whichever fired - and keeps
 passing when the guard it meant to cover is deleted. `replyErrors($reply)` returns the messages as
 plain text if you want to assert on them yourself.
+
+**A redirect carries no http status of its own.** `getResponseCode()` answers **200** on a redirect
+reply whether it is permanent or not, because the code is chosen much later, by the renderer, which
+maps permanent to a **301** and temporary to a **303**. So a test asserting the code cannot tell the
+two apart, and `type` is what to assert. Note 303 rather than the 302 most people expect.
+
+**The `message` is for a test that dispatches more than one route.** Without it a failure says what
+the reply was but not which route produced it, which in a loop over a list of routes is the part you
+need. It is added to the description rather than replacing it.
+
+```php
+foreach ($routes AS $route)
+{
+	$this->assertReplyIsError($this->dispatch($route, 'admin'), 403, null, $route);
+}
+```
 
 ### actingAsApiKey
 Run api dispatches as a given api key.
@@ -441,9 +475,101 @@ on 2.3.12 — so an `assertDontSee()` against one would pass while testing nothi
 present in your working copy: XenForo applies modifications when it compiles the template, so what
 renders here is what the forum has.
 
+**A template that fails and renders nothing is refused too.** XenForo's templater catches everything
+a template does wrong — a PHP error, a macro or an included template that does not exist, an
+exception part way through — logs it, and carries on. Where that leaves an empty string the failure
+arrives as output rather than as a failure, and `assertDontSee()` passes on it, so `renderTemplate()`
+throws instead and names what went wrong.
+
+**A render that errored and still produced markup comes back to you.** That is much the commoner
+case — a template missing a parameter it reads usually renders most of itself anyway, measured at
+103 of 400 core templates rendered bare, of which 101 still produced markup — and a test asserting
+on markup that is really there passes for a good enough reason. `assertNoTemplateErrors()` below is
+the opt-in if you want the stricter guarantee.
+
+One part of this only works in debug mode. A template that *throws* renders as the exception's markup
+with `$config['debug'] = true`, which is detected, and as an empty string without it, which the empty
+check catches anyway. Another reason to run tests against a development install.
+
 **This renders the template, not the page.** There is no navigation, header or footer around it —
 those come from XenForo's `Pub` and `Admin` app classes rather than from the template. Assertions
-about a page's furniture still want a browser, or a request against a real forum.
+about a page's furniture still want a browser, or a request against a real forum. The values the
+template itself set are readable, though — see `pageParam()` below.
+
+### renderMacro
+Render one macro out of a template, with the arguments a caller would pass it.
+
+Worth reaching for when the markup you care about is a macro your add-on adds to a template, or when
+rendering the whole template would need parameters the test has no reason to build.
+
+##### Parameters:
+
+* `template` - `type:title`, the template the macro is declared in
+* `macro` - the macro's name, as in `<xf:macro name="...">`
+* `arguments` - optional - the macro's arguments, by name
+
+##### Example:
+
+```php
+$html = $this->renderMacro('public:thread_list_macros', 'item', ['thread' => $thread]);
+
+$this->assertSee($html, $thread->title);
+```
+
+**A macro that does not exist renders as an empty string**, the same way a missing template does, so
+this refuses one rather than returning it. There is no empty-render check beyond that: a macro that
+renders nothing for the arguments it was given is ordinary.
+
+### pageParam
+A page parameter the rendered template set, such as the title from `<xf:title>`.
+
+These never appear in the rendered HTML, because the markup around them belongs to the page wrapper
+rather than to the template — so reading one back is the only way to assert on it. Call it after a
+render.
+
+##### Parameters:
+
+* `name` - XenForo's own name for the parameter
+
+| the tag | the name |
+|---|---|
+| `<xf:title>` | `pageTitle` |
+| `<xf:description>` | `pageDescription` |
+| `<xf:h1>` | `pageH1` |
+| `<xf:pageaction>` | `pageAction` |
+
+##### Example:
+
+```php
+$html = $this->renderTemplate('public:thread_view', ['thread' => $thread]);
+
+$this->assertSame('Welcome to the board', $this->pageParam('pageTitle'));
+```
+
+Returns `null` if the render never set it. The values accumulate on the templater as each template
+sets them, so read the one you want before rendering something else.
+
+### assertNoTemplateErrors
+Assert that no template this test rendered raised an error.
+
+The strict form of the check `renderTemplate()` makes for you, and opt-in because most renders that
+raise an error still produce the markup a test is asserting on.
+
+Reach for it when you want the render to be *right* rather than merely to contain what you asserted
+— which, for a template of your own rendered with the parameters its controller passes, is a
+reasonable thing to want.
+
+##### Example:
+
+```php
+$html = $this->renderReply($this->dispatch('my-addon/report', 'admin'));
+
+$this->assertSee($html, 'Reports');
+$this->assertNoTemplateErrors();
+```
+
+It covers every render the test has made, not only the last one, because the templater accumulates
+them for the life of the application and each test gets its own.
 
 ### assertSee / assertDontSee / assertSeeInOrder
 Assert on rendered output.
