@@ -11,6 +11,20 @@ The scaffold files are the reason this document exists. `tests/TestCase.php` and
 `tests/CreatesApplication.php` are **copied into your add-on and owned by you**, so a change to
 either cannot reach you through Composer — it has to be merged by hand.
 
+## 4.3.1
+
+**Nothing to do.** Documentation only — no code in `src/` changed.
+
+One correction is worth reading even so, because it is about something you may have been relying
+on: **add-on isolation does not filter code event listeners.** An add-on left out of
+`$addonsToLoad` still has its `app_setup` listener run, so it can still register container entries
+and still throw while the application boots. That behaviour is not new — only the documentation of
+it is, and it had said the opposite since isolation was introduced. `README.md`'s "What isolation
+does not cover" section has the detail, and the fix is deferred to the next major version.
+
+`spy()` is also documented for the first time, in `DOCS.md` beside `mock()`. It has shipped since
+1.0.0.
+
 ## 4.3.0
 
 **One thing needs checking, and only if you pin Mockery yourself.** The package now requires

@@ -385,6 +385,21 @@ So we instruct XenForo to use our mock object when querying the Request object, 
 expecting our code to call `XF\Http\Request::getIp(true);` once, at which point our mock object will return the IP 
 address `10.0.0.1`.
 
+`spy()` is the same swap again, with the expectations turned around. A mock declares what must happen and fails if it
+does not; a spy declares nothing, records everything, and lets us assert after the code under test has run:
+
+```php
+$request = $this->spy('request', XF\Http\Request::class);
+
+// ... run the code under test ...
+
+$request->shouldHaveReceived('getIp');
+```
+
+That suits code we want to observe rather than constrain. It costs us the return value, though - a spy answers `null`
+for every method it was not explicitly told about, so where the code under test uses what it gets back, `mock()` is
+still the right tool.
+
 We have helpers to mock many of the key subsystems:
 
 * `mockDatabase`

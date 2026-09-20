@@ -754,6 +754,53 @@ class MockTest extends TestCase
 }	
 ```
 
+### spy
+Record what the container's object was asked to do, and assert it afterwards.
+
+`mock()` declares up front what must happen and fails if it does not. `spy()` declares nothing,
+records everything, and lets the assertions come after the code under test has run — which suits
+code you want to observe rather than constrain.
+
+##### Parameters:
+
+* `key` - the container key to be swapped with a spy
+* `abstract` - the base class or interface to use for the spy
+* `mock` - optional - a closure to set return values on, for the calls whose result matters
+
+##### Example:
+
+```php
+$request = $this->spy('request', \XF\Http\Request::class);
+
+// run the code under test, which asks the request for the visitor's IP
+
+$request->shouldHaveReceived('getIp');
+$request->shouldNotHaveReceived('getUserAgent');
+```
+
+Arguments are matched the way they were passed, so a call the code made as `getIp(false)` is
+asserted as:
+
+```php
+$request->shouldHaveReceived('getIp')->with(false);
+```
+
+**A spy answers `null` for every method it was not explicitly told about**, which is the cost of not
+declaring the call up front. Where the code under test uses what it gets back, either give the spy a
+closure:
+
+```php
+$request = $this->spy('request', \XF\Http\Request::class, function ($mock)
+{
+    $mock->allows()->getIp(false)->andReturns('10.0.0.1');
+});
+```
+
+or reach for `mock()` instead.
+
+It is a `swap()` underneath, so the caveat in that section applies here too: a spy installed after
+something has already been built from the key it replaces does not reach it.
+
 ### mockFactory
 Mock a factory builder in the container.
 

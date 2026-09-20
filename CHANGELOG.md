@@ -1,6 +1,39 @@
 CHANGELOG
 =========
 
+4.3.1 (2026-09-20)
+------------------
+
+A documentation release - nothing in `src/` changed, so it cannot affect how a test runs. Two of the
+entries below correct things the previous documentation stated as fact.
+
+* docs: **`spy()` has never been documented.** It has shipped in every release since 1.0.0 and
+  appeared in neither `README.md` nor `DOCS.md`, so the only way to find it was to read
+  `src/Concerns/InteractsWithContainer.php`. `DOCS.md` now carries a `spy` section beside `mock`,
+  the `README` places it between `swap()` and `mock()`, and `integration/SpyTest.php` pins the
+  documented behaviour - including that a spy answers `null` for every method it was not told
+  about, which is the trade against `mock()` and the part an example has to show
+* docs: **add-on isolation does not filter code event listeners, and the documentation said it
+  did.** `XF\App::setup()` fires `app_setup` as its last step, while the filtered `extension`
+  container key is installed later still - so Composer autoloading and class extensions are
+  filtered and listeners are not, and every installed add-on's `app_setup` listener runs whatever
+  `$addonsToLoad` says. Measured on a development forum carrying 13 of them: all 13 listener
+  classes loaded, and the container kept the entries they registered. `README.md` gains a
+  "What isolation does not cover" note, because a consumer meeting this sees a failure inside an
+  add-on they never listed, which reads as anything but a framework limitation. Fixing it needs a
+  change to the boot sequence and is deferred to the next major version
+* docs: upgrade notes for every version back to 2.1 move out of `README.md` and into a new
+  `UPGRADING.md`, which ships in the package. They had been duplicated between the README and the
+  resource post, and a second copy of an upgrade instruction is how someone ends up following a
+  stale one. Only v4.0 and v2.1 require action from you; the file says so at the top
+* docs: the `failOnRisky` and `failOnDeprecation` explanation moves into the installation section,
+  beside the `phpunit.xml` it describes. It had lived only under "Upgrading", where a first-time
+  installer would never meet it
+* docs: `README.md`'s section 12 no longer presents `app.classType` as a testability workaround -
+  it is XenForo's own idiom, used four times in `XF\App.php` itself
+* docs: `README.md`'s "Compatibilty" heading is spelled correctly
+* changelog: the 3.0.7 entry, brought across from the `3.x` branch
+
 4.3.0 (2026-09-20)
 ------------------
 
