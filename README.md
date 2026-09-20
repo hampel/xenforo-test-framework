@@ -10,15 +10,27 @@ Unit testing framework for XenForo
 
 ## Compatibility
 
-The test framework is specific to the version of XenForo being run. Given this is a development tool, simply install the
-appropriate version of the test framework in your addon based on what version of XenForo you are developing on.
+**Install the newest version your XenForo and PHP allow.** Each major line targets one XenForo version, and the older
+lines stay on Packagist for anyone who cannot move - a tag you have already released keeps installing whatever changes
+here later.
 
-|XenForo|PHP  |Unit Test Framework|
-|-------|-----|-------------------|
-|v2.1   |     |v1.x               |
-|v2.2   |     |v2.x               |
-|v2.3   |8.1+ |v3.x               |
-|v2.3   |8.3+ |v4.x               |
+|version|XenForo|PHP|still gets fixes|
+|---|---|---|---|
+|v4.x|2.3|8.3+|yes - the current line|
+|v3.x|2.3|8.1+|yes - for PHP 8.1 and 8.2|
+|v2.x|2.2|8.1+|no|
+|v1.x|2.1|5.5+|no|
+
+**Two lines target XenForo 2.3, because PHP moved on while XenForo did not.** v4 dropped PHP 8.1 and 8.2 when they left
+security support, and v3 stayed behind for the people still on them. So where two lines share a XenForo version, read
+the PHP column as the tiebreaker rather than as extra detail.
+
+"No longer gets fixes" is not the same as "stopped working" - it means nobody is patching it. v1.x is also the one line
+that predates this package declaring only what it tests: its `>=5.5.0` was never testable, because the PHPUnit 8 it
+installs needs PHP 7.
+
+Put the version you picked in your addon's `require-dev` as `^4.0`, `^3.0` and so on - the installation section below
+shows the whole file.
 
 ## Upgrading
 

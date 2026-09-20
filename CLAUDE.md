@@ -168,11 +168,15 @@ rather than merely tolerating them.
 
 ## Version compatibility is the release axis
 
-Each major version targets one XenForo major version, and users install the version matching the
-XenForo they develop against (README has the table): XF 2.1 → 1.x, XF 2.2 → 2.x, XF 2.3 → 3.x
-(current, `master`). Because the framework subclasses XenForo internals (see below), a XenForo
-point release can break it — which is why the fix is a new tag on the matching branch, never a
-runtime version check.
+Each major line targets one XenForo version and `master` is always the current line — 4.x today.
+**The mapping stopped being one-to-one at 4.0.0**: 3.x and 4.x both target XF 2.3 and are told
+apart by their PHP floor, because PHP's security calendar moved and XenForo's did not. The README's
+table is the published statement of this, so correct that copy first.
+
+Maintenance happens on a branch per line — `1.x`, `3.x`, `4.x`, and none for 2.x — and nothing has
+ever merged back to `master`. Because the framework subclasses XenForo internals (see below), a
+XenForo point release can break it, which is why the fix is a new tag on the matching branch and
+never a runtime version check.
 
 ## Architecture
 
