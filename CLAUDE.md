@@ -280,6 +280,15 @@ install produces a green test rather than a red one.
 | `assertDontSee($html, …)` | a template XenForo cannot find renders as an empty string, with no error | 4.2.0 |
 | `assertDontSee($html, …)`, again | a template that *fails while rendering* also returns an empty string — the templater catches everything, logs it and carries on | 4.3.0 |
 
+**The logging that goes with row seven is a decision, not an oversight — do not "fix" it.**
+`renderTemplate()` leaves the templater's error on its way to `$app->logException()`, so on a real
+forum a template error becomes a row in `xf_error_log`. Suppressing it by default was considered
+and declined on 2026-09-21: `fakesErrors()` already opts out, and it costs nothing to do so.
+Measured on one render of `public:account_preferences` — with the fake, zero rows written and all
+nine errors still in `getTemplateErrors()`; without it, nine rows. So the test writer chooses, and
+choosing the fake loses no information. What *was* wrong was that `DOCS.md` never said any of this,
+which is why a consumer suite wrote 71 rows a run to a shared install for months.
+
 Two rules follow, and both are cheap:
 
 - **A helper that can return "nothing" must refuse instead of returning it.** That is why

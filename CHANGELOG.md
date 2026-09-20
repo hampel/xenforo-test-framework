@@ -23,7 +23,11 @@ CHANGELOG
   the real one - so rendering a core template without the parameters it expects leaves rows behind
   on an install other people share. Found by trialling this release against a consumer suite, which
   was writing **71 rows on every run** from one test. `fakesErrors()` or `UsesDatabaseTransactions`
-  prevents it, and `assertNoTemplateErrors()`'s section now says which and why
+  prevents it, and `assertNoTemplateErrors()`'s section now says which and why. **Suppressing the
+  logging by default was considered and declined**: whether a template error reaches the real log
+  is the test writer's call, and `fakesErrors()` costs nothing to reach for - measured on one
+  render, the fake returns the same markup and `getTemplateErrors()` still carries all nine errors
+  while the log gains none
 * `mockDatabase()` no longer needs its `fetchAll` to return an array rather than `null`. Rebuilding
   the entity manager used to re-run the listener query behind `$addonsToLoad` through your mock,
   and a `null` there failed inside the framework rather than in your test - `DOCS.md` has said so

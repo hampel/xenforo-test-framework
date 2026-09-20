@@ -628,6 +628,14 @@ Two things prevent it, and a suite usually wants one of them:
   This package's own template tests are clean only for that reason, which is luck rather than
   design — worth knowing before you conclude your own suite is clean.
 
+**Whether a template error reaches the real log is yours to decide, and `renderTemplate()`
+deliberately does not decide it for you.** Some suites want the rows; most do not. The reason that
+choice is cheap is that `fakesErrors()` costs nothing in visibility — measured on one render of
+`public:account_preferences`, the fake still returns the same 6,652 characters of markup and
+`getTemplateErrors()` still carries all nine errors, while `xf_error_log` gains **zero** rows.
+Without it the same render writes **nine**. The fake hides the errors from the forum, not from
+your test.
+
 ### assertSee / assertDontSee / assertSeeInOrder
 Assert on rendered output.
 
