@@ -8,7 +8,7 @@
 
 Unit testing framework for XenForo
 
-## Compatibilty
+## Compatibility
 
 The test framework is specific to the version of XenForo being run. Given this is a development tool, simply install the
 appropriate version of the test framework in your addon based on what version of XenForo you are developing on.
