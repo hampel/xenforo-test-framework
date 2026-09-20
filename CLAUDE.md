@@ -66,6 +66,18 @@ Two things in there are load-bearing and easy to undo by accident:
   `OK, but there were issues!` in yellow, so **read the exit status, and capture it without a
   pipe** — `vendor/bin/phpunit; echo $?`, since `phpunit | tail` reports `tail`'s status.
 
+### One command for the three checks
+
+```bash
+XF_ROOT=/srv/www/myforum composer check
+```
+
+Style, then PHPStan, then the integration suite. Composer stops the list at the first failure,
+so the order is deliberate: the cheapest and least interesting check goes first and the suite
+last, and a style nit never hides a failing test from you for longer than one re-run.
+`check:lowest` stays out of it — it installs a second dependency tree, which is a pre-release
+step rather than a per-commit one.
+
 ### Before a release, run the suite at the declared floor
 
 ```bash
