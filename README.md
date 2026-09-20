@@ -832,9 +832,26 @@ under a test, so the body never runs, and a test written against it passes while
 the `app.classType` container key rather than the application object, because all three routers live on the base app
 and a subclass was not needed for routing.
 
-There is no way around it from here. What you can do is make the check something a test can reach - `$app->container(
-'app.classType') === 'Pub'` sees what `dispatch()` set - or move the body into a method the test calls directly, which
-is worth doing anyway for anything with logic in it.
+There is no way around it from here. What you can do is ask the question the way XenForo itself asks it:
+`$app->container('app.classType') === 'Pub'` sees what `dispatch()` set. **That is not a testability compromise** -
+`XF\App.php` uses `app.classType` four times, including `if ($c['app.classType'] != 'Pub')` at line 1291, so
+`instanceof` is the less canonical of the two forms. The other option is to move the body into a method the test calls
+directly, which is worth doing anyway for anything with logic in it.
+
+Once the listener checks the class type, testing it takes no double and no dispatch - swap the key and hand it the
+application:
+
+```php
+$this->swap('app.classType', 'Pub');
+
+$data = [];
+\MyVendor\MyAddon\Listener::templaterGlobalData($this->app(), $data, $reply);
+
+$this->assertArrayHasKey('myAddonData', $data);
+```
+
+Pair it with a negative that asserts the test app's own class type is not `Pub`, or the positive proves only that the
+swap worked.
 
 ### Data in the database
 
