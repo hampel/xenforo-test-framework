@@ -14,9 +14,12 @@ It ships two distinct things, and the distinction matters when editing:
 - **`src/`** — the framework itself, namespaced `Hampel\Testing\` (PSR-4, the only autoloaded code).
 - **`tests/`** — a **template that is copied into consuming add-ons**, namespaced `Tests\`. It is
   not this package's own test suite and is not autoloaded (`composer.json` has no `autoload-dev`).
-  `tests/TestCase.php` and `tests/CreatesApplication.php` are the files add-on authors edit and
-  own, so a change to either is a **breaking change** that must be called out in `CHANGELOG.md`
-  with merge instructions — see the 2.1.0 entry for the precedent.
+  `tests/TestCase.php` is the one file add-on authors edit and own, so a change to it is a
+  **breaking change** that must be called out in `CHANGELOG.md` with merge instructions — see the
+  2.1.0 entry for the precedent. **Keep that file to declarations**: 5.0.0 moved the boot out of
+  the scaffold and into `Hampel\Testing\TestCase::createApplication()` precisely because anything
+  copied cannot be updated, and `tests/CreatesApplication.php` proved it by sitting unmerged in
+  real add-ons for four years. Adding logic back here re-creates that.
 
 ## There is no runnable test suite here
 
@@ -181,8 +184,12 @@ never a runtime version check.
 
 ## Architecture
 
-Boot path: `tests/CreatesApplication::createApplication()` requires `{$rootDir}/src/XF.php`, calls
-`\XF::start()`, then `\XF::setupApp(Hampel\Testing\App::class, $options)`. `Hampel\Testing\App`
+Boot path: `Hampel\Testing\TestCase::createApplication()` — the framework's, not the scaffold's,
+since 5.0.0 — requires `{$rootDir}/src/XF.php`, calls `\XF::start()`, then
+`\XF::setupApp(Hampel\Testing\App::class, ['xf-addons' => $this->addonsToLoad])`. It is an ordinary
+method, and a consumer's own `CreatesApplication` trait still overrides it, because a trait method
+beats an inherited one — which is what makes the upgrade optional.
+`integration/LegacyCreatesApplicationTest.php` pins that. `Hampel\Testing\App`
 extends `XF\App` to make the container usable from PHPUnit — it forces the CLI class type with a
 `public` default, allows manual jobs, and makes `run()` throw. Its `setup()` implements **add-on
 isolation**: when `$addonsToLoad` is non-empty, it filters `addon.composer` down to those ids, so

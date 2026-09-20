@@ -242,7 +242,7 @@ framework does is provide some additional layers between the base TestCase class
 `Hampel\Testing\TestCase` extends `PHPUnit\Framework\TestCase` and provides most of the functionality for the unit test 
 framework. This is provided by the Composer package.
 
-You then copy two files into your unit testing directory `{addon_root}/tests/TestCase.php`:
+You then copy one file into your unit testing directory, `{addon_root}/tests/TestCase.php`:
 
 ```php
 <?php namespace Tests;
@@ -251,8 +251,6 @@ use Hampel\Testing\TestCase as BaseTestCase;
 
 abstract class TestCase extends BaseTestCase
 {
-    use CreatesApplication;
-
     /**
      * @var string $rootDir path to your XenForo root directory, relative to the addon path
      *
@@ -291,32 +289,20 @@ abstract class TestCase extends BaseTestCase
 
 You might need to edit the `$rootDir` variable if you don't include a vendor folder in your addon installation path.
 
-This class is what your unit tests will extend.
+This class is what your unit tests will extend, and the two properties above are the whole of its configuration.
 
-The other file contains the code we use to boot the XenForo framework `{addon_root}/tests/CreatesApplication.php`:
+**Booting XenForo is the framework's job, not yours.** `Hampel\Testing\TestCase::createApplication()` reads those two
+properties, requires XenForo's `XF.php`, starts it and hands the add-on ids to `XF::setupApp()`. There is nothing to
+copy and nothing to keep in step.
 
-```php
-<?php namespace Tests;
+Before v5 that code shipped as a second file, `tests/CreatesApplication.php`, for you to copy alongside the one above -
+which meant every later change to the boot had to be merged by hand into a file you owned. The v2.1 addon isolation
+arguments are the case that settled it: add-ons are still running the 2020 version of that file today, quietly without
+the isolation they were configured for.
 
-trait CreatesApplication
-{
-    /**
-     * Creates the application.
-     *
-     * @return \XF\App
-     */
-    public function createApplication()
-    {
-        require_once("{$this->rootDir}/src/XF.php");
-
-        \XF::start($this->rootDir);
-
-        $options['xf-addons'] = $this->addonsToLoad ?: [];
-
-        return \XF::setupApp('Hampel\Testing\App', $options);
-    }
-}
-```
+If you genuinely need a different boot, `createApplication()` is an ordinary method - override it in your
+`tests/TestCase.php` and pass `['xf-addons' => $this->addonsToLoad]` to `XF::setupApp()` so isolation still reaches the
+application.
 
 As you can see from our previous discussion about entry points into XenForo, we follow the same pattern - including 
 `XF.php`, booting the framework and then setting up our application container. We don't need to do anything more - we 
@@ -536,8 +522,7 @@ Inside the tests directory, you'll find the following directories and files:
   delete it without putting a feature test in its place, commit a `.gitkeep` instead
 * `/tests/Unit` this is where all of your unit tests should go
 * `/tests/Unit/ExampleTest.php` this is a simple example test - edit or copy it as the basis for your own test classes
-* `/tests/CreatesApplication.php` this is the trait that boots our XenForo test framework. If you need to adjust the way we boot things, you can change this - but for most cases you should leave it as is
-* `/tests/TestCase.php` this is our base test class (`Tests\TestCase`) that all unit test classes should inherit from if you want to boot the XenForo application framework for use in your tests
+* `/tests/TestCase.php` this is our base test class (`Tests\TestCase`) that all unit test classes should inherit from if you want to boot the XenForo application framework for use in your tests. It is the only file here you own and edit
 
 Third step is to copy the `phpunit.xml` file from `{addon_root}/vendor/hampel/xenforo-test-framework/phpunit.xml` into the root of your addon:
 

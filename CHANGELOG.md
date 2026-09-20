@@ -4,6 +4,19 @@ CHANGELOG
 5.0.0 (unreleased)
 ------------------
 
+* **the framework boots the application now, and `tests/CreatesApplication.php` has left the
+  scaffold.** `Hampel\Testing\TestCase::createApplication()` reads `$rootDir` and `$addonsToLoad`
+  off your test class and does the rest, so the scaffold is one file instead of two. That second
+  file existed to be copied, and a copied file cannot be updated by a release: the v2.1.0 add-on
+  isolation arguments went into it in 2022, and add-ons are still running the 2020 version today,
+  quietly without the isolation they were configured for. **Nothing breaks if you do nothing** - a
+  trait method wins over an inherited one in PHP, so an add-on keeping its own copy keeps exactly
+  the boot it has. To adopt the framework's, delete that file and the `use CreatesApplication;`
+  line from your `tests/TestCase.php`. If you need a boot of your own, `createApplication()` is an
+  ordinary method: override it and pass `['xf-addons' => $this->addonsToLoad]` to `XF::setupApp()`
+  so isolation still reaches the application
+* `$rootDir` and `$addonsToLoad` are declared on `Hampel\Testing\TestCase` with the scaffold's
+  own defaults, so the copies in your `tests/TestCase.php` override them rather than define them
 * fix: **add-on isolation filters code event listeners now, and never did before.** Naming add-ons
   in `$addonsToLoad` filtered Composer autoloading and class extensions, and this package's
   documentation said that gave complete isolation. It did not. `XF\App::setup()` fires `app_setup`
@@ -40,6 +53,8 @@ CHANGELOG
   add-on's `app_setup` listener registered a container entry, set an option or extended a class
   will now find that entry absent. If a test breaks on this upgrade, the add-on it was quietly
   relying on belongs in `$addonsToLoad` - which is the question isolation existed to ask
+* `tests/CreatesApplication.php` is no longer part of the scaffold, so a fresh install copies one
+  file rather than two. An existing copy keeps working untouched, and deleting it is opt-in
 * `Concerns\InteractsWithExtension` no longer exists. Nothing needs to change unless your own test
   class `use`d it directly, which the scaffold has never done - `TestCase` composed it for you and
   now does not. One edge, for a suite that boots the application with a different add-on list than

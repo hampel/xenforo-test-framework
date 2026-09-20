@@ -6,8 +6,6 @@ use Hampel\Testing\TestCase as BaseTestCase;
 
 abstract class TestCase extends BaseTestCase
 {
-	use CreatesApplication;
-
 	/**
 	 * @var string $rootDir path to your XenForo root directory, relative to the addon path
 	 *

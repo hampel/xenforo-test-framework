@@ -39,6 +39,16 @@ abstract class TestCase extends BaseTestCase
 	protected $app;
 
 	/**
+	 * Path to your XenForo root directory, relative to the add-on directory the tests run from.
+	 *
+	 * '../../../..' suits an add-on id carrying a vendor - src/addons/Vendor/AddonId. Without
+	 * one - src/addons/AddonId - use '../../..'. An absolute path works too. No trailing slash.
+	 *
+	 * @var string
+	 */
+	protected $rootDir = '../../../..';
+
+	/**
 	 * The add-on ids to load, and nothing else. An id matching nothing - 'None/None' - loads no
 	 * add-ons at all; an empty array loads every add-on installed on the forum.
 	 *
@@ -72,13 +82,28 @@ abstract class TestCase extends BaseTestCase
 	protected $setUpHasRun = false;
 
 	/**
-	 * Creates the application.
+	 * Boot the XenForo application this test runs against.
 	 *
-	 * Needs to be implemented by subclasses.
+	 * The framework owns this as of 5.0.0. It used to ship as tests/CreatesApplication.php for
+	 * you to copy, which meant every later change to the boot had to be merged by hand into a
+	 * file you owned - and a copy nobody merged is indistinguishable from one nobody needed to.
+	 * The v2.1.0 add-on isolation arguments are the case that proves it: add-ons are still
+	 * running the 2020 version of that file today.
+	 *
+	 * It is an ordinary method, so override it if you genuinely need a different boot. An
+	 * add-on that kept its own tests/CreatesApplication.php also keeps exactly the behaviour it
+	 * had, because a trait method wins over an inherited one.
 	 *
 	 * @return App
 	 */
-	abstract public function createApplication();
+	public function createApplication()
+	{
+		require_once "{$this->rootDir}/src/XF.php";
+
+		\XF::start($this->rootDir);
+
+		return \XF::setupApp(App::class, ['xf-addons' => $this->addonsToLoad]);
+	}
 
 	/**
 	 * Setup the test environment.
@@ -135,12 +160,14 @@ abstract class TestCase extends BaseTestCase
 				. 'application was booted without it, so no add-on isolation is in effect: every '
 				. 'add-on installed on the forum is active, including any shipping their own '
 				. 'PHPUnit and Mockery for yours to collide with.' . "\n\n"
-				. 'This is the v2.1.0 scaffold upgrade taken half way. tests/CreatesApplication.php '
-				. 'has to pass the ids through:' . "\n\n"
-				. '    $options[\'xf-addons\'] = $this->addonsToLoad ?: [];' . "\n\n"
-				. '    return \XF::setupApp(\'Hampel\Testing\App\', $options);' . "\n\n"
-				. 'Re-copy tests/CreatesApplication.php from the package to fix it - see '
-				. 'UPGRADING.md.'
+				. 'Your tests/CreatesApplication.php predates v2.1.0 and never passes the ids on. '
+				. 'As of v5.0.0 this framework boots the application for you, so the fix is to '
+				. 'delete that file and the "use CreatesApplication;" line in tests/TestCase.php.'
+				. "\n\n"
+				. 'If you need a boot of your own, pass the ids to it:' . "\n\n"
+				. '    return \XF::setupApp(\'Hampel\Testing\App\', '
+				. '[\'xf-addons\' => $this->addonsToLoad]);' . "\n\n"
+				. 'See UPGRADING.md.'
 		);
 	}
 

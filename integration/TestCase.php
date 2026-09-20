@@ -17,9 +17,15 @@ use Hampel\Testing\TestCase as BaseTestCase;
  */
 abstract class TestCase extends BaseTestCase
 {
-	use CreatesApplication;
-
-	/** @var string absolute path to a XenForo 2.3 root */
+	/**
+	 * Absolute path to a XenForo 2.3 root, from the environment.
+	 *
+	 * Nothing else here overrides the boot: this suite runs on the createApplication() the
+	 * framework itself provides, which is the point - if that boot breaks, every test below
+	 * breaks with it rather than a copy of it going stale unnoticed.
+	 *
+	 * @var string
+	 */
 	protected $rootDir;
 
 	/**

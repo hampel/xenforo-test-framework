@@ -13,8 +13,31 @@ either cannot reach you through Composer — it has to be merged by hand.
 
 ## 5.0.0
 
+**The one thing you can act on: the scaffold is one file now, and deleting the other is optional.**
+
+`tests/CreatesApplication.php` has left the scaffold. `Hampel\Testing\TestCase::createApplication()`
+reads `$rootDir` and `$addonsToLoad` off your test class and boots XenForo itself.
+
+**Doing nothing is a supported choice.** A trait method wins over an inherited one in PHP, so an
+add-on that keeps its own copy keeps exactly the boot it has. To adopt the framework's instead:
+
+- delete `tests/CreatesApplication.php`;
+- delete the `use CreatesApplication;` line from `tests/TestCase.php`.
+
+That is the whole migration, and it is the last time this file will ask you to merge boot code by
+hand. The reason for the change is the v2.1.0 entry near the bottom of this document: those add-on
+isolation arguments went into that file in 2022, and add-ons are still running the 2020 version
+today — a release cannot reach a file you copied.
+
+If you need a boot of your own, `createApplication()` is an ordinary method. Override it in your
+`tests/TestCase.php` and pass the ids on, or isolation never reaches the application:
+
+```php
+return \XF::setupApp('Hampel\Testing\App', ['xf-addons' => $this->addonsToLoad]);
+```
+
 **Add-on isolation filters code event listeners now, and on every earlier version it did not.**
-Nothing in your test files has to change for this. What changes is what your suite sees.
+Nothing to change for this. What changes is what your suite sees.
 
 Until now, naming add-ons in `$addonsToLoad` filtered Composer autoloading and class extensions,
 and left listeners alone — XenForo fires `app_setup` at the very end of `XF\App::setup()`, and the
@@ -30,24 +53,24 @@ question isolation existed to ask, and it has not been able to ask it until now.
 The reverse is worth knowing too: if an excluded add-on has been *breaking* your suite during boot,
 that stops.
 
-**Second: if your suite is half way through the v2.1.0 scaffold upgrade, it now stops rather than
-running.** That upgrade needed both files — `$addonsToLoad` in `tests/TestCase.php`, and
-`tests/CreatesApplication.php` passing it to `XF::setupApp()` — and taking one without the other
-has been silent since 2022. If you are in that state, every test now errors with:
+**If your suite is half way through the v2.1.0 scaffold upgrade, it now stops rather than running.**
+That upgrade needed both files, and taking one without the other has been silent since 2022. If you
+are in that state — `$addonsToLoad` set, and a `tests/CreatesApplication.php` old enough not to pass
+it on — every test now errors with:
 
 ```text
 This suite sets $addonsToLoad to [...], but the application was booted without it, so no add-on
 isolation is in effect
 ```
 
-The fix is to re-copy `tests/CreatesApplication.php` from the package. Nothing else changes, and a
-suite that was in that state was never getting the isolation it was configured for — so this is a
-day you were going to lose eventually, brought forward and labelled.
+The fix is the migration at the top of this entry. A suite in that state was never getting the
+isolation it was configured for, so this is a day you were going to lose eventually, brought
+forward and labelled.
 
-**Third, and almost certainly nothing to do:** the `Concerns\InteractsWithExtension` trait is gone.
-`TestCase` composed it for you and no longer needs to, so the scaffold never referred to it and
-neither did any documented example. If one of your own test classes `use`s it directly, remove that
-line — the work it did now happens while the application boots.
+**Almost certainly nothing to do:** the `Concerns\InteractsWithExtension` trait is gone. `TestCase`
+composed it for you and no longer needs to, so the scaffold never referred to it and neither did
+any documented example. If one of your own test classes `use`s it directly, remove that line — the
+work it did now happens while the application boots.
 
 ## 4.3.1
 
