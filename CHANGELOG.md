@@ -28,6 +28,11 @@ CHANGELOG
   suite that deliberately boots with a different list than the property names is left alone
 * new `Hampel\Testing\App::isolatedAddOnIds()` returns the ids the application was actually told
   to keep, which is what makes that check possible
+* the `Concerns\InteractsWithExtension` trait is **removed**. Its `setUpExtension()` hook installed
+  the filtered extension after the application had booted, which is the defect above; now that
+  `App::setup()` installs it beforehand, the hook rebuilt an identical extension from two database
+  queries per test and changed nothing. The only case it still covered was the half-upgraded
+  scaffold, which no longer gets that far
 
 **Breaking changes:**
 * **a suite that names add-ons in `$addonsToLoad` now gets the isolation it asked for**, and that
@@ -35,6 +40,11 @@ CHANGELOG
   add-on's `app_setup` listener registered a container entry, set an option or extended a class
   will now find that entry absent. If a test breaks on this upgrade, the add-on it was quietly
   relying on belongs in `$addonsToLoad` - which is the question isolation existed to ask
+* `Concerns\InteractsWithExtension` no longer exists. Nothing needs to change unless your own test
+  class `use`d it directly, which the scaffold has never done - `TestCase` composed it for you and
+  now does not. One edge, for a suite that boots the application with a different add-on list than
+  `$addonsToLoad` names: the list the **application** was given now decides which listeners and
+  class extensions are active, where the property used to win at test time
 * **a suite in the half-upgraded state stops running at all**, where it used to run with no
   isolation. If your `tests/TestCase.php` sets `$addonsToLoad` and your
   `tests/CreatesApplication.php` predates v2.1.0, every test now errors with an explanation until

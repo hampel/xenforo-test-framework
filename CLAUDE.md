@@ -229,9 +229,12 @@ container closure reads it.
 - `setUp()` → `refreshApplication()` (wrapped in output-buffer save/restore, because XenForo boot
   writes to the buffer), disable the auto job runner, then `setUpTraits()`.
 - **`setUpTraits()` is an explicit allow-list**, matched by trait name via
-  `UsesReflection::classUsesRecursive()`. Only EntityManager, Extension, Language, Options and Time
-  get a `setUp*()` call. A new concern needing per-test setup must be registered there or its hook
-  silently never runs.
+  `UsesReflection::classUsesRecursive()`. Only EntityManager, Language, Options, Routes, Time and
+  Visitor get a `setUp*()` call, plus `UsesDatabaseTransactions`, which is opt-in per test class
+  and so is not composed into `TestCase` at all. A new concern needing per-test setup must be
+  registered there or its hook silently never runs — and note that a hook is the wrong home for
+  anything that must happen before `app_setup` fires, which is what 5.0.0 moved into
+  `App::setup()`.
 - `tearDown()` closes the DB connection (unless mocked), destroys `\XF::$app` by reflection
   (`UsesReflection::destroyProperty()`), closes Mockery and resets Carbon.
 

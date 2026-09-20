@@ -15,7 +15,6 @@ abstract class TestCase extends BaseTestCase
 	use Concerns\InteractsWithEntityManager;
 	use Concerns\InteractsWithErrors;
 	use Concerns\InteractsWithEvents;
-	use Concerns\InteractsWithExtension;
 	use Concerns\InteractsWithFilesystem;
 	use Concerns\InteractsWithHttp;
 	use Concerns\InteractsWithJobs;
@@ -197,11 +196,6 @@ abstract class TestCase extends BaseTestCase
 		if (isset($uses[Concerns\InteractsWithEntityManager::class]))
 		{
 			$this->setUpEntityManager();
-		}
-
-		if (isset($uses[Concerns\InteractsWithExtension::class]))
-		{
-			$this->setUpExtension();
 		}
 
 		if (isset($uses[Concerns\InteractsWithLanguage::class]))

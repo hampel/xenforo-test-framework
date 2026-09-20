@@ -85,6 +85,32 @@ class AddOnIsolationTest extends TestCase
 		$this->assertSame([], $this->listenersOf($extension));
 	}
 
+	public function test_the_filter_keeps_the_class_extensions_of_the_add_ons_it_is_given()
+	{
+		$extension = $this->anAddOnWithAClassExtension();
+
+		if (!$extension)
+		{
+			$this->markTestSkipped('No add-on on this forum extends a class.');
+		}
+
+		$filtered = Extension::forAddOns([$extension['addon_id']], $this->app()->db());
+
+		$this->assertContains(
+			$extension['to_class'],
+			$this->classExtensionsOf($filtered)[$extension['from_class']]
+		);
+	}
+
+	public function test_the_filter_excludes_class_extensions_for_an_id_matching_nothing()
+	{
+		// the listener half is what app_setup needed, but a leaked class extension is the older
+		// half of isolation and wants its own assertion rather than being assumed
+		$extension = Extension::forAddOns(['None/None'], $this->app()->db());
+
+		$this->assertSame([], $this->classExtensionsOf($extension));
+	}
+
 	public function test_the_application_records_what_it_was_given()
 	{
 		$this->assertSame(['None/None'], $this->app()->isolatedAddOnIds());
@@ -155,13 +181,50 @@ class AddOnIsolationTest extends TestCase
 	}
 
 	/**
+	 * @return array|null
+	 */
+	private function anAddOnWithAClassExtension()
+	{
+		return $this->app()->db()->fetchRow("
+			SELECT extension.addon_id, extension.from_class, extension.to_class
+			FROM xf_class_extension AS extension
+			LEFT JOIN xf_addon AS addon ON (extension.addon_id = addon.addon_id)
+			WHERE extension.active = 1
+				AND addon.active = 1
+				AND addon.is_processing = 0
+			LIMIT 1
+		");
+	}
+
+	/**
+	 * @param Extension $extension
+	 *
+	 * @return array
+	 */
+	private function classExtensionsOf(Extension $extension)
+	{
+		return $this->readProperty($extension, 'classExtensions');
+	}
+
+	/**
 	 * @param Extension $extension
 	 *
 	 * @return array
 	 */
 	private function listenersOf(Extension $extension)
 	{
-		$property = new \ReflectionProperty(\XF\Extension::class, 'listeners');
+		return $this->readProperty($extension, 'listeners');
+	}
+
+	/**
+	 * @param Extension $extension
+	 * @param string $name
+	 *
+	 * @return array
+	 */
+	private function readProperty(Extension $extension, $name)
+	{
+		$property = new \ReflectionProperty(\XF\Extension::class, $name);
 		$property->setAccessible(true);
 
 		return $property->getValue($extension);

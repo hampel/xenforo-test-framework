@@ -44,6 +44,11 @@ The fix is to re-copy `tests/CreatesApplication.php` from the package. Nothing e
 suite that was in that state was never getting the isolation it was configured for — so this is a
 day you were going to lose eventually, brought forward and labelled.
 
+**Third, and almost certainly nothing to do:** the `Concerns\InteractsWithExtension` trait is gone.
+`TestCase` composed it for you and no longer needs to, so the scaffold never referred to it and
+neither did any documented example. If one of your own test classes `use`s it directly, remove that
+line — the work it did now happens while the application boots.
+
 ## 4.3.1
 
 **Nothing to do.** Documentation only — no code in `src/` changed.
