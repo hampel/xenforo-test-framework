@@ -1,6 +1,17 @@
 CHANGELOG
 =========
 
+3.0.7 (unreleased)
+------------------
+
+Backported from 4.3.0.
+
+* `mockery/mockery` is now `^1.6`. The old `^1.0` was never tested and could not work: Mockery
+  1.0, 1.1 and 1.2 declare `php >=5.6.0`, so Composer installs them onto a supported PHP and the
+  mock code they generate is then invalid there. Mocking a plain class still succeeds, which is
+  what made the constraint look sound - it is mocking an **interface** that fails, with
+  `Cannot use "parent" when current class scope has no parent`, before the first test runs
+
 3.0.6 (2026-09-10)
 ------------------
 

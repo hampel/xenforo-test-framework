@@ -24,7 +24,7 @@
 	"require": {
 		"php": ">=8.1.0",
 		"phpunit/phpunit": "^10.0",
-		"mockery/mockery": "^1.0"
+		"mockery/mockery": "^1.6"
 	},
     "suggest": {
         "nesbot/carbon": "Gives better control when dealing with time.",
