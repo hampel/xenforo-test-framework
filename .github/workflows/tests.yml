@@ -2,7 +2,10 @@ name: tests
 
 on:
   push:
-    branches: [master]
+    # This is the 4.x maintenance branch, so the trigger names it rather than master.
+    # A push event uses the workflow file at the pushed commit, so listing master here
+    # would run nothing at all and look exactly like a branch with no CI.
+    branches: ["4.x"]
   pull_request:
   workflow_dispatch:
 
