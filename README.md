@@ -22,88 +22,18 @@ appropriate version of the test framework in your addon based on what version of
 
 ## Upgrading
 
-**Unit Test Framework v4.0**
+Upgrade notes are in [UPGRADING.md](UPGRADING.md), newest first, back to v2.1. It lists only the
+changes that need something from you - most releases need nothing beyond `composer update`, and
+say so.
 
-`phpunit.xml` has been updated in v4.0 and you should copy the new version into your addon root - or
-diff it against yours if you have customised it, since copying over the top discards your changes:
+Two of them do need action. **v4.0** raised the minimum PHP to 8.3, allowed PHPUnit 12 - which
+stops reading `@dataProvider` and friends from doc comments - and added `makeEntity()` and
+`createEntity()` as protected methods, which collide with a helper of either name in your own test
+classes. **v2.1** changed both scaffold files, and those are copies you own, so Composer cannot
+deliver it for you.
 
-```bash
-$ cp vendor/hampel/xenforo-test-framework/phpunit.xml .
-```
-
-It now fails the test suite on deprecations, notices, warnings, risky tests, PHPUnit's own deprecations, and a run that
-executes no tests at all.
-
-`phpunit.xml` declares a Feature test suite, so `tests/Feature` has to exist. If yours does not, take it from the
-scaffold rather than creating it by hand - it ships `tests/Feature/ExampleTest.php`, which keeps the directory in git as
-well as showing where feature tests go. **Git does not track empty directories**, so a `tests/Feature` you `mkdir`
-yourself works on your machine and is absent in every clone, including CI. A missing directory does at least fail
-loudly: PHPUnit prints `Test directory ".../tests/Feature" not found` and exits **2** without running anything, on 10,
-11 and 12 alike.
-
-`failOnPhpunitDeprecation` is the one most likely to turn a currently-green suite red, and that is what it is for - see
-the note on PHPUnit 12 below. `failOnEmptyTestSuite` covers the case that genuinely was silent: a run which finds no
-tests at all exits **0** by default, so a suite that has quietly stopped collecting anything reads as passing.
-
-You will most often meet that second flag when you mistype a `--filter`. A filter matching nothing used to print
-`No tests executed!` and exit 0, which looks a lot like a test that passed; it now exits 1. That is the same defect as a
-CI job silently testing nothing, just caught at the moment it is obvious rather than months later.
-
-**`failOnEmptyTestSuite` fires on an empty run, not an empty suite**, and there is no flag that does the latter. So if
-your Unit suite passes, a Feature suite collecting nothing still exits 0 - and so does one holding a feature test
-PHPUnit never picked up, because the file is named `SomethingFeature.php` rather than `SomethingTest.php`, or sits in
-the wrong directory. Nothing in `phpunit.xml` will tell you.
-
-When you add your first feature test, run `vendor/bin/phpunit --testsuite Feature` once and **read the count, not the
-exit code**. The example test above means that suite always collects something, so the command exits 0 whether or not
-your own test was picked up - `OK (1 test, 1 assertion)` where you expected two is the only thing that tells you. (An
-empty `tests/Feature` does make that command exit 1, but only until you put anything in it at all, which is the first
-thing you do.)
-
-### PHPUnit 12 removes metadata in doc comments
-
-v4.0 widens the PHPUnit constraint to `^10.0|^11.0|^12.0`. For most addons this framework is the only reason PHPUnit is
-installed at all, so that constraint is what chooses the version - and a `composer update` will now select 12 where it
-used to select 10.
-
-PHPUnit 12 no longer reads metadata from doc comments. If your tests use `@dataProvider`, `@depends`, `@covers`,
-`@group` or similar annotations, they stop working: the tests error rather than run. Convert them to attributes
-(`#[DataProvider]`, `#[Depends]`, `#[CoversClass]`, `#[Group]`), which are understood by 10, 11 and 12 - or pin
-`phpunit/phpunit` yourself in your addon's `composer.json`.
-
-This is worth doing before you upgrade rather than after, because of how the versions differ:
-
-| on | an `@dataProvider` test |
-|---|---|
-| PHPUnit 10 | runs, no complaint |
-| PHPUnit 11 | runs, reports `PHPUnit Deprecations: n` - and **exits 0** unless `failOnPhpunitDeprecation` is set |
-| PHPUnit 12 | errors, and the test does not run |
-
-The new `failOnPhpunitDeprecation="true"` in the supplied `phpunit.xml` is what turns the middle row into a failure you
-can act on while it is still cheap.
-
-The minimum PHP version is now 8.3. If your addon pins `config.platform.php` in `composer.json` below that, Composer
-cannot install v4.0 at all - the solve fails outright rather than falling back to an older release. Raising the pin is
-dev-only in intent but not in effect: it also lets Composer select **runtime** dependencies above the PHP version your
-addon declares, and those go into your release zip. After raising it, check that every package in the `packages` array
-of `composer.lock` still satisfies your addon's own PHP floor, and cap any that don't.
-
-**Unit Test Framework v2.1**
-
-The `TestCase.php` and `CreatesApplication.php` files have been updated in v2.1 of the unit test framework and you 
-should edit these files in your addon unit test directory to merge in these changes.
-
-Specifically, there is a new variable in `TestCase.php`:
-
-```php
-protected $addonsToLoad = [];
-```
-
-... and some new code in `CreatesApplication.php` which should be copied across to your own version of this file:
-
-```php
-$options['xf-addons'] = $this->addonsToLoad ?: [];
-```
+[CHANGELOG.md](CHANGELOG.md) answers the other question: everything that changed, rather than only
+what you have to do about it.
 
 ## 1. Introduction
 
@@ -620,6 +550,24 @@ options - they tell PHPUnit where to find our unit tests.
   </testsuites>
 </phpunit>
 ```
+
+The `failOn*` flags are worth understanding rather than just copying. They fail the suite on deprecations, notices,
+warnings, risky tests, PHPUnit's own deprecations, and a run that executes no tests at all. A library should hear about
+deprecations before its users do, and the last two are the ones that catch a suite which has quietly stopped testing
+anything.
+
+You will most often meet `failOnEmptyTestSuite` when you mistype a `--filter`. A filter matching nothing used to print
+`No tests executed!` and exit 0, which looks a lot like a test that passed; it now exits 1. That is the same defect as a
+CI job silently testing nothing, just caught at the moment it is obvious rather than months later.
+
+**It fires on an empty run, not an empty suite**, and there is no flag that does the latter. So if your Unit suite
+passes, a Feature suite collecting nothing still exits 0 - and so does one holding a feature test PHPUnit never picked
+up, because the file is named `SomethingFeature.php` rather than `SomethingTest.php`, or sits in the wrong directory.
+Nothing in `phpunit.xml` will tell you.
+
+When you add your first feature test, run `vendor/bin/phpunit --testsuite Feature` once and **read the count, not the
+exit code**. The example test means that suite always collects something, so the command exits 0 whether or not your own
+test was picked up - `OK (1 test, 1 assertion)` where you expected two is the only thing that tells you.
 
 Finally, update your `build.json` file to clean up unit test code when we build our addon releases. Assuming you only 
 use Composer for unit testing:
