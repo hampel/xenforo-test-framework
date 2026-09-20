@@ -1,7 +1,7 @@
 CHANGELOG
 =========
 
-3.0.7 (unreleased)
+3.0.7 (2026-09-20)
 ------------------
 
 Backported from 4.3.0.
