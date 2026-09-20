@@ -40,6 +40,17 @@ abstract class TestCase extends BaseTestCase
 	protected $app;
 
 	/**
+	 * The add-on ids to load, and nothing else. An id matching nothing - 'None/None' - loads no
+	 * add-ons at all; an empty array loads every add-on installed on the forum.
+	 *
+	 * Declared here so the framework can read it. Your own tests/TestCase.php overrides it, and
+	 * that is still where you set it.
+	 *
+	 * @var string[]
+	 */
+	protected $addonsToLoad = [];
+
+	/**
 	 * The callbacks that should be run after the application is created.
 	 *
 	 * @var array
@@ -82,6 +93,8 @@ abstract class TestCase extends BaseTestCase
 			$this->refreshApplication();
 		}
 
+		$this->requireAddOnIsolationApplied($this->addonsToLoad, $this->app()->isolatedAddOnIds());
+
 		$this->disableAutoJobRunner();
 
 		$this->setUpTraits();
@@ -92,6 +105,44 @@ abstract class TestCase extends BaseTestCase
 		}
 
 		$this->setUpHasRun = true;
+	}
+
+	/**
+	 * Refuse a suite that asked for add-on isolation and did not get it.
+	 *
+	 * The v2.1.0 scaffold change needed both files: $addonsToLoad in tests/TestCase.php, and
+	 * tests/CreatesApplication.php passing it to XF::setupApp(). Taking one without the other
+	 * has always been silent - the suite runs with every installed add-on active, which is the
+	 * state $addonsToLoad was set to avoid, and the failure that follows looks like a bug in
+	 * the add-on rather than a half-finished upgrade.
+	 *
+	 * Only the missing case is refused. A suite that deliberately boots with a different list
+	 * than the property names is doing something of its own and is left alone.
+	 *
+	 * @param string[] $wanted - the ids the test class asks for
+	 * @param string[] $applied - the ids the application was actually given
+	 *
+	 * @return void
+	 */
+	protected function requireAddOnIsolationApplied(array $wanted, array $applied)
+	{
+		if (!$wanted || $applied)
+		{
+			return;
+		}
+
+		throw new \LogicException(
+			'This suite sets $addonsToLoad to [' . implode(', ', $wanted) . '], but the '
+				. 'application was booted without it, so no add-on isolation is in effect: every '
+				. 'add-on installed on the forum is active, including any shipping their own '
+				. 'PHPUnit and Mockery for yours to collide with.' . "\n\n"
+				. 'This is the v2.1.0 scaffold upgrade taken half way. tests/CreatesApplication.php '
+				. 'has to pass the ids through:' . "\n\n"
+				. '    $options[\'xf-addons\'] = $this->addonsToLoad ?: [];' . "\n\n"
+				. '    return \XF::setupApp(\'Hampel\Testing\App\', $options);' . "\n\n"
+				. 'Re-copy tests/CreatesApplication.php from the package to fix it - see '
+				. 'UPGRADING.md.'
+		);
 	}
 
 	/**

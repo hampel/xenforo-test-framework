@@ -85,6 +85,58 @@ class AddOnIsolationTest extends TestCase
 		$this->assertSame([], $this->listenersOf($extension));
 	}
 
+	public function test_the_application_records_what_it_was_given()
+	{
+		$this->assertSame(['None/None'], $this->app()->isolatedAddOnIds());
+	}
+
+	public function test_a_half_upgraded_scaffold_is_refused()
+	{
+		// $addonsToLoad set in tests/TestCase.php, nothing passed to setupApp() - the v2.1.0
+		// upgrade taken half way, silent on every version before 5.0.0
+		$this->expectException(\LogicException::class);
+		$this->expectExceptionMessage('no add-on isolation is in effect');
+
+		$this->requireAddOnIsolationApplied(['MyVendor/MyAddon'], []);
+	}
+
+	public function test_the_refusal_names_the_add_ons_that_went_missing()
+	{
+		try
+		{
+			$this->requireAddOnIsolationApplied(['MyVendor/MyAddon', 'XFMG'], []);
+			$this->fail('a half-upgraded scaffold should have been refused');
+		}
+		catch (\LogicException $e)
+		{
+			$this->assertStringContainsString('MyVendor/MyAddon, XFMG', $e->getMessage());
+			$this->assertStringContainsString('tests/CreatesApplication.php', $e->getMessage());
+		}
+	}
+
+	public function test_isolation_that_reached_the_application_is_accepted()
+	{
+		$this->requireAddOnIsolationApplied(['MyVendor/MyAddon'], ['MyVendor/MyAddon']);
+
+		$this->assertTrue(true, 'no exception');
+	}
+
+	public function test_a_deliberately_different_list_is_left_alone()
+	{
+		// a suite that computes its own list and boots with it is not the half-upgrade, so the
+		// guard stays out of the way rather than insisting the two agree
+		$this->requireAddOnIsolationApplied(['MyVendor/MyAddon'], ['Someone/Else']);
+
+		$this->assertTrue(true, 'no exception');
+	}
+
+	public function test_wanting_no_isolation_is_not_a_half_upgrade()
+	{
+		$this->requireAddOnIsolationApplied([], []);
+
+		$this->assertTrue(true, 'no exception');
+	}
+
 	/**
 	 * @return array
 	 */

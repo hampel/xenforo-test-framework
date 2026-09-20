@@ -18,6 +18,16 @@ CHANGELOG
 * new `Hampel\Testing\Extension::forAddOns()` builds an extension carrying only the listeners and
   class extensions belonging to the given add-ons. It is where the filtering logic lives now, so
   the boot and the test-time hook share one copy of it
+* **a half-finished v2.1.0 scaffold upgrade now fails loudly instead of running without the
+  isolation it was configured for.** That upgrade needed both files - `$addonsToLoad` in
+  `tests/TestCase.php`, and `tests/CreatesApplication.php` passing it to `XF::setupApp()` - and
+  taking one without the other has been silent since 2022. The suite simply ran with every
+  installed add-on active, which is the state `$addonsToLoad` was set to avoid, and the collision
+  that followed looked like a bug in the add-on. `TestCase` now refuses to run, naming the add-ons
+  that went missing and showing the two lines that fix it. Only the missing case is refused: a
+  suite that deliberately boots with a different list than the property names is left alone
+* new `Hampel\Testing\App::isolatedAddOnIds()` returns the ids the application was actually told
+  to keep, which is what makes that check possible
 
 **Breaking changes:**
 * **a suite that names add-ons in `$addonsToLoad` now gets the isolation it asked for**, and that
@@ -25,6 +35,11 @@ CHANGELOG
   add-on's `app_setup` listener registered a container entry, set an option or extended a class
   will now find that entry absent. If a test breaks on this upgrade, the add-on it was quietly
   relying on belongs in `$addonsToLoad` - which is the question isolation existed to ask
+* **a suite in the half-upgraded state stops running at all**, where it used to run with no
+  isolation. If your `tests/TestCase.php` sets `$addonsToLoad` and your
+  `tests/CreatesApplication.php` predates v2.1.0, every test now errors with an explanation until
+  you re-copy that file. This is loud on purpose: the silent version of it has cost people days,
+  and a suite in that state was never testing what it claimed to
 
 4.3.1 (2026-09-20)
 ------------------

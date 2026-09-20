@@ -30,6 +30,20 @@ question isolation existed to ask, and it has not been able to ask it until now.
 The reverse is worth knowing too: if an excluded add-on has been *breaking* your suite during boot,
 that stops.
 
+**Second: if your suite is half way through the v2.1.0 scaffold upgrade, it now stops rather than
+running.** That upgrade needed both files — `$addonsToLoad` in `tests/TestCase.php`, and
+`tests/CreatesApplication.php` passing it to `XF::setupApp()` — and taking one without the other
+has been silent since 2022. If you are in that state, every test now errors with:
+
+```text
+This suite sets $addonsToLoad to [...], but the application was booted without it, so no add-on
+isolation is in effect
+```
+
+The fix is to re-copy `tests/CreatesApplication.php` from the package. Nothing else changes, and a
+suite that was in that state was never getting the isolation it was configured for — so this is a
+day you were going to lose eventually, brought forward and labelled.
+
 ## 4.3.1
 
 **Nothing to do.** Documentation only — no code in `src/` changed.

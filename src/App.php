@@ -8,6 +8,25 @@ use XF\Db\Exception as DbException;
 
 class App extends BaseApp
 {
+	/**
+	 * The add-on ids this application was told to keep, exactly as setup() received them.
+	 *
+	 * Empty means no isolation was asked for. That is not the same as asking for it and having
+	 * the request never arrive, and TestCase uses the difference to refuse a half-upgraded
+	 * scaffold rather than running without the isolation it was configured for.
+	 *
+	 * @var string[]
+	 */
+	protected $isolatedAddOnIds = [];
+
+	/**
+	 * @return string[]
+	 */
+	public function isolatedAddOnIds()
+	{
+		return $this->isolatedAddOnIds;
+	}
+
 	public function initializeExtra()
 	{
 		$container = $this->container;
@@ -25,6 +44,8 @@ class App extends BaseApp
 	public function setup(array $options = [])
 	{
 		$addOnIds = !empty($options['xf-addons']) ? $options['xf-addons'] : [];
+
+		$this->isolatedAddOnIds = $addOnIds;
 
 		// isolate addons if required
 		if ($addOnIds)
