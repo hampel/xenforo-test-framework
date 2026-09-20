@@ -1,7 +1,7 @@
 CHANGELOG
 =========
 
-4.3.0 (unreleased)
+4.3.0 (2026-09-20)
 ------------------
 
 * fix: `dispatch()` never ran the work a controller deferred. XenForo drains its run-once queue in
