@@ -276,6 +276,14 @@ the fake.** Both catch this shape, and they catch what static analysis structura
 defect in the table above was invisible to PHPStan, because a green-but-empty assertion is
 well-typed.
 
+**It is not a quirk of this package's fakes.** XenForo's own `xf-dev:unused-phrase-finder` reports
+a live phrase as unused, because it matches usage by a regex requiring a literal `XF::phrase(` and
+a phrase reached through `$this->phrase(...)` therefore looks like it is reached from nowhere —
+absence of evidence read as evidence of absence, in a tool whose output invites a `--delete-all`.
+Worth knowing because it moves the rule off this codebase: **a check that looks for something and
+does not find it has two explanations, and "it is not there" is only one of them.** Ask what else
+produces the same silence before believing the first.
+
 ## Documentation
 
 - `README.md` — the tutorial: theory, installation, `build.json` cleanup, limitations, testing tips.
