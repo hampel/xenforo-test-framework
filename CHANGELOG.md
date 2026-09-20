@@ -41,6 +41,10 @@ CHANGELOG
 * **`assertReplyIsError()`'s third parameter is now named `$errorText`**, since `$message` is the
   failure message everywhere else in the family. Positional calls are unaffected; a call passing it
   by name has to change
+* `mockery/mockery` is now `^1.6`. The old `^1.0` was never tested and could not work: Mockery
+  1.0, 1.1 and 1.2 declare `php >=5.6.0`, so Composer installs them onto a supported PHP and the
+  generated mock code is then invalid - `Cannot use "parent" when current class scope has no
+  parent`, a fatal before any test runs
 * docs: a public route needs the visitor to hold `general.view`, which a built visitor does not, so
   a public `dispatch()` refuses with a `403` until the test grants it
 * docs: this framework boots the base `XF\App`, so your own code asking which application is
