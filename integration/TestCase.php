@@ -28,8 +28,13 @@ abstract class TestCase extends BaseTestCase
 	 * An empty array would load every add-on installed in the forum, and any that ship their
 	 * own PHPUnit and Mockery then collide with ours - Mockery registers an expectation in one
 	 * instance and verifies it in another, and tests fail with counts of zero. Naming an id
-	 * that matches nothing gives complete isolation, which is what testing the framework
-	 * itself wants.
+	 * that matches nothing keeps every add-on's Composer autoloading and class extensions out,
+	 * which is what testing the framework itself wants.
+	 *
+	 * It does NOT keep their code event listeners out. app_setup fires at the end of
+	 * XF\App::setup(), while the filtered extension container key is installed later, from
+	 * setUpTraits() - so every installed add-on's app_setup listener runs before any test does.
+	 * Measured 2026-09-20 on a forum with 13 of them: all 13 listener classes loaded.
 	 *
 	 * @var array
 	 */

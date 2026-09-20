@@ -646,12 +646,22 @@ For example:
 protected $addonsToLoad = ['Vendor/AddonId', 'XFMG'];
 ```
 
-Generally, you would simply list the addon id of the addon you are developing, thus preventing all other addons from
-being loaded when unit tests execute. Note that this also restricts Composer autoloading, which is a good way of 
-checking that you've specified all requirements in `composer.json` correctly and aren't picking up packages from other 
-addons.
+Generally, you would simply list the addon id of the addon you are developing, thus keeping other addons out of the
+test run. Note that this also restricts Composer autoloading, which is a good way of checking that you've specified all
+requirements in `composer.json` correctly and aren't picking up packages from other addons.
 
 Leaving the array empty will load all addons as normal.
+
+**What isolation does not cover**
+
+Isolation filters Composer autoloading and class extensions. It does **not** filter code event listeners that fire
+while the application is starting up. XenForo fires `app_setup` at the end of `XF\App::setup()`, before this framework
+installs its filtered listener set, so every installed addon's `app_setup` listener runs whatever you put in
+`$addonsToLoad`. Measured on a development forum carrying 13 of them: all 13 ran.
+
+In practice that means an addon you excluded can still register container entries, and can still throw while the
+application boots. If your suite fails inside code belonging to an addon you did not list, this is why. Fixing it
+requires a change to the framework's own boot sequence and is on the list for the next major version.
 
 **A note on `failOnRisky`**
 

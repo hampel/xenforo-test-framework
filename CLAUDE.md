@@ -47,7 +47,16 @@ Two things in there are load-bearing and easy to undo by accident:
 - **`$addonsToLoad = ['None/None']`** loads no add-ons at all. An empty array loads *every*
   installed add-on, and any that ship their own PHPUnit and Mockery then collide with this
   package's — Mockery registers an expectation in one instance and verifies it in another, and
-  tests fail with counts of zero. An id matching nothing gives complete isolation.
+  tests fail with counts of zero. An id matching nothing filters `addon.composer`.
+
+  **It does not filter listeners, and this file claimed for years that it did.** `app_setup` fires
+  at the end of `XF\App::setup()`, while the filtered `extension` key is installed later still, from
+  `setUpTraits()` — so every installed add-on's `app_setup` listener runs whatever `$addonsToLoad`
+  says. Measured 2026-09-20 on a forum with 13 of them: all 13 listener classes loaded into the
+  process, XenForo's own `XFMG` and `XFRM` among them, and the container kept the keys they
+  registered. They arrive through XenForo's **own** autoload path, so filtering `addon.composer`
+  cannot prevent it — the listener set is the only lever. Unfixed: the fix belongs in `App::setup()`
+  ahead of `parent::setup()`, which is boot code every consumer owns a copy of.
 - **`TestCase` hands PHPUnit back its error and exception handlers** in teardown. `XF::start()`
   installs its own and never removes them, which used to mark every XF-booting test risky and
   made `failOnRisky` unusable. Don't remove that restoration without turning `failOnRisky` off
@@ -172,8 +181,9 @@ Boot path: `tests/CreatesApplication::createApplication()` requires `{$rootDir}/
 extends `XF\App` to make the container usable from PHPUnit — it forces the CLI class type with a
 `public` default, allows manual jobs, and makes `run()` throw. Its `setup()` implements **add-on
 isolation**: when `$addonsToLoad` is non-empty, it filters `addon.composer` down to those ids, so
-only those add-ons' listeners, extensions and Composer autoloading are active (a good check that
-an add-on declares its own dependencies).
+only those add-ons' extensions and Composer autoloading are active (a good check that an add-on
+declares its own dependencies). **Listeners are not filtered there** — see the `app_setup` caveat
+above.
 
 Everything else works by **swapping container keys**. `Concerns\InteractsWithContainer::swap()` is
 the primitive; `mock()`/`spy()`/`mockFactory()`/`mockService()` wrap it with Mockery. `swap()` also
