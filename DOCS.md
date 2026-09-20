@@ -6,15 +6,57 @@ Unit testing framework for XenForo
 
 ### Unit Test Configuration
 
-Note the instructions in README.md under the title "Configuring the Framework".
-
-There are two variables in `TestCase.php` that you may need to edit:
+Your add-on owns one file, `tests/TestCase.php`, and it holds two properties. README.md covers
+this at length under "9. Configuring the Framework".
 
 ```php
 protected $rootDir = '../../../..';
 
 protected $addonsToLoad = [];
 ```
+
+`$rootDir` is the path to the XenForo root, relative to the directory the tests run from.
+`'../../../..'` suits an add-on id carrying a vendor - `src/addons/Vendor/AddonId`. Without one -
+`src/addons/AddonId` - use `'../../..'`. An absolute path works too. No trailing slash.
+
+`$addonsToLoad` lists the add-on ids to load. Name your own and nothing else on the forum is
+loaded. Leave it empty to load every installed add-on, which is XenForo's own behaviour and is
+what you want only if your add-on genuinely depends on another.
+
+**What isolation covers.** Naming ids in `$addonsToLoad` filters three things:
+
+* **Composer autoloading** - only the named add-ons' autoloaders are registered, which is a good
+  check that your own `composer.json` declares everything your code uses rather than picking a
+  package up from a neighbour
+* **class extensions** - `xf_class_extension` rows belonging to other add-ons are not applied
+* **code event listeners** - including the ones that fire while the application is starting up
+
+**That third one is new in v5**, and before it an excluded add-on's `app_setup` listener ran
+anyway: it could still register container entries and still throw during boot. If a test passed on
+v4 and fails here, it was relying on an add-on it had excluded.
+
+Nothing else is filtered. The forum's database is the real one, and so are its options, phrases and
+templates - isolation decides which code runs, not which data exists.
+
+**The boot belongs to the framework.** `Hampel\Testing\TestCase::createApplication()` requires
+XenForo's `XF.php`, starts it, and hands `$addonsToLoad` to `XF::setupApp()`. There is nothing to
+copy and nothing to keep in step.
+
+Before v5 that code shipped as a second scaffold file, `tests/CreatesApplication.php`, and a file
+you copy cannot be updated by a release - which is why add-ons are still running its 2020 version,
+without the isolation they were configured for. If yours still has that file it keeps working,
+because a trait method wins over an inherited one in PHP. Delete it, and the
+`use CreatesApplication;` line beside it, to take the framework's boot instead.
+
+Override `createApplication()` if you need a boot of your own - it is an ordinary method - and pass
+the ids on, or isolation never reaches the application:
+
+```php
+return \XF::setupApp('Hampel\Testing\App', ['xf-addons' => $this->addonsToLoad]);
+```
+
+If `$addonsToLoad` is set and the application is booted without it, `TestCase` refuses to run at
+all rather than testing quietly with every add-on on the forum active.
 
 ### assertBbCode
 Helper function for testing custom BBCode functions. Simply pass it some BBCode, tell it how you
@@ -972,9 +1014,11 @@ rebuilds the entity manager so that it holds the mock, and the rebuilt manager d
 the repository, finder and entity mocks registered on the previous one. They are discarded without
 a word, and the real repository runs.
 
-Its `fetchAll` must also return an array rather than `null`. Rebuilding the entity manager re-runs
-the listener query behind `$addonsToLoad` through your mock, and a `null` there fails inside the
-framework rather than in your test.
+**Until v5 its `fetchAll` also had to return an array rather than `null`**, and it no longer does.
+Rebuilding the entity manager used to re-run the listener query behind `$addonsToLoad` through your
+mock, where a `null` failed inside the framework rather than in your test. The filtered extension
+is resolved while the application boots now, so the rebuilt manager reads the resolved instance
+instead of running that query again, and a mock with no expectations at all is fine.
 
 ##### Example: 
 

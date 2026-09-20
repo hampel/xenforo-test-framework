@@ -3,6 +3,7 @@
 namespace Hampel\Testing\Integration;
 
 use Hampel\Testing\Extension;
+use Hampel\Testing\Mvc\Entity\Manager;
 
 /**
  * Add-on isolation, and the half of it that did not work until 5.0.0.
@@ -178,6 +179,20 @@ class AddOnIsolationTest extends TestCase
 				AND addon.is_processing = 0
 			ORDER BY listener.addon_id
 		");
+	}
+
+	public function test_a_mocked_database_no_longer_re_runs_the_listener_query()
+	{
+		// this lives here because the cause is boot-time resolution rather than anything about
+		// mockDatabase(). Until 5.0.0 the filtered extension was installed during test setup as
+		// an unresolved closure, so mockDatabase() - which rebuilds the entity manager, which
+		// reads $c['extension'] - ran that closure's listener query through the mock. DOCS told
+		// consumers their fetchAll had to return an array rather than null because of it. The
+		// extension is resolved while the application boots now, so the rebuilt manager reads
+		// the resolved instance and a mock with no expectations at all is fine
+		$this->mockDatabase();
+
+		$this->assertInstanceOf(Manager::class, $this->app()->em());
 	}
 
 	/**

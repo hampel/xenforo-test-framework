@@ -17,6 +17,12 @@ CHANGELOG
   so isolation still reaches the application
 * `$rootDir` and `$addonsToLoad` are declared on `Hampel\Testing\TestCase` with the scaffold's
   own defaults, so the copies in your `tests/TestCase.php` override them rather than define them
+* `mockDatabase()` no longer needs its `fetchAll` to return an array rather than `null`. Rebuilding
+  the entity manager used to re-run the listener query behind `$addonsToLoad` through your mock,
+  and a `null` there failed inside the framework rather than in your test - `DOCS.md` has said so
+  since 4.0.0. The filtered extension is resolved while the application boots now, so the rebuilt
+  manager reads the resolved instance instead of running that query again, and a mock with no
+  expectations at all works
 * fix: **add-on isolation filters code event listeners now, and never did before.** Naming add-ons
   in `$addonsToLoad` filtered Composer autoloading and class extensions, and this package's
   documentation said that gave complete isolation. It did not. `XF\App::setup()` fires `app_setup`
