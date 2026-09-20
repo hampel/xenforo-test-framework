@@ -66,6 +66,24 @@ Two things in there are load-bearing and easy to undo by accident:
   `OK, but there were issues!` in yellow, so **read the exit status, and capture it without a
   pipe** — `vendor/bin/phpunit; echo $?`, since `phpunit | tail` reports `tail`'s status.
 
+### Before a release, run the suite at the declared floor
+
+```bash
+XF_ROOT=/srv/www/myforum composer check:lowest
+```
+
+It copies the working tree to a temporary directory, resolves every dependency at the bottom
+of its constraint, and runs the integration suite there — leaving this tree's `vendor/`
+alone, which matters because downgrading in place and restoring afterwards skips the restore
+whenever the suite fails.
+
+**CI cannot do this half.** The `lowest` job proves the declared constraints still *resolve*,
+which is all that is possible without a forum. Resolving is not working: `mockery/mockery`
+was declared `^1.0` for years, resolved cleanly every time, and was a fatal before the first
+test ran — Mockery 1.0 to 1.2 declare `php >=5.6.0`, so Composer installs them onto a
+supported PHP and the mock code they generate is invalid there. Nothing but running the suite
+at the floor would have found it.
+
 Every test in `integration/` reproduces a bug that shipped in 3.0.3. **Check a change to the
 fakes against this suite** — the registry, mail and job bugs fixed in 4.0.0 were all invisible
 to PHPStan and to a scaffold suite with no forum behind it.

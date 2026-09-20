@@ -46,6 +46,33 @@ jobs:
       - name: no deprecations or notices from src/Concerns
         run: php -d error_reporting=E_ALL .github/deprecation-check.php
 
+  lowest:
+    name: dependencies resolve at the floor
+    runs-on: ubuntu-latest
+
+    # What this proves, and what it does not. It resolves the declared constraints
+    # downward and fails if they no longer resolve - which is the only half of the
+    # lowest corner that works without a forum. It does NOT prove the package RUNS on
+    # that tree, because the suite needs XenForo. `composer check:lowest` does that half
+    # locally before a release, and it is not optional: mockery/mockery ^1.0 resolved
+    # cleanly here for years and was a fatal before the first test ran.
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2.37.2
+        with:
+          # the declared floor - the corner where an old dependency is resolved
+          php-version: '8.3'
+          coverage: none
+
+      - name: the declared constraints still resolve at their floor
+        run: composer update --prefer-lowest --prefer-dist --no-progress
+
+      # The oldest resolvable tree is the one most likely to carry an advisory, and the
+      # only one nothing else ever installs.
+      - name: no advisories against that tree
+        run: composer audit
+
   style:
     name: code style
     runs-on: ubuntu-latest

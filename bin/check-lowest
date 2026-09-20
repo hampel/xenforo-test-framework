@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+#
+# Resolve this package's dependencies at their declared floor and run the integration
+# suite against them. A release step someone runs, not a check that runs itself.
+#
+# WHY IT EXISTS
+#
+# CI cannot run the suite - XenForo is licensed, so no public workflow can provision a
+# forum - so the workflow's lowest job proves only that the declared constraints still
+# RESOLVE. Resolving is not working. `mockery/mockery: ^1.0` was declared for years,
+# resolved cleanly every time, and was a fatal before the first test ran: Mockery 1.0 to
+# 1.2 declare `php >=5.6.0`, so Composer installs them onto a supported PHP and the mock
+# code they generate is then invalid. Only running the suite at the floor finds that.
+#
+# WHY IT COPIES THE PACKAGE RATHER THAN DOWNGRADING IN PLACE
+#
+# Downgrading vendor/ and putting it back is two commands and one hazard: if the suite
+# fails, the restoring update never runs, and the next ordinary `composer integration`
+# then reports on the floor tree without saying so. That misread cost a session once
+# already. The copy leaves the working tree's vendor/ untouched whatever happens here.
+
+set -euo pipefail
+
+if [ -z "${XF_ROOT:-}" ]
+then
+	echo "XF_ROOT is not set - point it at a XenForo root, eg XF_ROOT=/srv/www/myforum" >&2
+	exit 2
+fi
+
+if [ ! -f "$XF_ROOT/src/XF.php" ]
+then
+	echo "No src/XF.php under $XF_ROOT - the integration suite would skip every test" >&2
+	exit 2
+fi
+
+package="$(cd "$(dirname "$0")/.." && pwd)"
+work="$(mktemp -d)"
+trap 'rm -rf "$work"' EXIT
+
+# the working tree, not HEAD: what is about to be released is what should be checked
+tar -C "$package" --exclude=./vendor --exclude=./.git --exclude=./composer.lock \
+	--exclude=./.phpunit.cache -cf - . | tar -C "$work" -xf -
+
+cd "$work"
+
+echo "==> resolving at the declared floor"
+composer update --prefer-lowest --prefer-dist --no-progress
+
+echo
+echo "==> resolved"
+composer show --direct
+
+echo
+echo "==> integration suite on that tree"
+set +e
+./vendor/bin/phpunit -c integration/phpunit.xml
+status=$?
+set -e
+
+echo
+if [ "$status" -eq 0 ]
+then
+	echo "PASS - the declared floor resolves and the suite runs on it"
+else
+	echo "FAIL - exit $status. The package declares a floor it does not work on." >&2
+fi
+
+exit "$status"
