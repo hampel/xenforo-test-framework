@@ -613,6 +613,21 @@ $this->assertNoTemplateErrors();
 It covers every render the test has made, not only the last one, because the templater accumulates
 them for the life of the application and each test gets its own.
 
+**A template error is also written to the forum's real `xf_error_log`, and that surprises people.**
+XenForo's error handler turns the templater's `E_USER_WARNING` into an `ErrorException`, the
+templater catches it and calls `$app->logException()`, and on a development forum that logger is
+the real one. Rendering a core template with parameters it does not have is enough —
+`public:account_preferences` with no visitor, say. Measured at **71 rows per run** from a single
+consumer test, against an install several people share.
+
+Two things prevent it, and a suite usually wants one of them:
+
+* `fakesErrors()` before the render, which swaps the logger for an in-memory one and gives you
+  `assertExceptionLogged()` into the bargain;
+* `UsesDatabaseTransactions` on the test class, which rolls the insert back with everything else.
+  This package's own template tests are clean only for that reason, which is luck rather than
+  design — worth knowing before you conclude your own suite is clean.
+
 ### assertSee / assertDontSee / assertSeeInOrder
 Assert on rendered output.
 

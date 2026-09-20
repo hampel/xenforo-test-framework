@@ -17,6 +17,13 @@ CHANGELOG
   so isolation still reaches the application
 * `$rootDir` and `$addonsToLoad` are declared on `Hampel\Testing\TestCase` with the scaffold's
   own defaults, so the copies in your `tests/TestCase.php` override them rather than define them
+* docs: **a template error is written to the forum's real `xf_error_log`**, and `DOCS.md` never said
+  so. XenForo's error handler turns the templater's `E_USER_WARNING` into an `ErrorException`, the
+  templater catches it and calls `$app->logException()`, and on a development forum that logger is
+  the real one - so rendering a core template without the parameters it expects leaves rows behind
+  on an install other people share. Found by trialling this release against a consumer suite, which
+  was writing **71 rows on every run** from one test. `fakesErrors()` or `UsesDatabaseTransactions`
+  prevents it, and `assertNoTemplateErrors()`'s section now says which and why
 * `mockDatabase()` no longer needs its `fetchAll` to return an array rather than `null`. Rebuilding
   the entity manager used to re-run the listener query behind `$addonsToLoad` through your mock,
   and a `null` there failed inside the framework rather than in your test - `DOCS.md` has said so
