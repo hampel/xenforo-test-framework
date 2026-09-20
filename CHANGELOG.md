@@ -45,6 +45,12 @@ CHANGELOG
   1.0, 1.1 and 1.2 declare `php >=5.6.0`, so Composer installs them onto a supported PHP and the
   generated mock code is then invalid - `Cannot use "parent" when current class scope has no
   parent`, a fatal before any test runs
+* docs: **the `fakesJobs()` example could not run.** It showed the truth-test callback receiving
+  a job object and calling `$job->getData()`, where what the fake passes is the array it recorded
+  - the parameters are `$job['execute_data']`, and no job is ever constructed. The same example
+  also asserted a job name it had not queued. Both fixed, and `assertJobQueued()` now documents
+  what it matches on: the class string exactly as the caller named it, so `'XF:FileCleanUp'` and
+  `\XF\Job\FileCleanUp::class` are both valid and do not match each other
 * docs: a public route needs the visitor to hold `general.view`, which a built visitor does not, so
   a public `dispatch()` refuses with a `403` until the test grants it
 * docs: this framework boots the base `XF\App`, so your own code asking which application is

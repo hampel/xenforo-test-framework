@@ -1542,19 +1542,40 @@ class JobTest extends TestCase
 		$this->app->jobManager()->enqueue('MyVendor/MyAddon:MyJob', [
 			'key1' => 'value1',
 			'key2' => 'value2'
-		]);		
+		]);
 
-		// assert our job was queued as expected	
-		$this->assertJobQueued('foo');
-		
+		// assert our job was queued as expected
+		$this->assertJobQueued('MyVendor/MyAddon:MyJob');
+
 		// alternatively, assert our job was queued with specific attributes - return a truth test
-		$this->assertJobQueued('foo', function ($job) {
-			$data = $job->getData();
-			return $data['key1'] == 'value1' && $data['key2'] == 'value2';
+		$this->assertJobQueued('MyVendor/MyAddon:MyJob', function ($job) {
+			return $job['execute_data']['key1'] == 'value1'
+				&& $job['execute_data']['key2'] == 'value2';
 		});
 	}
 }	
 ```
+
+**The callback receives an array, not a job object.** It is the row the fake recorded, with
+XenForo's own column names:
+
+| key | holds |
+|---|---|
+| `execute_class` | the job class, exactly as the caller named it |
+| `execute_data` | the parameters passed to `enqueue()` |
+| `unique_key` | the unique id, or `null` |
+| `manual_execute` | whether it was queued to run manually |
+| `trigger_date` | the run time |
+
+So the parameters are `$job['execute_data']`, and the job has not been constructed — there is no
+instance to call a method on.
+
+**Match the name the code under test used.** `enqueue()` records the class string it was given and
+XenForo does not resolve it, so neither form is canonical: code calling
+`enqueue('XF:FileCleanUp', …)` is asserted as `assertJobQueued('XF:FileCleanUp')`, and code
+calling `enqueue(\XF\Job\FileCleanUp::class, …)` as
+`assertJobQueued(\XF\Job\FileCleanUp::class)`. The two do not match each other. (The parameter
+is named `$shortName`, which is a misnomer — a fully qualified class name is equally valid.)
 
 Refer to the `Hampel\Testing\Concerns\InteractsWithJobs` trait for full details of available job validation 
 functions.
