@@ -49,14 +49,15 @@ Two things in there are load-bearing and easy to undo by accident:
   package's — Mockery registers an expectation in one instance and verifies it in another, and
   tests fail with counts of zero. An id matching nothing filters `addon.composer`.
 
-  **It does not filter listeners, and this file claimed for years that it did.** `app_setup` fires
-  at the end of `XF\App::setup()`, while the filtered `extension` key is installed later still, from
-  `setUpTraits()` — so every installed add-on's `app_setup` listener runs whatever `$addonsToLoad`
-  says. Measured 2026-09-20 on a forum with 13 of them: all 13 listener classes loaded into the
-  process, XenForo's own `XFMG` and `XFRM` among them, and the container kept the keys they
-  registered. They arrive through XenForo's **own** autoload path, so filtering `addon.composer`
-  cannot prevent it — the listener set is the only lever. Unfixed: the fix belongs in `App::setup()`
-  ahead of `parent::setup()`, which is boot code every consumer owns a copy of.
+  **Listeners are filtered by `App::setup()`, and the ordering is load-bearing.** It installs the
+  extension *before* calling `parent::setup()`, because `XF\App::setup()` fires `app_setup` as its
+  last step — anything installed after that is too late to stop a single listener. Until 5.0.0 the
+  only install was the `setUpTraits()` hook, and it was too late: measured 2026-09-20 on a forum
+  with 13 `app_setup` listeners, all 13 listener classes loaded into a process that had asked for
+  no add-ons at all, `XFMG` and `XFRM` among them. Do not move that call after `parent::setup()`,
+  and do not assume filtering `addon.composer` covers it — add-on classes resolve through
+  XenForo's **own** autoload path, so the listener set is the only lever.
+  `integration/AddOnIsolationTest.php` fails if this regresses.
 - **`TestCase` hands PHPUnit back its error and exception handlers** in teardown. `XF::start()`
   installs its own and never removes them, which used to mark every XF-booting test risky and
   made `failOnRisky` unusable. Don't remove that restoration without turning `failOnRisky` off
@@ -186,8 +187,8 @@ extends `XF\App` to make the container usable from PHPUnit — it forces the CLI
 `public` default, allows manual jobs, and makes `run()` throw. Its `setup()` implements **add-on
 isolation**: when `$addonsToLoad` is non-empty, it filters `addon.composer` down to those ids, so
 only those add-ons' extensions and Composer autoloading are active (a good check that an add-on
-declares its own dependencies). **Listeners are not filtered there** — see the `app_setup` caveat
-above.
+declares its own dependencies), and installs the filtered `extension` before `parent::setup()`
+fires `app_setup` — see the ordering note above.
 
 Everything else works by **swapping container keys**. `Concerns\InteractsWithContainer::swap()` is
 the primitive; `mock()`/`spy()`/`mockFactory()`/`mockService()` wrap it with Mockery. `swap()` also

@@ -31,10 +31,10 @@ abstract class TestCase extends BaseTestCase
 	 * that matches nothing keeps every add-on's Composer autoloading and class extensions out,
 	 * which is what testing the framework itself wants.
 	 *
-	 * It does NOT keep their code event listeners out. app_setup fires at the end of
-	 * XF\App::setup(), while the filtered extension container key is installed later, from
-	 * setUpTraits() - so every installed add-on's app_setup listener runs before any test does.
-	 * Measured 2026-09-20 on a forum with 13 of them: all 13 listener classes loaded.
+	 * As of 5.0.0 that includes their code event listeners, which it did not before: the
+	 * extension is installed by App::setup() ahead of parent::setup(), which is the only point
+	 * early enough to stop an app_setup listener running. Measured on a forum with 13 of them,
+	 * all 13 listener classes used to load into a process that had asked for no add-ons.
 	 *
 	 * @var array
 	 */

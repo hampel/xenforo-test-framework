@@ -1,6 +1,31 @@
 CHANGELOG
 =========
 
+5.0.0 (unreleased)
+------------------
+
+* fix: **add-on isolation filters code event listeners now, and never did before.** Naming add-ons
+  in `$addonsToLoad` filtered Composer autoloading and class extensions, and this package's
+  documentation said that gave complete isolation. It did not. `XF\App::setup()` fires `app_setup`
+  as its last step, and the filtered extension was installed later still, from a test-time hook -
+  too late to stop a single listener. So every installed add-on's `app_setup` listener ran before
+  any test did, registering container entries and occasionally throwing, out of a suite that had
+  asked for none of them. Measured on a development forum carrying 13 of them: all 13 listener
+  classes loaded, XenForo's own `XFMG` and `XFRM` among them. Filtering `addon.composer` could
+  never have covered it either, because an add-on's classes resolve through XenForo's own autoload
+  path whether or not its Composer autoloader was registered. `Hampel\Testing\App::setup()` now
+  installs the extension before it calls `parent::setup()`
+* new `Hampel\Testing\Extension::forAddOns()` builds an extension carrying only the listeners and
+  class extensions belonging to the given add-ons. It is where the filtering logic lives now, so
+  the boot and the test-time hook share one copy of it
+
+**Breaking changes:**
+* **a suite that names add-ons in `$addonsToLoad` now gets the isolation it asked for**, and that
+  is a behaviour change even though it is a fix. A test that was passing because an excluded
+  add-on's `app_setup` listener registered a container entry, set an option or extended a class
+  will now find that entry absent. If a test breaks on this upgrade, the add-on it was quietly
+  relying on belongs in `$addonsToLoad` - which is the question isolation existed to ask
+
 4.3.1 (2026-09-20)
 ------------------
 

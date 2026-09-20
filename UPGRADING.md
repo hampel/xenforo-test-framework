@@ -11,6 +11,25 @@ The scaffold files are the reason this document exists. `tests/TestCase.php` and
 `tests/CreatesApplication.php` are **copied into your add-on and owned by you**, so a change to
 either cannot reach you through Composer — it has to be merged by hand.
 
+## 5.0.0
+
+**Add-on isolation filters code event listeners now, and on every earlier version it did not.**
+Nothing in your test files has to change for this. What changes is what your suite sees.
+
+Until now, naming add-ons in `$addonsToLoad` filtered Composer autoloading and class extensions,
+and left listeners alone — XenForo fires `app_setup` at the very end of `XF\App::setup()`, and the
+filtered listener set was installed after that, too late to stop anything. So every installed
+add-on's `app_setup` listener ran regardless. On a development forum carrying 13 of them, all 13
+ran in a suite that had asked for no add-ons at all.
+
+**So a test that passes on v4 and fails here was relying on an add-on it excluded.** Its listener
+used to run anyway — registering a container entry, setting an option, extending a class — and now
+it does not. Either add that add-on to `$addonsToLoad`, or stop depending on it. That is the
+question isolation existed to ask, and it has not been able to ask it until now.
+
+The reverse is worth knowing too: if an excluded add-on has been *breaking* your suite during boot,
+that stops.
+
 ## 4.3.1
 
 **Nothing to do.** Documentation only — no code in `src/` changed.

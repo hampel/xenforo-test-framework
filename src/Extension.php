@@ -2,6 +2,7 @@
 
 namespace Hampel\Testing;
 
+use XF\Db\AbstractAdapter;
 use XF\Extension as BaseExtension;
 
 class Extension extends BaseExtension
@@ -136,6 +137,95 @@ class Extension extends BaseExtension
 		self::$globalClassAliasMap[$alias] = $aliased;
 
 		return $aliased;
+	}
+
+	/**
+	 * Build an Extension carrying only the listeners and class extensions that belong to the
+	 * given add-ons.
+	 *
+	 * The container's own `extension.listeners` and `extension.classExtensions` come from the
+	 * registry, where every add-on's entries are already merged together with nothing left to
+	 * filter them by - so this reads the tables directly. It is also called before the registry
+	 * is necessarily populated, during App::setup().
+	 *
+	 * @param string[] $addOnIds
+	 * @param AbstractAdapter $db
+	 *
+	 * @return self
+	 */
+	public static function forAddOns(array $addOnIds, AbstractAdapter $db)
+	{
+		// self rather than static: the constructor is XenForo's, so a subclass is not
+		// guaranteed to accept these arguments, and nothing here wants a subclass back
+		return new self(
+			self::listenersForAddOns($addOnIds, $db),
+			self::classExtensionsForAddOns($addOnIds, $db)
+		);
+	}
+
+	/**
+	 * @param string[] $addOnIds
+	 * @param AbstractAdapter $db
+	 *
+	 * @return array
+	 */
+	private static function listenersForAddOns(array $addOnIds, AbstractAdapter $db)
+	{
+		$listeners = $db->fetchAll("
+			SELECT listener.*
+			FROM xf_code_event_listener AS listener
+			LEFT JOIN xf_addon AS addon ON (listener.addon_id = addon.addon_id)
+			WHERE listener.active = 1
+				AND addon.active = 1
+				AND addon.is_processing = 0
+				AND listener.addon_id IN (" . $db->quote($addOnIds) . ")
+			ORDER BY listener.event_id, listener.execute_order, addon.addon_id
+		");
+
+		$cache = [];
+
+		foreach ($listeners AS $listener)
+		{
+			$hint = $listener['hint'] !== '' ? $listener['hint'] : '_';
+			$cache[$listener['event_id']][$hint][] = [
+				$listener['callback_class'],
+				$listener['callback_method'],
+			];
+		}
+
+		return $cache;
+	}
+
+	/**
+	 * Read with the database rather than a finder, because a finder needs the extension we are
+	 * in the middle of building.
+	 *
+	 * @param string[] $addOnIds
+	 * @param AbstractAdapter $db
+	 *
+	 * @return array
+	 */
+	private static function classExtensionsForAddOns(array $addOnIds, AbstractAdapter $db)
+	{
+		$extensions = $db->fetchAll("
+			SELECT extension.*
+			FROM xf_class_extension AS extension
+			LEFT JOIN xf_addon AS addon ON (extension.addon_id = addon.addon_id)
+			WHERE extension.active = 1
+				AND addon.active = 1
+				AND addon.is_processing = 0
+				AND extension.addon_id IN (" . $db->quote($addOnIds) . ")
+			ORDER BY extension.execute_order, extension.to_class
+		");
+
+		$cache = [];
+
+		foreach ($extensions AS $extension)
+		{
+			$cache[$extension['from_class']][] = $extension['to_class'];
+		}
+
+		return $cache;
 	}
 
 	public function resolveExtendedClassToRoot($class)

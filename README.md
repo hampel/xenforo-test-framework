@@ -679,16 +679,19 @@ requirements in `composer.json` correctly and aren't picking up packages from ot
 
 Leaving the array empty will load all addons as normal.
 
-**What isolation does not cover**
+**What isolation covers, and what it did not before v5**
 
-Isolation filters Composer autoloading and class extensions. It does **not** filter code event listeners that fire
-while the application is starting up. XenForo fires `app_setup` at the end of `XF\App::setup()`, before this framework
-installs its filtered listener set, so every installed addon's `app_setup` listener runs whatever you put in
-`$addonsToLoad`. Measured on a development forum carrying 13 of them: all 13 ran.
+Isolation filters three things: Composer autoloading, class extensions, and code event listeners.
 
-In practice that means an addon you excluded can still register container entries, and can still throw while the
-application boots. If your suite fails inside code belonging to an addon you did not list, this is why. Fixing it
-requires a change to the framework's own boot sequence and is on the list for the next major version.
+**That third one is new in v5, and on v4 and earlier it did not work at all.** XenForo fires `app_setup` at the very
+end of `XF\App::setup()`, and older versions of this package installed their filtered listener set after that - too
+late to stop anything. So on v4, every installed addon's `app_setup` listener ran whatever you put in `$addonsToLoad`:
+measured on a development forum carrying 13 of them, all 13 ran. An addon you had excluded could still register
+container entries and still throw while the application booted, and a suite failing inside code belonging to an addon
+you never listed was the usual way to find out.
+
+If you are upgrading and a test breaks on this, the addon it was quietly relying on belongs in `$addonsToLoad` - which
+is the question isolation exists to ask.
 
 **A note on `failOnRisky`**
 
