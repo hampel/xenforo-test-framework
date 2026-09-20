@@ -241,7 +241,7 @@ install produces a green test rather than a red one.
 | `hasAdminPermission()` on a built user | it inherited the test forum's own administrator record | 4.0.3 |
 | `assertReplyIsError($reply, 403)` | two different guards both deny with 403, so it passed whichever fired | 4.1.0 |
 | `assertDontSee($html, …)` | a template XenForo cannot find renders as an empty string, with no error | 4.2.0 |
-| `assertDontSee($html, …)`, again | a template that *fails while rendering* also returns an empty string — the templater catches everything, logs it and carries on | 4.2.1 |
+| `assertDontSee($html, …)`, again | a template that *fails while rendering* also returns an empty string — the templater catches everything, logs it and carries on | 4.3.0 |
 
 Two rules follow, and both are cheap:
 

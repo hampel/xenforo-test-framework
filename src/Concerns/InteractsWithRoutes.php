@@ -382,7 +382,7 @@ trait InteractsWithRoutes
 	 * @param AbstractReply $reply
 	 * @param int|null $code - optional http response code
 	 * @param string|null $errorText - optional, matched as a substring of the error text. Named
-	 *                                 $message before 4.2.1; positional calls are unaffected
+	 *                                 $message before 4.3.0; positional calls are unaffected
 	 * @param string|null $message - added to the failure, for a test that dispatches several routes
 	 *
 	 * @return void
