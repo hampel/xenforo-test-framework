@@ -172,7 +172,7 @@ rather than merely tolerating them.
 
 ## Version compatibility is the release axis
 
-Each major line targets one XenForo version and `master` is always the current line — 4.x today.
+Each major line targets one XenForo version and `master` is always the current line — 5.x today.
 **The mapping stopped being one-to-one at 4.0.0**: 3.x and 4.x both target XF 2.3 and are told
 apart by their PHP floor, because PHP's security calendar moved and XenForo's did not. The README's
 table is the published statement of this, so correct that copy first.

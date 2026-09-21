@@ -16,20 +16,26 @@ here later.
 
 |version|XenForo|PHP|still gets fixes|
 |---|---|---|---|
-|v4.x|2.3|8.3+|yes - the current line|
+|v5.x|2.3|8.3+|yes - the current line|
+|v4.x|2.3|8.3+|yes - fixes only|
 |v3.x|2.3|8.1+|yes - for PHP 8.1 and 8.2|
 |v2.x|2.2|8.1+|no|
 |v1.x|2.1|5.5+|no|
 
-**Two lines target XenForo 2.3, because PHP moved on while XenForo did not.** v4 dropped PHP 8.1 and 8.2 when they left
-security support, and v3 stayed behind for the people still on them. So where two lines share a XenForo version, read
-the PHP column as the tiebreaker rather than as extra detail.
+**Three lines target XenForo 2.3, and only one pair is told apart by PHP.** v4 dropped PHP 8.1 and 8.2 when they left
+security support, and v3 stayed behind for the people still on them, so between those two the PHP column is the
+tiebreaker rather than extra detail.
+
+**v4 and v5 need exactly the same XenForo and PHP, so nothing in your environment chooses between them.** v5 changed how
+the framework boots your suite and made add-on isolation filter listeners as it always claimed to - see
+[UPGRADING.md](UPGRADING.md). Start new addons on v5. An existing suite can move whenever it likes: doing nothing to
+your test files is a supported way to upgrade.
 
 "No longer gets fixes" is not the same as "stopped working" - it means nobody is patching it. v1.x is also the one line
 that predates this package declaring only what it tests: its `>=5.5.0` was never testable, because the PHPUnit 8 it
 installs needs PHP 7.
 
-Put the version you picked in your addon's `require-dev` as `^4.0`, `^3.0` and so on - the installation section below
+Put the version you picked in your addon's `require-dev` as `^5.0`, `^3.0` and so on - the installation section below
 shows the whole file.
 
 ## Upgrading
@@ -509,7 +515,7 @@ use Composer, you can simply create a `composer.json` file with the following in
 ```json
 {
     "require-dev": {
-        "hampel/xenforo-test-framework": "^4.0",
+        "hampel/xenforo-test-framework": "^5.0",
         "nesbot/carbon": "^3.0"
     },
     "autoload-dev": {
