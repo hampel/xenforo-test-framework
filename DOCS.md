@@ -317,7 +317,8 @@ $this->assertDatabaseHas('xf_notice', ['title' => 'Maintenance']);
 ##### Parameters:
 
 * `controller` - `'XF:Notice'` or a full class name
-* `action` - as it appears in a route: `'save'`, `'toggle'`, `'delete'`
+* `action` - as it appears in a route, slashes included: `'save'`, `'toggle'`, `'archive-users/run'`
+  calls `actionArchiveUsersRun()`
 * `type` - optional - `'public'` (default), `'admin'` or `'api'`
 * `input` - optional - the request input, as `$_POST` would carry it
 * `params` - optional - route parameters, eg `['notice_id' => 3]`
@@ -872,7 +873,8 @@ class ServiceTest extends TestCase
 Wrap each test in a database transaction and roll it back afterwards, so tests can save entities
 and run real queries without leaving anything behind. Add the trait to each test class that needs it.
 
-Code under test may open and commit its own transactions; they nest inside the wrapper.
+Code under test may open and commit its own transactions; they nest inside the wrapper, and are
+rolled back with it - including when the code commits and then throws.
 
 Two things it cannot roll back:
 
@@ -1552,6 +1554,36 @@ two do not match each other.
 
 Refer to the `Hampel\Testing\Concerns\InteractsWithJobs` trait for full details of available job validation 
 functions.
+
+### runJobToCompletion
+Run a job until it completes, and return its final `JobResult` - to test what the job does, where
+`fakesJobs()` tests that it was queued.
+
+Each pass builds a new instance of the job from the data the previous pass returned, as XenForo's
+job manager does, so a job that keeps its position only on the instance never completes here either.
+Work queued with `\XF::runOnce()` runs after each pass.
+
+##### Parameters:
+
+* `jobClass` - `'MyVendor\MyAddon:ArchiveUsers'` or a full class name
+* `data` - optional - the job's parameters, as `enqueue()` would take them
+* `maxRunTime` - optional - seconds allowed per pass, default 30
+* `maxPasses` - optional - passes allowed before the job is judged not to finish, default 1000
+
+##### Example:
+
+```php
+// a batch size of 1 runs every item as a pass of its own
+$result = $this->runJobToCompletion('MyVendor\MyAddon:ArchiveUsers', ['batch' => 1]);
+
+$this->assertDatabaseMissing('xf_user', ['user_state' => 'to_archive']);
+```
+
+It throws a `LogicException` if the job reports failure, does not complete within `maxPasses`, or
+does not exist. An exception the job throws is not caught - it fails the test. Unlike the job
+manager, nothing is rolled back, so use `UsesDatabaseTransactions` for a job that writes.
+
+Jobs queued by the job under test are queued as normal; use `fakesJobs()` to assert on them.
 
 ### expectPhrase
 Allow us to easily mock the phrase/language system to avoid database lookups and rendering phrases. This is especially

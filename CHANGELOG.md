@@ -1,5 +1,15 @@
 # Changelog
 
+## 5.3.0 (unreleased)
+
+* new `runJobToCompletion()` runs a job until it completes and returns its final `JobResult`. Each
+  pass is a new instance built from the previous pass's data, and work queued with
+  `\XF::runOnce()` runs after each pass. A failed result, a job that does not complete within
+  `maxPasses`, and a job that does not exist throw a `LogicException`
+* docs: `callAction()` accepts an action name containing slashes
+* docs: `UsesDatabaseTransactions` rolls back a nested commit even when the code then throws
+* docs: the README's install example requires `^5.3`
+
 ## 5.2.0 (2026-09-22)
 
 * `dispatch()` and `callAction()` take an optional `$server` argument - request server values such
