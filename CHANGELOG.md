@@ -139,7 +139,7 @@ Documentation only.
 
 ## 4.0.1 (2026-09-05)
 
-* docs: `isolateAddon` has been removed from the README's helper list - it was removed in 3.0.0; use
+* docs: `isolateAddon` has been removed from the README's helper list - it was removed in 2.1.0; use
   `$addonsToLoad`
 * docs: the README's helper lists include the helpers added in 4.0.0
 * docs: the README notes that `swapFs()` needs `league/flysystem-memory`
