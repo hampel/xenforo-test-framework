@@ -1,5 +1,14 @@
 # Changelog
 
+## 5.4.0 (unreleased)
+
+* `renderTemplate()`, `renderReply()` and `renderMacro()` set the `xf` template parameter as XenForo
+  does for a page, from `getGlobalTemplateData()`, so `$xf.options`, `$xf.visitor` and the rest are
+  available to the template. It is rebuilt for every render, and an `xf` parameter the test set
+  itself is left alone
+* a visitor a test set with `\XF::setVisitor()` is cleared after the test, rather than carried
+  into the next one
+
 ## 5.3.0 (2026-09-22)
 
 * new `runJobToCompletion()` runs a job until it completes and returns its final `JobResult`. Each

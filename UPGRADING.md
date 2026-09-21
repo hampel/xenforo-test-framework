@@ -5,6 +5,18 @@ Most releases need nothing beyond `composer update`. `CHANGELOG.md` lists everyt
 
 `tests/TestCase.php` is copied into your add-on, so a change to it has to be merged by hand.
 
+## 5.4.0
+
+**A template rendered by `renderTemplate()` now sees `$xf`.** A template that called into `$xf.app`
+or `$xf.visitor` previously rendered that part as nothing; it now runs it. If a render starts
+failing after upgrading, pass the parameter the template needs - `admin:user_edit` needs `user`:
+
+```php
+$html = $this->renderTemplate('admin:user_edit', ['user' => \XF::visitor()]);
+```
+
+A `templater_global_data` listener in your add-on now runs on every render.
+
 ## 5.3.0
 
 Nothing to do. If one of your test classes already defines a `runJobToCompletion()` method, rename

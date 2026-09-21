@@ -85,7 +85,8 @@ class BbCodeTest extends TestCase
 
 ### actingAs / actingAsMember / actingAsGuest
 Run a test as a given user, so code that reads `\XF::visitor()` or checks permissions behaves as
-it would for that user. The visitor is restored automatically after each test.
+it would for that user. The visitor is restored automatically after each test, and so is one a
+test set itself with `\XF::setVisitor()`.
 
 Users are built in memory and are never written to the database.
 
@@ -492,6 +493,16 @@ not seen until `xf-dev:import`, and a template modification must be installed.
 with the parameters it passed. Call it in the same test that dispatched, since the template type
 comes from the dispatch.
 
+**The `xf` parameter is set as it is for a page** - `$xf.options`, `$xf.visitor`, `$xf.time`,
+`$xf.app` and the rest, from `getGlobalTemplateData()`. It is rebuilt for every render, so
+`$xf.visitor` is whoever `actingAs()` set. An `xf` parameter the test adds to the templater itself
+is left alone. Building it fires the `templater_global_data` event, so a listener for it runs on
+every render.
+
+**Pass every parameter the template requires.** A template such as `admin:user_edit` calls into
+`$xf.app` with its own parameters, and a missing one fails the render rather than leaving part of
+the template blank.
+
 ##### Example:
 
 ```php
@@ -538,6 +549,8 @@ $this->assertSee($html, $thread->title);
 
 A macro that does not exist throws a `LogicException`. A macro that renders nothing for the
 arguments given is returned as an empty string.
+
+The `xf` parameter is set as for `renderTemplate()`.
 
 ### pageParam
 A page parameter the rendered template set, such as the title from `<xf:title>`. These do not

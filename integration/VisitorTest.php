@@ -7,8 +7,8 @@ use XF\Entity\User;
 /**
  * actingAs() and the permission seeding, against a real XenForo application.
  *
- * test_a_ / test_b_ ordering is load-bearing: the second test is what proves the first one's
- * visitor was restored rather than leaking into the rest of the suite.
+ * test_a_ to test_d_ ordering is load-bearing: each second test is what proves the visitor the
+ * first set was cleared rather than leaking into the rest of the suite.
  */
 class VisitorTest extends TestCase
 {
@@ -25,6 +25,20 @@ class VisitorTest extends TestCase
 	public function test_b_the_visitor_was_restored()
 	{
 		$this->assertNotSame(42, \XF::visitor()->user_id);
+	}
+
+	public function test_c_a_visitor_set_directly()
+	{
+		\XF::setVisitor($this->makeEntity('XF:User', ['username' => 'Set directly']));
+
+		$this->assertSame('Set directly', \XF::visitor()->username);
+	}
+
+	public function test_d_a_visitor_set_directly_does_not_reach_the_next_test()
+	{
+		// actingAs() restores what it replaced, but nothing restores a visitor a test set itself
+		// with \XF::setVisitor(); TestCase empties the static in teardown
+		$this->assertNotSame('Set directly', \XF::visitor()->username);
 	}
 
 	public function test_acting_as_a_guest()

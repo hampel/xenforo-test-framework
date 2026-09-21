@@ -5,9 +5,17 @@ namespace Hampel\Testing\Concerns;
 use PHPUnit\Framework\Assert as PHPUnit;
 use XF\Mvc\Reply\AbstractReply;
 use XF\Mvc\Reply\View;
+use XF\Template\Templater;
 
 trait InteractsWithTemplates
 {
+	/**
+	 * The `xf` parameter this trait last installed, so one the test set itself can be told apart.
+	 *
+	 * @var array|null
+	 */
+	private $installedGlobalTemplateData = null;
+
 	/**
 	 * What XF\Template\Templater::handleTemplateException() renders in place of a template that
 	 * threw, when the forum is in debug mode. Outside debug mode it renders an empty string.
@@ -34,6 +42,18 @@ trait InteractsWithTemplates
 	 */
 	protected function renderTemplate($template, array $params = [])
 	{
+		return $this->renderWithGlobalData($template, $params, null);
+	}
+
+	/**
+	 * @param string $template
+	 * @param array $params
+	 * @param AbstractReply|null $reply - passed on to getGlobalTemplateData(), as XenForo does
+	 *
+	 * @return string
+	 */
+	private function renderWithGlobalData($template, array $params, ?AbstractReply $reply)
+	{
 		if (strpos($template, ':') === false)
 		{
 			throw new \LogicException(
@@ -44,6 +64,7 @@ trait InteractsWithTemplates
 		}
 
 		$templater = $this->app()->templater();
+		$this->installGlobalTemplateData($templater, $reply);
 		$errorsBefore = count($templater->getTemplateErrors());
 
 		$html = (string) $templater->renderTemplate($template, $params);
@@ -86,6 +107,7 @@ trait InteractsWithTemplates
 		}
 
 		$templater = $this->app()->templater();
+		$this->installGlobalTemplateData($templater, null);
 		$errorsBefore = count($templater->getTemplateErrors());
 
 		$html = (string) $templater->renderMacro($template, $macro, $arguments);
@@ -119,6 +141,32 @@ trait InteractsWithTemplates
 
 		// XenForo stores these pre-escaped, as objects rather than strings
 		return isset($params[$name]) ? (string) $params[$name] : null;
+	}
+
+	/**
+	 * Install the `xf` template parameter - $xf.options, $xf.visitor, $xf.time and the rest - as
+	 * XenForo's App::preRender() does, from getGlobalTemplateData(). Rebuilt for every render, so
+	 * $xf.visitor follows actingAs(). An `xf` parameter the test installed itself is left alone.
+	 *
+	 * @param Templater $templater
+	 * @param AbstractReply|null $reply
+	 *
+	 * @return void
+	 */
+	private function installGlobalTemplateData(Templater $templater, ?AbstractReply $reply)
+	{
+		$defaultParams = new \ReflectionProperty(Templater::class, 'defaultParams');
+		$defaultParams->setAccessible(true);
+		$current = $defaultParams->getValue($templater)['xf'] ?? null;
+
+		if ($current !== null && $current !== $this->installedGlobalTemplateData)
+		{
+			return;
+		}
+
+		$data = $this->app()->getGlobalTemplateData($reply);
+		$templater->addDefaultParam('xf', $data);
+		$this->installedGlobalTemplateData = $data;
 	}
 
 	/**
@@ -256,9 +304,10 @@ trait InteractsWithTemplates
 			);
 		}
 
-		return $this->renderTemplate(
+		return $this->renderWithGlobalData(
 			self::TEMPLATE_TYPES[$classType] . ':' . $reply->getTemplateName(),
-			$reply->getParams()
+			$reply->getParams(),
+			$reply
 		);
 	}
 

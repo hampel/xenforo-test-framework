@@ -276,6 +276,10 @@ abstract class TestCase extends BaseTestCase
 			// here would execute deferred work after a transaction has already rolled back.
 			$this->setStaticProperty(\XF::class, 'runOnce', []);
 
+			// \XF::$visitor is a static too, and a visitor left in it belongs to the app being
+			// destroyed. The next test's \XF::visitor() builds a fresh guest when it is empty.
+			\XF::setVisitor(null);
+
 			$this->destroyProperty(\XF::class, 'app');
 		}
 

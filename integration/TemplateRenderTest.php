@@ -4,6 +4,7 @@ namespace Hampel\Testing\Integration;
 
 use Hampel\Testing\Concerns\UsesDatabaseTransactions;
 use PHPUnit\Framework\AssertionFailedError;
+use XF\Template\Templater;
 
 /**
  * Rendering a template is what covers the two checks a reply cannot: that a template modification
@@ -261,6 +262,65 @@ class TemplateRenderTest extends TestCase
 	 *
 	 * @return void
 	 */
+	public function test_a_template_reads_xf_options()
+	{
+		$this->makeTemplate('xf_probe_options', 'TITLE=[{{ $xf.options.boardTitle }}]');
+
+		$html = $this->renderTemplate('public:xf_probe_options');
+
+		$this->assertSee($html, 'TITLE=[' . $this->app()->options()->boardTitle . ']');
+		$this->assertDontSee($html, 'TITLE=[]');
+	}
+
+	public function test_a_contentcheck_around_xf_options_renders_its_block()
+	{
+		$this->makeTemplate('xf_probe_contentcheck', '<xf:if contentcheck="true">BLOCK'
+			. '<xf:contentcheck>{{ $xf.options.boardTitle }}</xf:contentcheck></xf:if>');
+
+		$this->assertSee($this->renderTemplate('public:xf_probe_contentcheck'), 'BLOCK');
+	}
+
+	public function test_xf_visitor_follows_acting_as_between_renders()
+	{
+		$this->makeTemplate('xf_probe_visitor', 'VIS=[{{ $xf.visitor.user_id }}]');
+
+		$this->actingAsGuest();
+		$this->assertSee($this->renderTemplate('public:xf_probe_visitor'), 'VIS=[0]');
+
+		$this->actingAsMember(['user_id' => 5]);
+		$this->assertSee($this->renderTemplate('public:xf_probe_visitor'), 'VIS=[5]');
+	}
+
+	public function test_an_xf_param_the_test_set_is_left_alone()
+	{
+		$this->makeTemplate('xf_probe_own', 'TITLE=[{{ $xf.options.boardTitle }}]');
+		$this->app()->templater()->addDefaultParam('xf', ['options' => ['boardTitle' => 'Mine']]);
+
+		$this->assertSee($this->renderTemplate('public:xf_probe_own'), 'TITLE=[Mine]');
+	}
+
+	public function test_a_macro_reads_xf()
+	{
+		$this->makeTemplate('xf_probe_macro', '<xf:macro id="m">MACRO=[{{ $xf.options.boardTitle }}]</xf:macro>');
+
+		$html = $this->renderMacro('public:xf_probe_macro', 'm');
+
+		$this->assertSee($html, 'MACRO=[' . $this->app()->options()->boardTitle . ']');
+	}
+
+	public function test_render_reply_passes_the_reply_to_the_global_data()
+	{
+		$admin = $this->actingAsMember(['is_admin' => true]);
+		$this->setVisitorAdminPermissions($admin, ['option' => true]);
+
+		$this->renderReply($this->dispatch('options', 'admin'));
+
+		$defaultParams = new \ReflectionProperty(Templater::class, 'defaultParams');
+		$defaultParams->setAccessible(true);
+
+		$this->assertSame('option_group_list', $defaultParams->getValue($this->app()->templater())['xf']['reply']['template']);
+	}
+
 	private function makeTemplate($title, $content)
 	{
 		$this->createEntity('XF:Template', [
