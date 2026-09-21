@@ -28,6 +28,14 @@ CHANGELOG
   is the test writer's call, and `fakesErrors()` costs nothing to reach for - measured on one
   render, the fake returns the same markup and `getTemplateErrors()` still carries all nine errors
   while the log gains none
+* docs: **a test extending plain `PHPUnit\Framework\TestCase` cannot load your add-on's classes on
+  its own**, and usually passes anyway. Add-on classes are loaded by XenForo's autoloader, which
+  exists only once a test has booted the application, so a plain test passes in a full run because
+  an earlier test booted, and fails alone with `Class ... not found`. `README.md` now says so, how
+  `--order-by=random` exposes it, and the two fixes - extend `Tests\TestCase`, or map the add-on
+  namespace in `autoload-dev`, which works for plain classes but not for anything built on an
+  `XFCP_` proxy. Found by a consumer trial of this release; it fails the same way on every earlier
+  version
 * `mockDatabase()` no longer needs its `fetchAll` to return an array rather than `null`. Rebuilding
   the entity manager used to re-run the listener query behind `$addonsToLoad` through your mock,
   and a `null` there failed inside the framework rather than in your test - `DOCS.md` has said so

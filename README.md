@@ -304,6 +304,30 @@ If you genuinely need a different boot, `createApplication()` is an ordinary met
 `tests/TestCase.php` and pass `['xf-addons' => $this->addonsToLoad]` to `XF::setupApp()` so isolation still reaches the
 application.
 
+**A test that skips the boot also skips XenForo's autoloader - and usually passes anyway, by accident.** It is tempting
+to write a class that needs nothing from XenForo as a plain `PHPUnit\Framework\TestCase`, and cheaper, since nothing
+boots. But your addon's own classes, like XenForo's, are loaded by XenForo's autoloader, which exists only once some
+test has booted the application. In a full run an earlier test usually has, so the plain test passes; run it alone with
+`--filter` and it fails with `Class "Vendorly\Addonista\..." not found`. It is passing because of the test before it.
+
+`--order-by=random` finds these in one run. Two fixes:
+
+* extend `Tests\TestCase` and pay for the boot - always correct;
+* or map your addon's namespace in your own `composer.json` and run `composer dump-autoload`, which lets Composer load
+  plain classes without XenForo:
+
+```json
+"autoload-dev": {
+    "psr-4": {
+        "Tests\\": "tests/",
+        "Vendorly\\Addonista\\": ""
+    }
+}
+```
+
+The second works only for plain classes. A class extending XenForo - anything built on an `XFCP_` proxy - still needs
+the booted application, because the proxy does not exist until XenForo's extension system creates it.
+
 As you can see from our previous discussion about entry points into XenForo, we follow the same pattern - including 
 `XF.php`, booting the framework and then setting up our application container. We don't need to do anything more - we 
 just need the application container available for us to use in our tests.
