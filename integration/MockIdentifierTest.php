@@ -6,8 +6,8 @@ use XF\Repository\UserRepository;
 use XF\Service\User\EmailStopService;
 
 /**
- * The two mock helpers that used to accept an identifier, do nothing useful with it, and let the
- * test pass anyway. Both failures were silent, which is the only reason they cost anyone time.
+ * mockRepository() and mockService() must honour every identifier spelling XenForo accepts, and
+ * mockService() must refuse one that resolves to nothing.
  */
 class MockIdentifierTest extends TestCase
 {
@@ -70,8 +70,8 @@ class MockIdentifierTest extends TestCase
 	}
 
 	/**
-	 * The one that used to pass while asserting against nothing: Mockery builds an untyped double
-	 * for a class name that resolves to nothing at all, so every expectation was met by a fiction.
+	 * Mockery would build an untyped double for a class that does not exist, meeting every
+	 * expectation.
 	 */
 	public function test_a_service_that_does_not_exist_is_refused()
 	{

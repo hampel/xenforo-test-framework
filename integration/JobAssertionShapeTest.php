@@ -7,11 +7,6 @@ use XF\Job\UserRename;
 
 /**
  * What assertJobQueued() matches on, and what it hands its truth-test callback.
- *
- * Both were documented wrongly until 4.3.0, in an example that could not run: the callback
- * was shown receiving an object with a getData() method, and the assertion was shown matching
- * a name the example never enqueued. Reported by a consumer, which is the only way a defect
- * in an example is ever found.
  */
 class JobAssertionShapeTest extends TestCase
 {

@@ -30,9 +30,8 @@ class MailQueueTest extends TestCase
 	}
 
 	/**
-	 * queue() used to enqueue a MailSend job the transport never saw, so this failed with "The
-	 * expected mail was not sent." - enableMailQueue is a config value and fakesMail() was setting
-	 * an option of that name, which XenForo has never had.
+	 * Mail sent with queue() reaches the test transport, and no MailSend job is queued.
+	 * enableMailQueue is a config value, not an option.
 	 */
 	public function test_queue_reaches_the_test_transport_too()
 	{
@@ -46,9 +45,8 @@ class MailQueueTest extends TestCase
 	}
 
 	/**
-	 * The transport and the queue flag are both constructor arguments of XF\Mail\Mailer, and `mailer`
-	 * is its own cached container entry - so resolving it before fakesMail() used to leave the fake
-	 * installed somewhere nothing looked.
+	 * The transport and the queue flag are constructor arguments of XF\Mail\Mailer, and `mailer` is
+	 * cached, so fakesMail() has to rebuild a mailer resolved before it.
 	 */
 	public function test_a_mailer_resolved_before_the_fake_is_rebuilt()
 	{

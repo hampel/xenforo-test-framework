@@ -12,10 +12,7 @@ use Hampel\Testing\SimpleCache;
 use League\Flysystem\Memory\MemoryAdapter;
 
 /**
- * Up to 4.0.0 each of these returned the closure handed to swap() rather than the object the
- * container builds from it, so the documented return type was never what came back. v2.0.2
- * intended to fix this and did not - swap() returns what it is given, and the container resolves
- * the closure later.
+ * Each fake returns the object the container builds, not the closure handed to swap().
  */
 class FakeReturnValuesTest extends TestCase
 {

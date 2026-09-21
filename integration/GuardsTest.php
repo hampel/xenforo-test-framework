@@ -14,8 +14,7 @@ class GuardsTest extends TestCase
 	use UsesDatabaseTransactions;
 
 	/**
-	 * UsesDatabaseTransactions needs a real connection to roll back. Its guard used to test the
-	 * adapter type as well as the mock, which was redundant - the mock is the case that matters.
+	 * UsesDatabaseTransactions needs a real connection to roll back.
 	 */
 	public function test_the_transaction_trait_refuses_a_mocked_database()
 	{

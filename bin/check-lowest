@@ -3,21 +3,11 @@
 # Resolve this package's dependencies at their declared floor and run the integration
 # suite against them. A release step someone runs, not a check that runs itself.
 #
-# WHY IT EXISTS
+# CI cannot run the suite, since XenForo is licensed, so its lowest job only proves the
+# declared constraints resolve. A constraint can resolve and still fail at runtime.
 #
-# CI cannot run the suite - XenForo is licensed, so no public workflow can provision a
-# forum - so the workflow's lowest job proves only that the declared constraints still
-# RESOLVE. Resolving is not working. `mockery/mockery: ^1.0` was declared for years,
-# resolved cleanly every time, and was a fatal before the first test ran: Mockery 1.0 to
-# 1.2 declare `php >=5.6.0`, so Composer installs them onto a supported PHP and the mock
-# code they generate is then invalid. Only running the suite at the floor finds that.
-#
-# WHY IT COPIES THE PACKAGE RATHER THAN DOWNGRADING IN PLACE
-#
-# Downgrading vendor/ and putting it back is two commands and one hazard: if the suite
-# fails, the restoring update never runs, and the next ordinary `composer integration`
-# then reports on the floor tree without saying so. That misread cost a session once
-# already. The copy leaves the working tree's vendor/ untouched whatever happens here.
+# It works on a copy, leaving this tree's vendor/ untouched: downgrading in place and
+# restoring afterwards would skip the restore whenever the suite failed.
 
 set -euo pipefail
 

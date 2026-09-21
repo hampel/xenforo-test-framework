@@ -5,9 +5,8 @@ namespace Hampel\Testing\Integration;
 use XF\Http\Request;
 
 /**
- * spy() shipped undocumented from the start and had no test until 4.3.1. These pin the shape
- * DOCS.md now describes - particularly that a spy returns null for anything it was not told
- * about, which is the whole trade against mock() and the part an example has to show.
+ * The behaviour DOCS.md describes for spy(), including that a spy returns null for anything it
+ * was not told about.
  */
 class SpyTest extends TestCase
 {
@@ -35,9 +34,7 @@ class SpyTest extends TestCase
 	{
 		$this->spy('request', Request::class);
 
-		// measured: the real Request answers getIp() with '' in this app, so null here really is
-		// the spy. A spy answers null for every method it was not told about, which is the cost
-		// of not having to declare the call up front
+		// the real Request answers getIp() with '' in this app, so null here is the spy
 		$this->assertNull($this->app()->request()->getIp());
 	}
 

@@ -3,12 +3,8 @@
 namespace Hampel\Testing\Integration;
 
 /**
- * An add-on that kept its own tests/CreatesApplication.php after upgrading to 5.0.0.
- *
- * This is the compatibility claim the release rests on: a trait method wins over an inherited
- * one in PHP, so a consumer who does nothing keeps the boot they already had, and migration is
- * something they choose rather than something the upgrade forces. Asserted rather than assumed,
- * because the whole point of owning the boot is that a copy nobody touches goes unnoticed.
+ * An add-on that still has its own tests/CreatesApplication.php. A trait method takes precedence
+ * over an inherited one, so its boot is used rather than the framework's.
  */
 trait LegacyCreatesApplication
 {

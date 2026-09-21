@@ -9,8 +9,7 @@ use XF\Mvc\Reply\Reroute;
 /**
  * Dispatching a route in process. The assertions here deliberately use XenForo's own admin pages
  * and a route that cannot exist, because a public route's reply depends on the forum's options -
- * what 'index' resolves to, whether custom terms are set - and would make this suite report on
- * the development forum's configuration rather than on the dispatch.
+ * what 'index' resolves to, whether custom terms are set.
  */
 class RouteDispatchTest extends TestCase
 {

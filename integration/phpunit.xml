@@ -3,12 +3,9 @@
   This package's own integration tests. They boot a real XenForo application, so they need
   a forum and skip every test without one.
 
-  They do not run in PUBLIC CI, because XenForo is licensed and no public workflow can
-  fetch it - a licensing constraint rather than a technical one, and a workflow holding
-  license credentials could provision a forum. See CLAUDE.md.
+  They do not run in CI, because XenForo is licensed. See CLAUDE.md.
 
-  The schema is 10.5, the oldest PHPUnit this package supports, so the config is validated
-  against the end of the range most likely to reject an attribute.
+  The schema is 10.5, the oldest PHPUnit this package supports.
 -->
 <phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/10.5/phpunit.xsd"

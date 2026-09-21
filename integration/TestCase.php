@@ -7,8 +7,8 @@ use Hampel\Testing\TestCase as BaseTestCase;
 /**
  * Base class for this package's own integration tests.
  *
- * These are NOT the scaffold in tests/ - that is what consuming add-ons copy, and it must keep
- * working as documented. This directory is export-ignored and never reaches a consumer.
+ * These are not the scaffold in tests/, which consuming add-ons copy. This directory is
+ * export-ignored.
  *
  * Unlike an add-on's suite, this harness lives outside any forum, so $rootDir is absolute and
  * comes from the environment:
@@ -20,9 +20,7 @@ abstract class TestCase extends BaseTestCase
 	/**
 	 * Absolute path to a XenForo 2.3 root, from the environment.
 	 *
-	 * Nothing else here overrides the boot: this suite runs on the createApplication() the
-	 * framework itself provides, which is the point - if that boot breaks, every test below
-	 * breaks with it rather than a copy of it going stale unnoticed.
+	 * The suite runs on the framework's own createApplication(), so it tests that boot.
 	 *
 	 * @var string
 	 */
@@ -32,15 +30,8 @@ abstract class TestCase extends BaseTestCase
 	 * Load no add-ons at all.
 	 *
 	 * An empty array would load every add-on installed in the forum, and any that ship their
-	 * own PHPUnit and Mockery then collide with ours - Mockery registers an expectation in one
-	 * instance and verifies it in another, and tests fail with counts of zero. Naming an id
-	 * that matches nothing keeps every add-on's Composer autoloading and class extensions out,
-	 * which is what testing the framework itself wants.
-	 *
-	 * As of 5.0.0 that includes their code event listeners, which it did not before: the
-	 * extension is installed by App::setup() ahead of parent::setup(), which is the only point
-	 * early enough to stop an app_setup listener running. Measured on a forum with 13 of them,
-	 * all 13 listener classes used to load into a process that had asked for no add-ons.
+	 * own PHPUnit and Mockery then collide with ours. An id that matches nothing keeps every
+	 * add-on's autoloading, class extensions and code event listeners out.
 	 *
 	 * @var array
 	 */

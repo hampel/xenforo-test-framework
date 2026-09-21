@@ -53,9 +53,8 @@ class TemplateRenderTest extends TestCase
 	}
 
 	/**
-	 * Measured on 2.3.12: a missing title, a wrong type and a type that does not exist all render
-	 * as an empty string with no error, so an assertDontSee() against one would have passed while
-	 * testing nothing.
+	 * A missing title, a wrong type and a type that does not exist all render as an empty string
+	 * with no error, so renderTemplate() has to refuse them.
 	 */
 	public function test_a_template_that_does_not_exist_is_refused_rather_than_rendering_nothing()
 	{

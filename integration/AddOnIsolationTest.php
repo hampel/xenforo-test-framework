@@ -6,17 +6,12 @@ use Hampel\Testing\Extension;
 use Hampel\Testing\Mvc\Entity\Manager;
 
 /**
- * Add-on isolation, and the half of it that did not work until 5.0.0.
+ * Add-on isolation: autoloading, class extensions and code event listeners.
  *
- * Filtering `addon.composer` was never enough: `XF\App::setup()` fires `app_setup` as its last
- * step, and the filtered extension used to be installed afterwards, from setUpTraits(). So every
- * installed add-on's `app_setup` listener ran before any test did, out of a suite that had named
- * an add-on id matching nothing.
- *
- * Control, run 2026-09-20: comment out the installExtension() call in App::setup() and
- * test_no_excluded_add_on_listener_ran_during_boot fails, listing all 13 listener classes this
- * forum's add-ons register - XenForo's own XFMG and XFRM among them. Nothing else in the suite
- * changes, so no other test depended on the leak.
+ * `XF\App::setup()` fires `app_setup` as its last step, so the filtered extension has to be
+ * installed before it. Control: comment out the installExtension() call in App::setup() and
+ * test_no_excluded_add_on_listener_ran_during_boot fails, listing the listener classes that
+ * loaded.
  */
 class AddOnIsolationTest extends TestCase
 {
@@ -124,8 +119,7 @@ class AddOnIsolationTest extends TestCase
 
 	public function test_a_half_upgraded_scaffold_is_refused()
 	{
-		// $addonsToLoad set in tests/TestCase.php, nothing passed to setupApp() - the v2.1.0
-		// upgrade taken half way, silent on every version before 5.0.0
+		// $addonsToLoad set in tests/TestCase.php, nothing passed to setupApp()
 		$this->expectException(\LogicException::class);
 		$this->expectExceptionMessage('no add-on isolation is in effect');
 
@@ -242,13 +236,8 @@ class AddOnIsolationTest extends TestCase
 
 	public function test_a_mocked_database_no_longer_re_runs_the_listener_query()
 	{
-		// this lives here because the cause is boot-time resolution rather than anything about
-		// mockDatabase(). Until 5.0.0 the filtered extension was installed during test setup as
-		// an unresolved closure, so mockDatabase() - which rebuilds the entity manager, which
-		// reads $c['extension'] - ran that closure's listener query through the mock. DOCS told
-		// consumers their fetchAll had to return an array rather than null because of it. The
-		// extension is resolved while the application boots now, so the rebuilt manager reads
-		// the resolved instance and a mock with no expectations at all is fine
+		// the extension is resolved while the application boots, so rebuilding the entity
+		// manager does not run the listener query through a mocked database
 		$this->mockDatabase();
 
 		$this->assertInstanceOf(Manager::class, $this->app()->em());

@@ -3,10 +3,9 @@
 namespace Hampel\Testing\Integration;
 
 /**
- * Every user built by buildVisitor() used to land on permission combination id 1 - the forum's
- * real guest combination. Two consequences, both of which make a permission test lie: granting a
- * permission to one built user granted it to every other one, and a user nothing had been granted
- * for silently inherited whatever the development forum happens to grant guests.
+ * Each user built by buildVisitor() has its own permission combination: a grant to one does not
+ * reach another, and a permission nothing granted is denied rather than read from the forum's
+ * guest permissions.
  */
 class VisitorPermissionIsolationTest extends TestCase
 {

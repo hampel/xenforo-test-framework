@@ -5,14 +5,11 @@ namespace Hampel\Testing\Integration;
 use Hampel\Testing\Concerns\UsesDatabaseTransactions;
 
 /**
- * A template error travels to the forum's real error log, and fakesErrors() is how a test opts
- * out. Both halves are asserted here because the positive one alone would pass if renderTemplate()
- * had simply stopped logging - which is the unpaired-assertion shape this package keeps shipping.
+ * A template error reaches the forum's real error log, and fakesErrors() is how a test opts out.
+ * Both halves are asserted, since the positive alone would pass if renderTemplate() stopped
+ * logging.
  *
- * The whole class runs in a transaction, so the control's rows are rolled back with everything
- * else and the forum keeps none of them. That is also, and accidentally, why this package never
- * noticed the behaviour: TemplateRenderTest uses the same trait for an unrelated reason, so its
- * own logging has always been invisible. A consumer suite without it wrote 71 rows a run.
+ * The class runs in a transaction, so the rows the control writes are rolled back.
  */
 class TemplateErrorLoggingTest extends TestCase
 {

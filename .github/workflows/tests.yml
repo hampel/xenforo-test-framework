@@ -28,11 +28,9 @@ jobs:
           php-version: ${{ matrix.php }}
           coverage: none
 
-      # There is no test suite to run here and there cannot be one. The suite in
-      # tests/ is a scaffold that consuming add-ons copy, and it boots XenForo,
-      # which is licensed and unavailable to CI. PHPStan is blocked for the same
-      # reason and runs locally instead - see CLAUDE.md. What follows is what can
-      # genuinely be checked without a forum.
+      # The integration suite and PHPStan need XenForo, which is licensed and not
+      # available to CI, so they run locally - see CLAUDE.md. These are the checks
+      # that work without a forum.
 
       - name: composer.json is valid
         run: composer validate --strict
@@ -40,9 +38,8 @@ jobs:
       - name: src/ parses on this PHP version
         run: find src -name '*.php' -print0 | xargs -0 -n1 -P4 php -l
 
-      # The check that earns its place: compiles the eighteen traits with all
-      # diagnostics on. See .github/deprecation-check.php for why it is limited
-      # to traits, and which shipped bug it exists to catch.
+      # Compiles every trait in src/Concerns with all diagnostics on. See
+      # .github/deprecation-check.php for why it is limited to traits.
       - name: no deprecations or notices from src/Concerns
         run: php -d error_reporting=E_ALL .github/deprecation-check.php
 
@@ -50,12 +47,9 @@ jobs:
     name: dependencies resolve at the floor
     runs-on: ubuntu-latest
 
-    # What this proves, and what it does not. It resolves the declared constraints
-    # downward and fails if they no longer resolve - which is the only half of the
-    # lowest corner that works without a forum. It does NOT prove the package RUNS on
-    # that tree, because the suite needs XenForo. `composer check:lowest` does that half
-    # locally before a release, and it is not optional: mockery/mockery ^1.0 resolved
-    # cleanly here for years and was a fatal before the first test ran.
+    # Resolves the declared constraints at their floor and fails if they no longer
+    # resolve. It does not prove the package runs on that tree, since the suite needs
+    # XenForo - `composer check:lowest` does that locally before a release.
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -68,8 +62,7 @@ jobs:
       - name: the declared constraints still resolve at their floor
         run: composer update --prefer-lowest --prefer-dist --no-progress
 
-      # The oldest resolvable tree is the one most likely to carry an advisory, and the
-      # only one nothing else ever installs.
+      # the oldest resolvable tree is the one most likely to carry an advisory
       - name: no advisories against that tree
         run: composer audit
 

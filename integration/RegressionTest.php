@@ -6,13 +6,11 @@ use Hampel\Testing\DataRegistry;
 use Symfony\Component\Cache\Adapter\AdapterInterface;
 
 /**
- * Each of these reproduces a bug that shipped in 3.0.3 and was fixed in 4.0.0. Run against
- * released 3.0.3 they fail as noted; the point of keeping them is that all three needed a real
- * XenForo application to show up at all.
+ * Regressions that need a real XenForo application to show up.
  */
 class RegressionTest extends TestCase
 {
-	/** 3.0.3: the class could not be declared - XF 2.3 added : void to both methods */
+	/** the class must match XF 2.3's signatures, which declare : void */
 	public function test_fakes_registry_round_trips()
 	{
 		$this->fakesRegistry();
@@ -44,7 +42,7 @@ class RegressionTest extends TestCase
 		$registry->delete('integrationProbe');
 	}
 
-	/** 3.0.3: TypeError - doSend() assigned a string over the array the assertions count */
+	/** the transport keeps every sent message, so the assertions can count them */
 	public function test_mail_assertions_survive_a_sent_message()
 	{
 		$this->fakesMail();
@@ -65,7 +63,7 @@ class RegressionTest extends TestCase
 		});
 	}
 
-	/** 3.0.3: Call to undefined method assertJobsQueuedTimes() */
+	/** assertJobQueued() with a count */
 	public function test_job_assertions_including_the_numeric_shortcut()
 	{
 		$this->fakesJobs();

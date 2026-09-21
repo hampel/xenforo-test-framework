@@ -8,9 +8,8 @@ use XF\LocalFsAdapter;
 
 /**
  * swapFs() and mockFs() rewrite the config, but XenForo builds its filesystem mounts once and caches
- * them under `fs`. Anything that touched the filesystem first therefore used to keep the real local
- * adapter - so the helper returned something that was not a fake, and the test read and wrote the
- * real data directory while reporting nothing.
+ * them under `fs`. These pin that a swap after the filesystem has been used still installs the fake,
+ * rather than returning the real local adapter.
  */
 class FilesystemResolveOrderTest extends TestCase
 {
