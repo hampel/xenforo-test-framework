@@ -23,7 +23,7 @@ Install the newest version your XenForo and PHP allow. Older lines stay on Packa
 v4 and v5 support the same XenForo and PHP versions; v5 is the current line, and
 [UPGRADING.md](UPGRADING.md) describes moving to it.
 
-Put the version you picked in your addon's `require-dev` as `^5.3`, `^3.0` and so on - the installation section below
+Put the version you picked in your addon's `require-dev` as `^5.4`, `^3.0` and so on - the installation section below
 shows the whole file.
 
 ## Upgrading
@@ -479,7 +479,7 @@ use Composer, you can simply create a `composer.json` file with the following in
 ```json
 {
     "require-dev": {
-        "hampel/xenforo-test-framework": "^5.3",
+        "hampel/xenforo-test-framework": "^5.4",
         "nesbot/carbon": "^3.0"
     },
     "autoload-dev": {

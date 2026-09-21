@@ -1,6 +1,6 @@
 # Changelog
 
-## 5.4.0 (unreleased)
+## 5.4.0 (2026-09-22)
 
 * `renderTemplate()`, `renderReply()` and `renderMacro()` set the `xf` template parameter as XenForo
   does for a page, from `getGlobalTemplateData()`, so `$xf.options`, `$xf.visitor` and the rest are
@@ -8,6 +8,7 @@
   itself is left alone
 * a visitor a test set with `\XF::setVisitor()` is cleared after the test, rather than carried
   into the next one
+* docs: the README's install example requires `^5.4`
 
 ## 5.3.0 (2026-09-22)
 
