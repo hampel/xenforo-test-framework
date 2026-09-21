@@ -7,14 +7,17 @@ use XF\Api\Mvc\Reply\ApiResult;
 use XF\Entity\ApiKey;
 use XF\Http\Request;
 use XF\Mvc\Dispatcher;
+use XF\Mvc\ParameterBag;
 use XF\Mvc\Reply\AbstractReply;
 use XF\Mvc\Reply\Error;
+use XF\Mvc\Reply\Exception as ReplyException;
 use XF\Mvc\Reply\Message;
 use XF\Mvc\Reply\Redirect;
 use XF\Mvc\Reply\Reroute;
 use XF\Mvc\Reply\View;
 use XF\Mvc\RouteMatch;
 use XF\Phrase;
+use XF\PrintableException;
 
 trait InteractsWithRoutes
 {
@@ -149,6 +152,116 @@ trait InteractsWithRoutes
 	}
 
 	/**
+	 * Call one controller action directly, with a POST request by default - the half of a
+	 * controller that dispatch() cannot reach.
+	 *
+	 * dispatch() only sends a GET, because XenForo asserts a CSRF token in preDispatch() for
+	 * anything else and a test has no session to build one from. So saving, toggling and
+	 * deleting went untested. This builds the controller the way the dispatcher does and calls
+	 * the action, **without preDispatch()** - which means without the CSRF check and without
+	 * preDispatchController(), where access checks usually live. It proves what an action does
+	 * once let through, never that the guard lets through the right people. Pair it with
+	 * dispatch() for that: a GET to a POST-only action returns 405, and 403 without permission.
+	 *
+	 * Everything else matches the dispatcher, and each part is something a hand-written version
+	 * gets wrong:
+	 *
+	 * - a PrintableException - what FormAction::run() throws for an entity with errors, so every
+	 *   standard admin save - comes back as an Error reply whose errors stay keyed by field;
+	 * - a reply thrown as XF\Mvc\Reply\Exception, by assertPostOnly(), assertRecordExists() and
+	 *   the permission asserts, comes back as that reply;
+	 * - the request is swapped into the container as well as handed to the controller, so code
+	 *   reading $app->request() sees the same request as the action's $this->request;
+	 * - a Reroute is followed, and deferred work queued with \XF::runOnce() runs afterwards.
+	 *
+	 * @param string $controller - 'XF:Option' or a full class name
+	 * @param string $action - as it appears in a route, eg 'save', 'toggle', 'delete'
+	 * @param string $type - 'public', 'admin' or 'api'
+	 * @param array $input - the request input, as $_POST would carry it
+	 * @param array $params - route parameters, eg ['advert_id' => 3]
+	 * @param string $method - the request method; POST unless you have a reason
+	 *
+	 * @return AbstractReply
+	 */
+	protected function callAction(
+		$controller,
+		$action,
+		$type = 'public',
+		array $input = [],
+		array $params = [],
+		$method = 'POST'
+	)
+	{
+		[$classType, $routerKey] = $this->routeTypeConfig($type);
+
+		// same reason as dispatch(): the controller class is resolved through app.classType
+		$this->swap('app.classType', $classType);
+
+		$request = $this->buildDispatchRequest('', $input, $method);
+		$this->swap('request', function () use ($request)
+		{
+			return $request;
+		});
+
+		$instance = $this->app()->controller($controller, $request);
+		if (!$instance)
+		{
+			throw new \LogicException(
+				"Controller '$controller' does not exist for route type '$type'"
+			);
+		}
+
+		// the dispatcher's own normalisation, so 'save' and 'save-draft' mean what a route means
+		$actionName = str_replace(' ', '', ucwords(preg_replace('#[^a-z0-9]#i', ' ', $action)));
+		$actionMethod = 'action' . $actionName;
+		if (!is_callable([$instance, $actionMethod]))
+		{
+			throw new \LogicException(
+				"Controller '" . get_class($instance) . "' has no action '$action' ($actionMethod)"
+			);
+		}
+
+		$instance->setResponseType($type === 'api' ? 'api' : 'html');
+		$parameterBag = new ParameterBag($params);
+
+		try
+		{
+			$reply = $instance->$actionMethod($parameterBag);
+		}
+		catch (PrintableException $e)
+		{
+			$reply = new Error($e->getMessages());
+		}
+		catch (ReplyException $e)
+		{
+			$reply = $e->getReply();
+		}
+
+		if (!$reply instanceof AbstractReply)
+		{
+			throw new \LogicException(
+				"Action '$action' on '" . get_class($instance) . "' returned no reply"
+			);
+		}
+
+		$instance->postDispatch($actionName, $parameterBag, $reply);
+		$reply->setControllerClass(get_class($instance));
+		$reply->setAction($actionName);
+
+		if ($reply instanceof Reroute)
+		{
+			$dispatcher = new Dispatcher($this->app(), $request);
+			$dispatcher->setRouter($this->app()->container($routerKey));
+
+			$reply = $this->resolveReply($dispatcher, $reply->getMatch(), "$controller::$action");
+		}
+
+		\XF::triggerRunOnce(true);
+
+		return $reply;
+	}
+
+	/**
 	 * Resolve reroutes ourselves rather than calling XF\Mvc\Dispatcher::dispatchLoop().
 	 *
 	 * That method catches every exception the controller throws and hands it to
@@ -187,11 +300,14 @@ trait InteractsWithRoutes
 	 *
 	 * @param string $routePath
 	 * @param array $input
+	 * @param string $method
 	 *
 	 * @return Request
 	 */
-	private function buildDispatchRequest($routePath, array $input = [])
+	private function buildDispatchRequest($routePath, array $input = [], $method = 'GET')
 	{
+		$method = strtoupper($method);
+
 		$container = $this->app()->container();
 		// XF\Options is an ArrayObject, so this reads the option without going through the magic
 		// property accessor that static analysis cannot see. The host has to match boardUrl, or a
@@ -199,8 +315,9 @@ trait InteractsWithRoutes
 		$host = parse_url((string) $this->app()->options()['boardUrl'], PHP_URL_HOST) ?: 'localhost';
 
 		// the route path cannot carry the parameters - the router takes the whole string as the
-		// path, so 'thing?id=1' is a 404 - which is why they come in as an array instead
-		$queryString = http_build_query($input);
+		// path, so 'thing?id=1' is a 404 - which is why they come in as an array instead. A POST
+		// carries them in the body, so its query string stays empty
+		$queryString = $method === 'GET' ? http_build_query($input) : '';
 
 		$request = new Request(
 			$container['inputFilterer'],
@@ -208,7 +325,7 @@ trait InteractsWithRoutes
 			[],
 			[],
 			[
-				'REQUEST_METHOD' => 'GET',
+				'REQUEST_METHOD' => $method,
 				'REQUEST_URI' => '/index.php?' . $routePath
 					. ($queryString !== '' ? '&' . $queryString : ''),
 				'SCRIPT_NAME' => '/index.php',

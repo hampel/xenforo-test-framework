@@ -11,6 +11,15 @@ The scaffold files are the reason this document exists. `tests/TestCase.php` and
 `tests/CreatesApplication.php` are **copied into your add-on and owned by you**, so a change to
 either cannot reach you through Composer — it has to be merged by hand.
 
+## 5.1.0
+
+**Nothing to do.** `callAction()` is new — it calls a controller action directly with a `POST`, for
+the saving, toggling and deleting `dispatch()` cannot reach. See `DOCS.md`.
+
+It is a new protected method on `TestCase`, which is the one way a new helper can break a suite:
+a test class of yours that already defines `callAction()` with a narrower visibility or a different
+signature would stop loading. None of the add-ons it was checked against did.
+
 ## 5.0.0
 
 **The one thing you can act on: the scaffold is one file now, and deleting the other is optional.**

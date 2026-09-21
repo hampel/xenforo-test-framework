@@ -1,6 +1,27 @@
 CHANGELOG
 =========
 
+5.1.0 (unreleased)
+------------------
+
+* new `callAction()` calls one controller action directly with a `POST` request and returns its
+  reply - the half of a controller `dispatch()` cannot reach, because XenForo asserts a CSRF token
+  in `preDispatch()` for anything that is not a `GET`. Saving, toggling and deleting can now be
+  tested. It skips `preDispatch()`, so the CSRF check **and** the controller's permission check:
+  it proves what an action does once let through, and `dispatch()` stays the way to prove the
+  guard refuses. Everything else the dispatcher does happens here too, each a thing a hand-written
+  version tends to miss: a `PrintableException` from a failed save comes back as an `Error` reply
+  with its errors **keyed by field**, a reply thrown as `XF\Mvc\Reply\Exception` comes back as
+  that reply, the request is swapped into the container, a `Reroute` is followed - and its target
+  *is* guarded - and work queued with `\XF::runOnce()` has run. Suggested by a consumer that had
+  fourteen tests against its own version
+* docs: finding a plain `PHPUnit\Framework\TestCase` that only passes because an earlier test
+  booted XenForo is done by running each test class on its own. 5.0.0's README named
+  `--order-by=random` for it, which looks reliable on a small suite and is not on a large one: once
+  anything has booted, the autoloader stays, so a random order fails only when the plain test is
+  drawn first. A 386-test suite with a known offender passed six random seeds out of six
+* docs: the renamed-class extension fix affected 61 extensions across **20** add-ons, not 18
+
 5.0.0 (2026-09-21)
 ------------------
 

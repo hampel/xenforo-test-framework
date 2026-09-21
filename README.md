@@ -787,8 +787,10 @@ markup around it is not. Nor does it cover anything needing the real front contr
 server rewrites - or JavaScript and visual appearance.
 
 A `POST` route dispatches, but only as far as the refusal: XenForo asserts a CSRF token in `preDispatch()` for anything
-that is not a `GET`, so an action opening with `assertPostOnly()` returns a 405 rather than running. Sending a real
-`POST` is not supported yet.
+that is not a `GET`, so an action opening with `assertPostOnly()` returns a 405 rather than running. For the action
+itself, `callAction()` calls it directly with a `POST` - skipping `preDispatch()`, and so the CSRF check and the
+controller's permission check with it. Use `dispatch()` to prove the guard refuses and `callAction()` to prove what the
+action does once let through; neither proves both.
 
 A public route also needs the visitor to hold `general.view`, which a built visitor does not - every public controller
 asserts it, so a public dispatch refuses with a 403 until the test grants it. See `dispatch()` in DOCS.md.

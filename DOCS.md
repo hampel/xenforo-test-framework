@@ -332,8 +332,78 @@ $reply = $this->dispatch('helpspot/user', 'api', ['user_id' => 1]);
 **`POST` routes dispatch, but only as far as the refusal.** XenForo asserts a valid CSRF token in
 `preDispatch()` for anything that is not a `GET`, and a test has no cookie to build one from, so an
 action opening with `assertPostOnly()` returns a 405 - `This action is available via POST only.`
-The dispatch itself is not refused; the happy path is unreachable. Sending a `POST` is not
-supported yet.
+The dispatch itself is not refused; the happy path is unreachable through `dispatch()`. Use
+`callAction()`, below, for the action itself - and keep a `dispatch()` beside it for the guard.
+
+### callAction
+Call one controller action directly, with a `POST` request, and get back the reply it produced.
+
+This is the half of a controller `dispatch()` cannot reach: saving, toggling, deleting. It builds
+the controller the way XenForo's dispatcher does and calls the action **without `preDispatch()`** -
+so without the CSRF check that makes a `POST` impossible to dispatch, and also without
+`preDispatchController()`, where most controllers check permissions.
+
+**So it proves what an action does once let through, and never that the guard lets through the
+right people.** Pair the two: `dispatch()` for the refusal, `callAction()` for the behaviour.
+
+```php
+// the guard - dispatch() runs preDispatch()
+$this->actingAsMember(['is_admin' => true]);
+$this->assertReplyIsError($this->dispatch('notices/save', 'admin'), 403);
+
+// the action - callAction() does not
+$reply = $this->callAction('XF:Notice', 'save', 'admin', [
+    'title' => 'Maintenance',
+    'message' => '...',
+    'notice_type' => 'block',
+    'display_style' => 'primary',
+]);
+$this->assertReplyIsRedirect($reply);
+$this->assertDatabaseHas('xf_notice', ['title' => 'Maintenance']);
+```
+
+##### Parameters:
+
+* `controller` - `'XF:Notice'` or a full class name, resolved the way the route type would
+* `action` - as it appears in a route: `'save'`, `'toggle'`, `'delete'`
+* `type` - optional - `'public'` (default), `'admin'` or `'api'`
+* `input` - optional - the request input, as `$_POST` would carry it
+* `params` - optional - route parameters, eg `['notice_id' => 3]`
+* `method` - optional - `'POST'` (default); `'GET'` is there to exercise `assertPostOnly()`
+
+**A validation failure comes back as an `Error` reply, not as an exception.** A standard admin save
+goes through `FormAction`, which throws `XF\PrintableException` for an entity with errors, and
+XenForo's dispatcher is what turns that into a reply. `callAction()` does the same - and
+`replyErrors()` then gives you the errors **keyed by field**, so a test can say which field was
+refused rather than only that something was:
+
+```php
+$reply = $this->callAction('XF:Notice', 'save', 'admin', ['title' => '']);
+
+$this->assertReplyIsError($reply);
+$this->assertArrayHasKey('title', $this->replyErrors($reply));
+```
+
+The rest of what the dispatcher does happens here too, and each is something a hand-written
+version tends to miss: a reply thrown as `XF\Mvc\Reply\Exception` - by `assertPostOnly()`,
+`assertRecordExists()`, the permission asserts - comes back as that reply; the request is swapped
+into the container, so `$app->request()` and the action's `$this->request` agree; a `Reroute` is
+followed; and work queued with `\XF::runOnce()`, such as a cache rebuild in an entity's
+`postSave()`, has run by the time you get the reply.
+
+**A rerouted-to action is guarded.** Only the action you name skips `preDispatch()`; a reroute goes
+through the dispatcher, so its target's permission checks apply.
+
+The toggle and delete plugins read the same request, so they work too. **A toggle's input is keyed
+by the column it toggles** - `active` unless the controller says otherwise - so turning a notice off
+is `['active' => [$id => false]]` to the `toggle` action. Send the wrong key and the plugin finds
+nothing to change, saves nothing, and still returns its "your changes have been saved" message, so
+assert the row rather than the reply.
+
+**It writes.** Use `UsesDatabaseTransactions` on the test class, and `fakesRegistry()` where the
+action rebuilds a cache - a registry write outlives the rollback if your forum caches it.
+
+A missing controller or action throws `LogicException` rather than returning nothing.
 
 ### assertReplyIsView / assertReplyTemplate / assertReplyViewClass
 Assert that a reply is a view, optionally rendering a given template or using a given view class.
