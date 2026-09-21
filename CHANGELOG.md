@@ -1,6 +1,6 @@
 # Changelog
 
-## 5.1.0 (unreleased)
+## 5.1.0 (2026-09-21)
 
 * new `callAction()` calls a controller action directly with a `POST` request and returns its
   reply, for testing saves, toggles and deletes. It skips `preDispatch()`, so neither the CSRF
