@@ -1585,6 +1585,12 @@ manager, nothing is rolled back, so use `UsesDatabaseTransactions` for a job tha
 
 Jobs queued by the job under test are queued as normal; use `fakesJobs()` to assert on them.
 
+**The entity cache is not cleared between jobs**, just as XenForo's job manager does not clear it
+when it runs several jobs in one request. So if one job creates a related row without hydrating the
+relation on an entity it loaded, a second job run in the same test - or the same request in
+production - finds that entity with the relation still empty. Clear it yourself with
+`$this->app()->em()->clearEntityCache()` if you want each job to start fresh.
+
 ### expectPhrase
 Allow us to easily mock the phrase/language system to avoid database lookups and rendering phrases. This is especially
 useful when dealing with error messages which include phrases that may be variable.
