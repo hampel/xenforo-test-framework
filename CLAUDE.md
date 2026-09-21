@@ -217,6 +217,7 @@ everything here installs a fake, and a fake that fails to install produces a gre
 | `hasAdminPermission()` on a built user | it inherited the test forum's own administrator record |
 | `assertReplyIsError($reply, 403)` | two different guards both deny with 403 |
 | `assertDontSee($html, …)` | a template that cannot be found, or that fails, renders as an empty string |
+| `assertDontSee($html, …)` | a rendered template had no `$xf`, so a block reading `$xf.options` did not render |
 
 Rules that follow:
 
