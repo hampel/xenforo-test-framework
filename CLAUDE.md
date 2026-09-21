@@ -9,17 +9,15 @@ library, not an application: add-on developers `require-dev` it, copy the `tests
 `phpunit.xml` into their add-on, and run PHPUnit from the add-on root inside a working XenForo
 installation.
 
-It ships two distinct things, and the distinction matters when editing:
+It ships two distinct things:
 
 - **`src/`** — the framework itself, namespaced `Hampel\Testing\` (PSR-4, the only autoloaded code).
 - **`tests/`** — a **template that is copied into consuming add-ons**, namespaced `Tests\`. It is
-  not this package's own test suite and is not autoloaded (`composer.json` has no `autoload-dev`).
-  `tests/TestCase.php` is the one file add-on authors edit and own, so a change to it is a
-  **breaking change** that must be called out in `CHANGELOG.md` with merge instructions — see the
-  2.1.0 entry for the precedent. **Keep that file to declarations**: 5.0.0 moved the boot out of
-  the scaffold and into `Hampel\Testing\TestCase::createApplication()` precisely because anything
-  copied cannot be updated, and `tests/CreatesApplication.php` proved it by sitting unmerged in
-  real add-ons for four years. Adding logic back here re-creates that.
+  not this package's own test suite and is not autoloaded. `tests/TestCase.php` is the one file
+  add-on authors edit and own, so a change to it is a **breaking change** that must be called out
+  in `CHANGELOG.md` and `UPGRADING.md` with merge instructions. **Keep that file to declarations** —
+  a release cannot update a copied file, which is why the boot lives in
+  `Hampel\Testing\TestCase::createApplication()` rather than in the scaffold.
 
 ## There is no runnable test suite here
 
@@ -27,8 +25,7 @@ It ships two distinct things, and the distinction matters when editing:
 the scaffold needs a XenForo install above it (`$rootDir` points at the forum root) and a `Tests\`
 autoload mapping that only the consuming add-on provides. **Do not "fix" this** by making `tests/`
 autoloadable or rewriting it — that would break the copy-into-your-addon contract. (The
-`autoload-dev` entry in `composer.json` is for `integration/`, below, and deliberately does not
-cover `tests/`.)
+`autoload-dev` entry in `composer.json` is for `integration/`, below, and does not cover `tests/`.)
 
 ### There IS an integration suite — `integration/`
 
@@ -39,45 +36,31 @@ consumer. It boots a real XenForo application, so it needs a forum:
 XF_ROOT=/srv/www/myforum composer integration
 ```
 
-Without `XF_ROOT`, or with one that has no `src/XF.php`, every test **skips** and the run exits 0
-— so it can sit in the repository without breaking anyone who has no forum. It does not run in CI,
-for the same reason PHPStan does not: XenForo's source is licensed and no public workflow can
-fetch it. Read that as a licensing decision rather than a technical impossibility — a workflow
-holding license credentials could provision a real forum, and the tooling for that is improving.
+Without `XF_ROOT`, or with one that has no `src/XF.php`, every test **skips** and the run exits 0.
+It does not run in CI, because XenForo's source is licensed and a public workflow cannot fetch it.
 
 Two things in there are load-bearing and easy to undo by accident:
 
 - **`$addonsToLoad = ['None/None']`** loads no add-ons at all. An empty array loads *every*
   installed add-on, and any that ship their own PHPUnit and Mockery then collide with this
-  package's — Mockery registers an expectation in one instance and verifies it in another, and
-  tests fail with counts of zero. An id matching nothing filters `addon.composer`.
+  package's, failing tests with expectation counts of zero.
 
   **Listeners are filtered by `App::setup()`, and the ordering is load-bearing.** It installs the
-  extension *before* calling `parent::setup()`, because `XF\App::setup()` fires `app_setup` as its
-  last step — anything installed after that is too late to stop a single listener. Until 5.0.0 the
-  only install was the `setUpTraits()` hook, and it was too late: measured 2026-09-20 on a forum
-  with 13 `app_setup` listeners, all 13 listener classes loaded into a process that had asked for
-  no add-ons at all, `XFMG` and `XFRM` among them. Do not move that call after `parent::setup()`,
-  and do not assume filtering `addon.composer` covers it — add-on classes resolve through
-  XenForo's **own** autoload path, so the listener set is the only lever.
+  filtered extension *before* calling `parent::setup()`, because `XF\App::setup()` fires
+  `app_setup` as its last step. Do not move that call after `parent::setup()`, and do not rely on
+  filtering `addon.composer` instead — add-on classes also load through XenForo's own autoloader.
   `integration/AddOnIsolationTest.php` fails if this regresses.
 - **`TestCase` hands PHPUnit back its error and exception handlers** in teardown. `XF::start()`
-  installs its own and never removes them, which used to mark every XF-booting test risky and
-  made `failOnRisky` unusable. Don't remove that restoration without turning `failOnRisky` off
-  in both configs at the same time.
+  installs its own and never removes them, which would mark every XF-booting test risky. Don't
+  remove that restoration without turning `failOnRisky` off in both configs at the same time.
 
-  A consequence worth knowing before changing either config: **while a test is running, XenForo's
-  handler is what a deprecation meets, not PHPUnit's.** `E_USER_DEPRECATED` arrives as
-  `ErrorException: [E_USER_DEPRECATED] …` and fails the test outright, so a XenForo-booting suite
-  is stricter about deprecations than its `phpunit.xml` describes, and stays that way whether or
-  not `failOnDeprecation` is set. The flag is correct in intent and currently redundant.
+  While a test is running, XenForo's handler is what a deprecation meets, not PHPUnit's:
+  `E_USER_DEPRECATED` arrives as an `ErrorException` and fails the test outright, whether or not
+  `failOnDeprecation` is set. Adding a `<source>` element does not change this.
 
-  Neither config declares a `<source>` element, and adding one does not change this. `<source>`
-  governs neither whether `failOnDeprecation` fires nor which files it fires for — measured on
-  PHPUnit 10.5, 11.5 and 12.5, with the deprecation raised both inside and outside the declared
-  source, all six runs failing identically. Note that a run failing this way still prints
-  `OK, but there were issues!` in yellow, so **read the exit status, and capture it without a
-  pipe** — `vendor/bin/phpunit; echo $?`, since `phpunit | tail` reports `tail`'s status.
+  **Read the exit status, and capture it without a pipe** — `vendor/bin/phpunit; echo $?`. A
+  failing run can still print `OK, but there were issues!`, and `phpunit | tail` reports `tail`'s
+  status.
 
 ### One command for the three checks
 
@@ -85,11 +68,8 @@ Two things in there are load-bearing and easy to undo by accident:
 XF_ROOT=/srv/www/myforum composer check
 ```
 
-Style, then PHPStan, then the integration suite. Composer stops the list at the first failure,
-so the order is deliberate: the cheapest and least interesting check goes first and the suite
-last, and a style nit never hides a failing test from you for longer than one re-run.
-`check:lowest` stays out of it — it installs a second dependency tree, which is a pre-release
-step rather than a per-commit one.
+Style, then PHPStan, then the integration suite; Composer stops at the first failure.
+`check:lowest` stays out of it, since it installs a second dependency tree.
 
 ### Before a release, run the suite at the declared floor
 
@@ -97,21 +77,14 @@ step rather than a per-commit one.
 XF_ROOT=/srv/www/myforum composer check:lowest
 ```
 
-It copies the working tree to a temporary directory, resolves every dependency at the bottom
-of its constraint, and runs the integration suite there — leaving this tree's `vendor/`
-alone, which matters because downgrading in place and restoring afterwards skips the restore
-whenever the suite fails.
+It copies the working tree to a temporary directory, resolves every dependency at the bottom of its
+constraint, and runs the integration suite there, leaving this tree's `vendor/` alone.
 
-**CI cannot do this half.** The `lowest` job proves the declared constraints still *resolve*,
-which is all that is possible without a forum. Resolving is not working: `mockery/mockery`
-was declared `^1.0` for years, resolved cleanly every time, and was a fatal before the first
-test ran — Mockery 1.0 to 1.2 declare `php >=5.6.0`, so Composer installs them onto a
-supported PHP and the mock code they generate is invalid there. Nothing but running the suite
-at the floor would have found it.
+The CI `lowest` job only proves the declared constraints *resolve*, since CI has no forum. A
+constraint can resolve and still fail at runtime, so run this before tagging.
 
-Every test in `integration/` reproduces a bug that shipped in 3.0.3. **Check a change to the
-fakes against this suite** — the registry, mail and job bugs fixed in 4.0.0 were all invisible
-to PHPStan and to a scaffold suite with no forum behind it.
+**Check a change to the fakes against the integration suite.** Their defects are invisible to
+PHPStan.
 
 Verification against a consuming add-on, when that is what you need:
 
@@ -123,9 +96,10 @@ cd /srv/www/<forum>/src/addons/<Vendor>/<AddonId>
 ./vendor/bin/phpunit --filter test_name           # one test
 ```
 
-**PHPStan is the only automated check this package has**, and it needs a XenForo install to
-analyse against — almost every class here extends one of XF's, the source is licensed and not on
-Packagist, and there is no public stub package. So the forum root comes from the environment:
+### PHPStan
+
+PHPStan needs a XenForo install to analyse against — almost every class here extends one of XF's,
+and the source is licensed and not on Packagist. So the forum root comes from the environment:
 
 ```bash
 XF_ROOT=/srv/www/myforum composer analyse
@@ -133,69 +107,46 @@ XF_ROOT=/srv/www/myforum composer analyse
 
 `phpstan.neon.dist` is committed and expands `%env.XF_ROOT%`; copy it to `phpstan.neon`
 (gitignored) to hard-code your own path. It scans `src/XF`, XF's `vendor`, `XF.php` and
-`utf8.php` — the last because XF `require`s it at runtime rather than autoloading it, and
-`src/Error.php` calls `utf8_substr()`.
+`utf8.php` — the last because XF `require`s it at runtime rather than autoloading it. The committed
+level is 4; keep it clean.
 
-Level 1 is clean. It found four real defects the first time it ran, which on a package whose own
-suite cannot execute is the whole argument for keeping it green.
+### Do not add the dependency checks
 
-### The dependency checks do not apply either — do not add them
+`composer-require-checker` and a dev-free PHPStan run can never be green here, and are deliberately
+absent. Every symbol they report is undeclarable rather than undeclared:
 
-`composer-require-checker` and a dev-free PHPStan run are the standard way to catch a package
-calling a class it never declared. The checker reports 33 symbols here, and **every one of them
-is undeclarable rather than undeclared**:
-
-- `XF\*` and XenForo's global helpers (`utf8_substr`) come from XenForo itself, which is licensed
-  and not on Packagist.
+- `XF\*` and XenForo's global helpers come from XenForo itself, which is not on Packagist.
 - `GuzzleHttp\*`, `League\Flysystem\*` and `Symfony\Component\Mailer\*` are supplied by the
-  **forum's** vendor directory, not the add-on's. Declaring them would install a second copy
-  alongside the forum's — see the `league/flysystem-memory` conflict in `composer.json` for what
-  a duplicate of one of these actually costs.
-- `Carbon\*` is genuinely optional and is in `suggest`.
+  **forum's** vendor directory. Declaring them would install a second copy alongside the forum's.
+- `Carbon\*` is optional and is in `suggest`.
 
-So neither check can ever be green. A whitelist file is the usual remedy for that, and it is the
-wrong one here, for a reason specific to this package: **the list would have to grow every time a
-new XenForo class is used**, which is most of what changing this code consists of. Raising PHPStan
-by two levels added `XF\Repository\UserRepository` and `League\Flysystem\Filesystem` in a single
-commit; both are supplied by the forum, both belong on the whitelist, and both would have turned
-the job red first. A check answered by extending its own exclusion list trains the reflex that a
-new symbol needs silencing rather than checking, which is the opposite of what it is for.
-
-The extension half does not rescue it either. `composer-require-checker` is the only thing that
-catches an undeclared `ext-*`, and that is a real failure mode for most packages — but this one
-runs only inside a XenForo installation, and XenForo's own requirements already guarantee
-`ext-json`, `ext-mbstring`, `ext-pcre`, `ext-intl` and a dozen more.
-
-So there is no `dependencies` workflow. The equivalent coverage comes from PHPStan reading
-XenForo's source directly, which is also the only check here that can resolve those 33 symbols
-rather than merely tolerating them.
+A whitelist would have to grow with every XenForo class the code starts using. The extensions the
+checker would catch are already guaranteed by XenForo's own requirements. PHPStan, reading
+XenForo's source, covers the same ground.
 
 ## Version compatibility is the release axis
 
-Each major line targets one XenForo version and `master` is always the current line — 5.x today.
-**The mapping stopped being one-to-one at 4.0.0**: 3.x and 4.x both target XF 2.3 and are told
-apart by their PHP floor, because PHP's security calendar moved and XenForo's did not. The README's
-table is the published statement of this, so correct that copy first.
+Each major line targets one XenForo version, and `master` is always the current line — 5.x today.
+3.x, 4.x and 5.x all target XF 2.3; 3.x is for PHP 8.1 and 8.2. The README's compatibility table is
+the published statement of this.
 
-Maintenance happens on a branch per line — `1.x`, `3.x`, `4.x`, and none for 2.x — and nothing has
-ever merged back to `master`. Because the framework subclasses XenForo internals (see below), a
-XenForo point release can break it, which is why the fix is a new tag on the matching branch and
-never a runtime version check.
+Maintenance happens on a branch per line — `1.x`, `3.x`, `4.x` — and nothing merges back to
+`master`. A XenForo point release can break the framework, since it subclasses XenForo internals;
+the fix is a new tag on the matching branch, never a runtime version check.
 
 ## Architecture
 
-Boot path: `Hampel\Testing\TestCase::createApplication()` — the framework's, not the scaffold's,
-since 5.0.0 — requires `{$rootDir}/src/XF.php`, calls `\XF::start()`, then
-`\XF::setupApp(Hampel\Testing\App::class, ['xf-addons' => $this->addonsToLoad])`. It is an ordinary
-method, and a consumer's own `CreatesApplication` trait still overrides it, because a trait method
-beats an inherited one — which is what makes the upgrade optional.
-`integration/LegacyCreatesApplicationTest.php` pins that. `Hampel\Testing\App`
-extends `XF\App` to make the container usable from PHPUnit — it forces the CLI class type with a
-`public` default, allows manual jobs, and makes `run()` throw. Its `setup()` implements **add-on
-isolation**: when `$addonsToLoad` is non-empty, it filters `addon.composer` down to those ids, so
-only those add-ons' extensions and Composer autoloading are active (a good check that an add-on
-declares its own dependencies), and installs the filtered `extension` before `parent::setup()`
-fires `app_setup` — see the ordering note above.
+Boot path: `Hampel\Testing\TestCase::createApplication()` requires `{$rootDir}/src/XF.php`, calls
+`\XF::start()`, then
+`\XF::setupApp(Hampel\Testing\App::class, ['xf-addons' => $this->addonsToLoad])`.
+It is an ordinary method; a consumer's own `CreatesApplication` trait still overrides it, because a
+trait method beats an inherited one. `integration/LegacyCreatesApplicationTest.php` pins that.
+
+`Hampel\Testing\App` extends `XF\App` to make the container usable from PHPUnit — it forces the CLI
+class type with a `public` default, allows manual jobs, and makes `run()` throw. Its `setup()`
+implements **add-on isolation**: when `$addonsToLoad` is non-empty, it filters `addon.composer` down
+to those ids and installs the filtered `extension` before `parent::setup()`.
+`TestCase::setUp()` throws if `$addonsToLoad` is set but the application was booted without it.
 
 Everything else works by **swapping container keys**. `Concerns\InteractsWithContainer::swap()` is
 the primitive; `mock()`/`spy()`/`mockFactory()`/`mockService()` wrap it with Mockery. `swap()` also
@@ -203,14 +154,10 @@ accepts `[$subcontainerKeyOrObject, $key]` to reach into an `XF\SubContainer\Abs
 
 ### A swap does not reach anything already built from the key — decache the consumer
 
-This is the single most productive bug in the package: **four** shipped instances of it, all found
-by consumers rather than by any check here, and every one of them silent. Assume any new fake has it
-until you have written the test that proves otherwise.
-
-`XF\Container::set()` clears the cache for **its own key only**. A resolved entry that was
-constructed from that key keeps the *value* it was handed, not the container, so it never sees the
-swap. The fake is genuinely installed, nothing consults it, and the test reports a plain assertion
-failure that reads like a bug in the code under test:
+`XF\Container::set()` clears the cache for **its own key only**. A resolved entry constructed from
+that key keeps the value it was handed, so it never sees the swap: the fake is installed, nothing
+consults it, and the test fails as though the code under test were wrong. Assume any new fake has
+this problem until a test shows otherwise.
 
 | swap | held by value in | fixed by |
 |---|---|---|
@@ -218,15 +165,11 @@ failure that reads like a bug in the code under test:
 | `mailer.transport`, `config['enableMailQueue']` | `mailer` | `decache('mailer')` |
 | `config['fsAdapters'][…]` | `fs` | `decache('fs')` |
 
-Two consequences worth stating separately, because each cost someone a session:
-
-- **A second fake of the same thing in one test is the same bug**, seen from the other end — the
-  first fake resolved the consumer, so the second one lands nowhere. Every fake wants a
+- **A second fake of the same thing in one test** has the same problem. Every fake wants a
   `test_a_second_fake_replaces_the_first`.
-- **The filesystem case is not merely a silent pass.** `swapFs()` returned the real `LocalFsAdapter`,
-  so the test then wrote to the forum's actual `data/` directory. A fake that quietly stops being a
-  fake is worse than no fake. `integration/FilesystemResolveOrderTest` demonstrates it and cleans up
-  after itself, because running it without the fix really does write that file.
+- **For the filesystem it is worse than a silent pass**: an un-decached `swapFs()` returns the real
+  adapter, and the test writes to the forum's `data/` directory.
+  `integration/FilesystemResolveOrderTest` covers it and cleans up after itself.
 
 To find the consumer: grep XenForo's `App.php` for the key you are swapping and see which other
 container closure reads it.
@@ -234,14 +177,14 @@ container closure reads it.
 `Hampel\Testing\TestCase` composes the `Concerns\*` traits and drives the lifecycle:
 
 - `setUp()` → `refreshApplication()` (wrapped in output-buffer save/restore, because XenForo boot
-  writes to the buffer), disable the auto job runner, then `setUpTraits()`.
+  writes to the buffer), the add-on isolation check, disable the auto job runner, then
+  `setUpTraits()`.
 - **`setUpTraits()` is an explicit allow-list**, matched by trait name via
   `UsesReflection::classUsesRecursive()`. Only EntityManager, Language, Options, Routes, Time and
-  Visitor get a `setUp*()` call, plus `UsesDatabaseTransactions`, which is opt-in per test class
-  and so is not composed into `TestCase` at all. A new concern needing per-test setup must be
-  registered there or its hook silently never runs — and note that a hook is the wrong home for
-  anything that must happen before `app_setup` fires, which is what 5.0.0 moved into
-  `App::setup()`.
+  Visitor get a `setUp*()` call, plus `UsesDatabaseTransactions`, which is opt-in per test class and
+  not composed into `TestCase`. A new concern needing per-test setup must be registered there or its
+  hook never runs. Anything that must happen before `app_setup` fires belongs in `App::setup()`, not
+  in a hook.
 - `tearDown()` closes the DB connection (unless mocked), destroys `\XF::$app` by reflection
   (`UsesReflection::destroyProperty()`), closes Mockery and resets Carbon.
 
@@ -250,107 +193,77 @@ The `src/` classes outside `Concerns/` are the fakes and subclasses that get swa
 `Mvc\Entity\Manager`, `Extension`. Two are worth knowing before touching:
 
 - **`Extension`** keeps `static` extension, inverse-extension and class-alias maps that deliberately
-  **persist across tests in a run**. Re-extending a class per test is what it exists to prevent;
-  making these instance state will reintroduce the bug 3.0.2 fixed.
+  **persist across tests in a run**, so a class is not re-extended for every test. Do not make them
+  instance state. `Extension::forAddOns()` must key class extensions by
+  `\XF::getClassForAlias($from_class)`, as XenForo 2.3's own cache builder does.
 - **`Job\Manager` and `Mail\TestTransport`** track queued jobs / sent mail in memory for the
   corresponding `assert*` helpers. Mail queueing is switched off rather than faked, so everything
-  goes through `TestTransport` — 3.0.0 removed the old queue fake. `enableMailQueue` is a
-  **config.php value, not an option**; `fakesMail()` set an option of that name from 2024 until
-  4.0.0, which did nothing at all, and `queue()` kept enqueuing `MailSend` jobs the transport never
-  saw.
+  goes through `TestTransport`. `enableMailQueue` is a **config.php value, not an option**.
 
-Naming convention across the concerns, worth preserving: `fakes*()` installs an in-memory
-implementation with assertion helpers, `mock*()` installs a Mockery double, `set*()` mutates state
-that is restored in teardown.
+Naming convention across the concerns: `fakes*()` installs an in-memory implementation with
+assertion helpers, `mock*()` installs a Mockery double, `set*()` mutates state that is restored in
+teardown.
 
-### The other recurring defect: an assertion that passes when the thing is absent
+### An assertion that passes because the thing is absent
 
-**Seven defects across six releases have been the same shape** — a check that passes because what it
-was testing was *missing*, rather than because it was *correct*. It is worth naming because this
-package invites it: almost everything here installs a fake, and a fake that silently fails to
-install produces a green test rather than a red one.
+This package's recurring defect: a check that passes because what it tests is *missing*. Almost
+everything here installs a fake, and a fake that fails to install produces a green test.
 
-| the check | what made it pass | fixed in |
-|---|---|---|
-| a test asserting on a mocked service | `mockService()` built an untyped double for a class that does not exist | 4.0.0 |
-| a whole suite | a suite that collects no tests exits 0 — `failOnEmptyTestSuite` now catches it | 4.0.0 |
-| `hasPermission()` on a built user | every built user landed on the real guest permission combination | 4.0.0 |
-| `hasAdminPermission()` on a built user | it inherited the test forum's own administrator record | 4.0.3 |
-| `assertReplyIsError($reply, 403)` | two different guards both deny with 403, so it passed whichever fired | 4.1.0 |
-| `assertDontSee($html, …)` | a template XenForo cannot find renders as an empty string, with no error | 4.2.0 |
-| `assertDontSee($html, …)`, again | a template that *fails while rendering* also returns an empty string — the templater catches everything, logs it and carries on | 4.3.0 |
+| the check | what made it pass |
+|---|---|
+| a test asserting on a mocked service | `mockService()` built an untyped double for a class that does not exist |
+| a whole suite | a suite that collects no tests exits 0 — `failOnEmptyTestSuite` catches it |
+| `hasPermission()` on a built user | every built user landed on the real guest permission combination |
+| `hasAdminPermission()` on a built user | it inherited the test forum's own administrator record |
+| `assertReplyIsError($reply, 403)` | two different guards both deny with 403 |
+| `assertDontSee($html, …)` | a template that cannot be found, or that fails, renders as an empty string |
 
-**The logging that goes with row seven is a decision, not an oversight — do not "fix" it.**
-`renderTemplate()` leaves the templater's error on its way to `$app->logException()`, so on a real
-forum a template error becomes a row in `xf_error_log`. Suppressing it by default was considered
-and declined on 2026-09-21: `fakesErrors()` already opts out, and it costs nothing to do so.
-Measured on one render of `public:account_preferences` — with the fake, zero rows written and all
-nine errors still in `getTemplateErrors()`; without it, nine rows. So the test writer chooses, and
-choosing the fake loses no information. What *was* wrong was that `DOCS.md` never said any of this,
-which is why a consumer suite wrote 71 rows a run to a shared install for months.
+Rules that follow:
 
-Two rules follow, and both are cheap:
+- **A helper that can return "nothing" must refuse instead of returning it** — as `renderTemplate()`
+  does for a missing template and `mockService()` for a missing class.
+- **Check every route to "nothing".** When something can return nothing, read what the upstream
+  class does in its `catch`.
+- **Every negative assertion needs a positive beside it**, in tests here and in DOCS examples.
+- **When adding a fake, write `test_a_second_fake_replaces_the_first` and a test that fails
+  without the fake.** PHPStan cannot catch this class of defect.
 
-- **A helper that can return "nothing" must refuse instead of returning it.** That is why
-  `renderTemplate()` throws for a template that does not exist, and why `mockService()` throws for
-  a class that does not exist. Returning the empty value is the defect, not the caller's handling
-  of it.
-- **Check every route to "nothing", not the one you thought of.** The last two rows are the same
-  helper: 4.2.0 guarded the name it could not find and shipped, and the identical empty string
-  coming out of a template that *failed* went unguarded for a release. When something can return
-  nothing, enumerate the ways — `grep` the upstream class for what it does in its `catch`.
-- **Every negative assertion needs a positive beside it.** `assertDontSee()` proves nothing on its
-  own; assert that the expected text *is* there in the same render. A consumer's trial mutation-
-  tested this and found that deleting the whole rendered block was caught by the positive half
-  only. The same applies to a permission test that asserts only denial — see the two controls in
-  `DOCS.md` under `setVisitorPermissions`.
-
-**When adding a fake, write `test_a_second_fake_replaces_the_first` and a test that fails without
-the fake.** Both catch this shape, and they catch what static analysis structurally cannot: every
-defect in the table above was invisible to PHPStan, because a green-but-empty assertion is
-well-typed.
-
-**It is not a quirk of this package's fakes.** XenForo's own `xf-dev:unused-phrase-finder` reports
-a live phrase as unused, because it matches usage by a regex requiring a literal `XF::phrase(` and
-a phrase reached through `$this->phrase(...)` therefore looks like it is reached from nowhere —
-absence of evidence read as evidence of absence, in a tool whose output invites a `--delete-all`.
-Worth knowing because it moves the rule off this codebase: **a check that looks for something and
-does not find it has two explanations, and "it is not there" is only one of them.** Ask what else
-produces the same silence before believing the first.
+**`renderTemplate()` writing template errors to the real `xf_error_log` is intended** — the test
+writer opts out with `fakesErrors()`, which keeps the errors available to the test. Do not suppress
+the logging by default.
 
 ## Documentation
 
 - `README.md` — the tutorial: theory, installation, `build.json` cleanup, limitations, testing tips.
 - `DOCS.md` — the API reference, one `###` section per public helper.
+- `UPGRADING.md` — what a consumer must do, per version.
 
-Both are user-facing and published; **a new or changed helper needs its `DOCS.md` section updated
-in the same change**, and removed helpers stay listed struck-through with the removing version (see
-`### ~~isolateAddon~~`).
+All are published. **A new or changed helper needs its `DOCS.md` section updated in the same
+change**, and removed helpers stay listed struck-through with the removing version (see
+`### ~~isolateAddon~~`). **Run every example as written before committing it.**
+
+Published documents describe the package and how to use it. They do not record how a behaviour was
+found, what earlier versions did, measurements, or the reasoning behind a decision — that belongs
+in commit messages.
 
 ## CHANGELOG
 
-**Mark up identifiers in `CHANGELOG.md` with backticks** - `` `fakesMail()` ``, `` `TypeError` ``,
-`` `enableMailQueue` ``. It renders better on GitHub and Packagist, and releases are announced as
-BBCode resource-update posts on xenforo.com, converted mechanically from this file - a converter can
-only convert what the source marks up, so bare identifiers stay bare all the way to the post.
+Entries state what changed and, where something is required, what to do. No mechanism, provenance
+or reasoning.
 
-The difference is not marginal. The 3.0.4 entry was written without backticks and yields four code
-spans; 4.0.0's yields eighty.
+**Mark up identifiers with backticks** - `` `fakesMail()` ``, `` `TypeError` ``,
+`` `enableMailQueue` ``. Releases are announced as BBCode posts on xenforo.com, converted
+mechanically from this file, which can only mark up what the source marks up.
 
 ## Style
 
-Style is not a judgement call here — **`xenforo-ltd/xf-cs-fixer` decides it**, which is XenForo's
-own PHP-CS-Fixer configuration (PER-CS plus their house rules). Run it before committing:
+**`xenforo-ltd/xf-cs-fixer` decides style** — XenForo's own PHP-CS-Fixer configuration (PER-CS plus
+their house rules). Run it before committing:
 
 ```bash
 composer format          # apply
 composer format:check    # report, changing nothing
 ```
 
-That means tabs, Allman braces, and `<?php` on its own line with `namespace` below it. The whole
-tree was converted in 4.0.0, including the `tests/` scaffold — the code previously used the
-one-line `<?php namespace Foo;` form, which is what XenForo itself used before 2.3.
-
-Do not hand-tune formatting or add rule overrides to preserve an older idiom: the point of using
-their config is to stop making these decisions independently, and every override is one more thing
-to re-check when XenForo updates it.
+That means tabs, Allman braces, and `<?php` on its own line with `namespace` below it. Do not
+hand-tune formatting or add rule overrides.
