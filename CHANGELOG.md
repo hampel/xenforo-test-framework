@@ -1,6 +1,6 @@
 # Changelog
 
-## 5.3.0 (unreleased)
+## 5.3.0 (2026-09-22)
 
 * new `runJobToCompletion()` runs a job until it completes and returns its final `JobResult`. Each
   pass is a new instance built from the previous pass's data, and work queued with
