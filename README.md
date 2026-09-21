@@ -316,7 +316,20 @@ boots. But your addon's own classes, like XenForo's, are loaded by XenForo's aut
 test has booted the application. In a full run an earlier test usually has, so the plain test passes; run it alone with
 `--filter` and it fails with `Class "Vendorly\Addonista\..." not found`. It is passing because of the test before it.
 
-`--order-by=random` finds these in one run. Two fixes:
+**Run each test class on its own to find them** - it is the check that works at any size:
+
+```bash
+for f in $(find tests/Unit tests/Feature -name '*Test.php' | sort); do
+    ./vendor/bin/phpunit "$f" >/dev/null 2>&1 || echo "FAILS ALONE: $f"
+done
+```
+
+It costs one boot per class. `--order-by=random` is not a substitute on a large suite, although it looks like one on a
+small suite: once any test has booted XenForo its autoloader stays registered for the rest of the process, so a random
+order only fails when a plain test happens to be drawn first. That is likely with four tests and rare with four
+hundred - a real 386-test suite with a known offender passed six random seeds out of six.
+
+Two fixes:
 
 * extend `Tests\TestCase` and pay for the boot - always correct;
 * or map your addon's namespace in your own `composer.json` and run `composer dump-autoload`, which lets Composer load
