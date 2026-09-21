@@ -1,6 +1,6 @@
 # Changelog
 
-## 5.2.0 (unreleased)
+## 5.2.0 (2026-09-22)
 
 * `dispatch()` and `callAction()` take an optional `$server` argument - request server values such
   as `REMOTE_ADDR`, `HTTP_USER_AGENT` and `HTTP_REFERER`, merged over the defaults. `REQUEST_METHOD`
