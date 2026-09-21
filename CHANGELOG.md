@@ -61,7 +61,7 @@ CHANGELOG
   be asked for; the isolated test application filed it under the spelling it was registered with,
   where nothing ever looked. The add-on's class was skipped and XenForo's ran instead, with nothing
   to say so. On the development forum where it was found that was **61 of 106 active extensions**,
-  across 18 add-ons including XenForo's own XFMG, XFRM and XFES - and the add-on that reported it
+  across 20 add-ons including XenForo's own XFMG, XFRM and XFES - and the add-on that reported it
   had a test come back clean only because the extension under test was never loaded. The
   map is now built the way XenForo 2.3 builds it, including collapsing both spellings into one
   entry so a class is not extended twice. Unaffected: a suite with `$addonsToLoad` empty, and the
@@ -115,7 +115,7 @@ CHANGELOG
   be asked for; the isolated test application filed it under the spelling it was registered with,
   where nothing ever looked. The add-on's class was skipped and XenForo's ran instead, with nothing
   to say so, and a test of the add-on's behaviour passed or failed for the wrong reason. On the
-  development forum where it was found that was **61 of 106 active extensions**, across 18 add-ons
+  development forum where it was found that was **61 of 106 active extensions**, across 20 add-ons
   including XenForo's own XFMG, XFRM and XFES. The map is now built the way XenForo 2.3 builds it,
   including collapsing both spellings into one entry so a class is not extended twice. Unaffected:
   a suite with `$addonsToLoad` empty, and the real application
@@ -436,7 +436,7 @@ Backported from 4.3.2.
   be asked for; the isolated test application filed it under the spelling it was registered with,
   where nothing ever looked. The add-on's class was skipped and XenForo's ran instead, with nothing
   to say so, and a test of the add-on's behaviour passed or failed for the wrong reason. On the
-  development forum where it was found that was **61 of 106 active extensions**, across 18 add-ons
+  development forum where it was found that was **61 of 106 active extensions**, across 20 add-ons
   including XenForo's own XFMG, XFRM and XFES. The map is now built the way XenForo 2.3 builds it,
   including collapsing both spellings into one entry so a class is not extended twice. Unaffected:
   a suite with `$addonsToLoad` empty, and the real application
