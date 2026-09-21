@@ -192,8 +192,6 @@ class AddOnIsolationTest extends TestCase
 	 * 2.3 then asks for the new one - so the map must be keyed the way 2.3's own cache builder
 	 * keys it, or the extension is silently not applied under isolation.
 	 *
-	 * Reported by the ArchiveSite add-on's first suite, 2026-09-21: a test of its Login extension
-	 * came back clean because the extension was never loaded and core's class ran instead.
 	 * Control: key on the raw from_class and this fails; end to end, the same revert makes
 	 * extendClass() return XF\Service\User\LoginService rather than the add-on's class.
 	 */

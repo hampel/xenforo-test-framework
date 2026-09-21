@@ -9,8 +9,6 @@ use XF\Mvc\Reply\Error;
  * callAction() - an action called directly, with a POST, for the half of a controller dispatch()
  * cannot reach. Written against XenForo's own admin notice controller, because its save is the
  * standard shape: assertPostOnly(), a FormAction, and a runOnce cache rebuild on save.
- *
- * Suggested by the NativeAds add-on, which had fourteen tests against a hand-written version.
  */
 class CallActionTest extends TestCase
 {

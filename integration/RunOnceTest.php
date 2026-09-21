@@ -10,7 +10,7 @@ use Hampel\Testing\Concerns\UsesDatabaseTransactions;
  * loop, so it has to drain the queue too - and \XF::$runOnce is a static nothing else clears, so
  * anything left in it would reach the next test still bound to the previous test's app.
  *
- * Reported by the NativeAds add-on, whose advert cache rebuild is queued from an entity postSave.
+ * The common case is an entity postSave() that queues a cache rebuild.
  */
 class RunOnceTest extends TestCase
 {

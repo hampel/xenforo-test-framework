@@ -101,8 +101,8 @@ class RouteDispatchTest extends TestCase
 	}
 
 	/**
-	 * Reported by the HelpSpot add-on's trial of 4.1.0: putting criteria in the route path looks
-	 * like the obvious thing to try, and the router takes the whole string as the path.
+	 * Putting criteria in the route path looks like the obvious thing to try, and the router takes
+	 * the whole string as the path.
 	 */
 	public function test_a_query_string_in_the_route_path_does_not_work()
 	{
