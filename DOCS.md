@@ -7,7 +7,7 @@ Unit testing framework for XenForo
 ### Unit Test Configuration
 
 Your add-on owns one file, `tests/TestCase.php`, and it holds two properties. README.md covers
-this at length under "9. Configuring the Framework".
+this under "9. Configuring the Framework".
 
 ```php
 protected $rootDir = '../../../..';
@@ -20,43 +20,29 @@ protected $addonsToLoad = [];
 `src/addons/AddonId` - use `'../../..'`. An absolute path works too. No trailing slash.
 
 `$addonsToLoad` lists the add-on ids to load. Name your own and nothing else on the forum is
-loaded. Leave it empty to load every installed add-on, which is XenForo's own behaviour and is
-what you want only if your add-on genuinely depends on another.
+loaded. Leave it empty to load every installed add-on.
 
-**What isolation covers.** Naming ids in `$addonsToLoad` filters three things:
+Naming ids in `$addonsToLoad` filters three things:
 
-* **Composer autoloading** - only the named add-ons' autoloaders are registered, which is a good
-  check that your own `composer.json` declares everything your code uses rather than picking a
-  package up from a neighbour
-* **class extensions** - `xf_class_extension` rows belonging to other add-ons are not applied
-* **code event listeners** - including the ones that fire while the application is starting up
+* **Composer autoloading** - only the named add-ons' autoloaders are registered
+* **class extensions** - other add-ons' class extensions are not applied
+* **code event listeners** - other add-ons' listeners do not run, including `app_setup`
 
-**That third one is new in v5**, and before it an excluded add-on's `app_setup` listener ran
-anyway: it could still register container entries and still throw during boot. If a test passed on
-v4 and fails here, it was relying on an add-on it had excluded.
+Nothing else is filtered: the forum's database, options, phrases and templates are the real ones.
 
-Nothing else is filtered. The forum's database is the real one, and so are its options, phrases and
-templates - isolation decides which code runs, not which data exists.
+The framework boots the application: `Hampel\Testing\TestCase::createApplication()` requires
+XenForo's `XF.php`, starts it, and passes `$addonsToLoad` to `XF::setupApp()`. A
+`tests/CreatesApplication.php` from an earlier version still works if you keep it; delete it and
+its `use` line to use the framework's boot.
 
-**The boot belongs to the framework.** `Hampel\Testing\TestCase::createApplication()` requires
-XenForo's `XF.php`, starts it, and hands `$addonsToLoad` to `XF::setupApp()`. There is nothing to
-copy and nothing to keep in step.
-
-Before v5 that code shipped as a second scaffold file, `tests/CreatesApplication.php`, and a file
-you copy cannot be updated by a release - which is why add-ons are still running its 2020 version,
-without the isolation they were configured for. If yours still has that file it keeps working,
-because a trait method wins over an inherited one in PHP. Delete it, and the
-`use CreatesApplication;` line beside it, to take the framework's boot instead.
-
-Override `createApplication()` if you need a boot of your own - it is an ordinary method - and pass
-the ids on, or isolation never reaches the application:
+To boot the application yourself, override `createApplication()` and pass the ids on:
 
 ```php
 return \XF::setupApp('Hampel\Testing\App', ['xf-addons' => $this->addonsToLoad]);
 ```
 
-If `$addonsToLoad` is set and the application is booted without it, `TestCase` refuses to run at
-all rather than testing quietly with every add-on on the forum active.
+If `$addonsToLoad` is set and the application is booted without it, `TestCase` throws a
+`LogicException`.
 
 ### assertBbCode
 Helper function for testing custom BBCode functions. Simply pass it some BBCode, tell it how you
@@ -101,8 +87,7 @@ class BbCodeTest extends TestCase
 Run a test as a given user, so code that reads `\XF::visitor()` or checks permissions behaves as
 it would for that user. The visitor is restored automatically after each test.
 
-Users are built in memory and are never written to the database, so these work without
-`UsesDatabaseTransactions` and without a `tests/mock` fixture.
+Users are built in memory and are never written to the database.
 
 ##### Parameters:
 
@@ -112,13 +97,10 @@ Users are built in memory and are never written to the database, so these work w
 * `actingAsGuest($permissions = [], $username = null)` - act as a guest, `user_id` 0
 
 `$permissions` is `group => [permission => value]`, matching the way XenForo caches global
-permissions. Anything not granted is denied, exactly as in production.
+permissions. Anything not granted is denied.
 
-**Check that your grant is load-bearing.** A test which only asserts that content is *denied* passes
-for the wrong reason, because a visitor with no permissions at all is also denied - so it would pass
-with the permission code deleted entirely. Two cheap controls settle it: remove the
-`setVisitorContentPermissions()` call and confirm the positive tests fail, and delete each guard from
-the code under test in turn and confirm exactly the one test that names it fails.
+**Pair a denial test with a positive one.** A visitor with no permissions is denied everything, so
+a test that only asserts denial passes even with the permission check removed.
 
 ##### Example:
 
@@ -162,24 +144,16 @@ content permissions.
 * `setVisitorContentPermissions($user, $contentType, $contentId, $permissions)` - for node
   permissions and the like
 
-**Content permissions are not grouped.** XenForo stores them flat, as `permission => value`, with
-no permission group above them - unlike global permissions. Passing a grouped array silently
-grants nothing.
+**Content permissions are not grouped.** They are `permission => value`, with no permission group
+above them. Passing a grouped array grants nothing.
 
-Every user built by the framework gets its own permission combination id, so granting a permission
-to one does not grant it to another, and a permission nothing has granted is denied rather than
-read from your development forum - see [buildVisitor](#buildvisitor).
+Each user built by the framework has its own permission combination, so granting a permission to one
+does not grant it to another - see [buildVisitor](#buildvisitor).
 
-XenForo caches the `PermissionSet` relation on the user entity, so **grant permissions before the
-first permission check on that user**, or the check populates the cache from an empty combination
-and the grant never takes effect.
+**Grant permissions before the first permission check on that user.** XenForo caches the
+`PermissionSet` relation, so a grant made after a check has no effect.
 
-**Admin permissions are a different mechanism and are not covered.** `User::hasAdminPermission()`
-returns false unless the user has both `is_admin` and an `Admin` relation, and then defers to the
-`Admin` entity's own permission cache. A visitor built in memory has no `Admin` relation, so
-`actingAsMember(['is_admin' => true], [...])` still returns false for every admin permission. Test
-code guarded by `hasAdminPermission()` by mocking the user, or restructure it so the permission
-check sits outside the code you want to test.
+Admin permissions are granted separately, with `setVisitorAdminPermissions()`.
 
 ##### Example:
 
@@ -198,9 +172,6 @@ $this->assertFalse($user->hasNodePermission(8, 'view'));
 Build an `XF\Entity\User` in memory without writing it to the database, for cases where you want
 the entity but not to act as it.
 
-XenForo will only construct a user without a database row via its guest user, so members are built
-from that with the columns overridden.
-
 ##### Parameters:
 
 * `values` - optional - column => value overrides
@@ -212,46 +183,23 @@ from that with the columns overridden.
 $user = $this->buildVisitor(['user_id' => 99, 'username' => 'Built']);
 ```
 
-**Each built user gets its own permission combination id**, counting up from 1000000 - far above
-anything a real forum has in `xf_permission_combination`. Two things follow, and both are the
-reason it works that way:
+**Each built user gets its own permission combination id**, counting up from 1000000. Permissions
+granted to one built user do not apply to another, and a permission the test never granted is
+denied. Pass `permission_combination_id` yourself to use an existing one:
+`['permission_combination_id' => 1]` reads the forum's guest permissions.
 
-* permissions granted to one built user do not apply to another, so a test can give two users
-  different permissions and assert that they see different things;
-* a permission the test never granted is **denied**, rather than inherited from whatever your
-  development forum happens to grant guests. Every built user previously landed on combination id
-  1 - the real guest combination - so `hasPermission('general', 'view')` returned true on most
-  forums without the test granting anything, and the same test could fail on someone else's forum.
+**A built user has no `Admin` record**, so `hasAdminPermission()` is false. Grant admin permissions
+with `setVisitorAdminPermissions()`, or pass a user you loaded yourself to `actingAs()`.
 
-Pass `permission_combination_id` yourself to opt out: `['permission_combination_id' => 1]` reads
-the forum's real guest permissions.
-
-**A built user has no `Admin` record**, so `hasAdminPermission()` is always false for one. XenForo's
-guest user pre-hydrates `Option`, `Profile` and `Privacy` but not `Admin`, so that relation used to
-lazy-load by `user_id` - and since `actingAsMember()` defaults to user 1, a built user with
-`is_admin` set inherited whatever administrator record your own forum has at that id. An
-`assertAdminPermission()` check then passed without the test granting anything, and the same test
-could fail on someone else's forum.
-
-If you need a real administrator, either pass one to `actingAs()` that you loaded yourself, or grant
-the permissions with `setVisitorAdminPermissions()` below.
-
-One piece of XenForo behaviour is deliberately preserved: `User::getPermissionCombinationId()`
-ignores the stored id for any user whose `user_state` is not `valid`, returning the guest
-combination instead. A user built as `moderated` therefore shares permissions with guests, exactly
-as it would in production - so granting permissions to one has no effect. `actingAsMember()` sets
-`user_state` to `valid`, so the usual path is unaffected.
+A user whose `user_state` is not `valid` uses the guest permission combination, as in XenForo, so
+permissions granted to it have no effect. `actingAsMember()` sets `user_state` to `valid`.
 
 ### setVisitorAdminPermissions
-Grant admin permissions to a built user, by giving it the administrator record `buildVisitor()`
-deliberately withholds.
-
-XenForo reads admin permissions from the user's `Admin` relation, not from the permission
-combination `setVisitorPermissions()` writes, so this is a separate helper.
+Grant admin permissions to a built user, by giving it an administrator record.
 
 ##### Parameters:
 
-* `user` - must already have `is_admin` set, because `User::hasAdminPermission()` checks that first
+* `user` - must already have `is_admin` set
 * `permissions` - permission id => bool, as XenForo caches them
 * `values` - optional - extra columns for the administrator record
 
@@ -268,10 +216,8 @@ regardless of what is granted here.
 ### dispatch
 Dispatch a route the way XenForo does, and return the reply its controller produced.
 
-**This is the only way to cover an action's own access checks.** A controller built directly and
-called with `$controller->actionIndex(...)` never runs `preDispatch()`, and XenForo's own
-`xf-make:controller` stub puts setup and access checks in `preDispatchController()` - so an action
-invoked that way is tested with its authorisation skipped.
+The controller's `preDispatch()` runs, so its access checks are tested - which a controller called
+directly does not do.
 
 ##### Parameters:
 
@@ -291,27 +237,19 @@ $reply = $this->dispatch('options', 'admin');
 $this->assertReplyTemplate($reply, 'option_group_list');
 ```
 
-Reroutes are resolved for you, so a route that reroutes returns the reply at the end of the chain
-rather than the `Reroute` that got you there.
+Reroutes are followed, so the reply is the one at the end of the chain.
 
 An api route returns an `ApiResult` rather than a view - see `assertReplyIsApiResult()` below.
 
-**An admin route needs a visitor with `is_admin` set**, and `dispatch()` throws if there is not one.
-XenForo's admin controllers assert it and reroute to the login form, which arrives as an ordinary
-view with a 200 response - so without that check a test would assert against the login page and
-never know.
+**An admin route needs a visitor with `is_admin` set**, and `dispatch()` throws if there is not
+one.
 
-**It does not render the page.** The reply carries the template name, the view class and the
-parameters the controller passed, which is what most assertions want and is far cheaper than
-rendering. To assert on the HTML itself - that a template modification applied, or that a phrase
-resolved rather than showing a raw key - pass the reply to `renderReply()` below. That renders the
-template, not the whole page: navigation, header and footer come from XenForo's own app classes
-rather than from the template - though `pageParam()` reads back the title and the other values the
-template set for it.
+**It does not render the page.** The reply carries the template name, view class and parameters. To
+assert on HTML, pass the reply to `renderReply()` below, which renders the template but not the page
+wrapper around it.
 
-**A public route needs `general.view`**, and a built visitor has no permissions at all — so a public
-dispatch refuses with a 403 until the test grants it. XenForo asserts it in `preDispatchController()`
-for every public controller, which is the same guard a guest without view permission meets:
+**A public route needs `general.view`**, which a built visitor does not have, so a public dispatch
+returns a 403 until the test grants it:
 
 ```php
 $member = $this->actingAsMember();
@@ -320,31 +258,22 @@ $this->setVisitorPermissions($member, ['general' => ['view' => true]]);
 $reply = $this->dispatch('members');
 ```
 
-Admin and api routes do not go through it; they have their own guards.
-
-**Criteria go in `input`, not in the route path.** The router takes the whole string as the path, so
-`dispatch('helpspot/user?user_id=1')` is a 404 rather than a lookup:
+**Parameters go in `input`, not in the route path.** `dispatch('my-addon/user?user_id=1')` is a
+404:
 
 ```php
-$reply = $this->dispatch('helpspot/user', 'api', ['user_id' => 1]);
+$reply = $this->dispatch('my-addon/user', 'api', ['user_id' => 1]);
 ```
 
-**`POST` routes dispatch, but only as far as the refusal.** XenForo asserts a valid CSRF token in
-`preDispatch()` for anything that is not a `GET`, and a test has no cookie to build one from, so an
-action opening with `assertPostOnly()` returns a 405 - `This action is available via POST only.`
-The dispatch itself is not refused; the happy path is unreachable through `dispatch()`. Use
-`callAction()`, below, for the action itself - and keep a `dispatch()` beside it for the guard.
+**`dispatch()` sends a `GET` only.** XenForo requires a CSRF token for anything else, so an action
+opening with `assertPostOnly()` returns a 405. Use `callAction()` to test the action itself.
 
 ### callAction
-Call one controller action directly, with a `POST` request, and get back the reply it produced.
+Call a controller action directly with a `POST` request, and return the reply it produced. Use it
+to test saving, toggling and deleting.
 
-This is the half of a controller `dispatch()` cannot reach: saving, toggling, deleting. It builds
-the controller the way XenForo's dispatcher does and calls the action **without `preDispatch()`** -
-so without the CSRF check that makes a `POST` impossible to dispatch, and also without
-`preDispatchController()`, where most controllers check permissions.
-
-**So it proves what an action does once let through, and never that the guard lets through the
-right people.** Pair the two: `dispatch()` for the refusal, `callAction()` for the behaviour.
+It skips `preDispatch()` - so the CSRF check and the controller's permission check do not run. Use
+`dispatch()` to test those:
 
 ```php
 // the guard - dispatch() runs preDispatch()
@@ -364,18 +293,15 @@ $this->assertDatabaseHas('xf_notice', ['title' => 'Maintenance']);
 
 ##### Parameters:
 
-* `controller` - `'XF:Notice'` or a full class name, resolved the way the route type would
+* `controller` - `'XF:Notice'` or a full class name
 * `action` - as it appears in a route: `'save'`, `'toggle'`, `'delete'`
 * `type` - optional - `'public'` (default), `'admin'` or `'api'`
 * `input` - optional - the request input, as `$_POST` would carry it
 * `params` - optional - route parameters, eg `['notice_id' => 3]`
-* `method` - optional - `'POST'` (default); `'GET'` is there to exercise `assertPostOnly()`
+* `method` - optional - `'POST'` (default) or `'GET'`
 
-**A validation failure comes back as an `Error` reply, not as an exception.** A standard admin save
-goes through `FormAction`, which throws `XF\PrintableException` for an entity with errors, and
-XenForo's dispatcher is what turns that into a reply. `callAction()` does the same - and
-`replyErrors()` then gives you the errors **keyed by field**, so a test can say which field was
-refused rather than only that something was:
+**A validation failure comes back as an `Error` reply**, and `replyErrors()` returns its errors
+keyed by field:
 
 ```php
 $reply = $this->callAction('XF:Notice', 'save', 'admin', ['title' => '']);
@@ -384,26 +310,20 @@ $this->assertReplyIsError($reply);
 $this->assertArrayHasKey('title', $this->replyErrors($reply));
 ```
 
-The rest of what the dispatcher does happens here too, and each is something a hand-written
-version tends to miss: a reply thrown as `XF\Mvc\Reply\Exception` - by `assertPostOnly()`,
-`assertRecordExists()`, the permission asserts - comes back as that reply; the request is swapped
-into the container, so `$app->request()` and the action's `$this->request` agree; a `Reroute` is
-followed; and work queued with `\XF::runOnce()`, such as a cache rebuild in an entity's
-`postSave()`, has run by the time you get the reply.
+A reply thrown as `XF\Mvc\Reply\Exception` - by `assertPostOnly()`, `assertRecordExists()` or a
+permission check - comes back as that reply. The request is placed in the container as well as
+passed to the controller. A `Reroute` is followed, and the action it leads to does run its
+`preDispatch()`. Work queued with `\XF::runOnce()` has run by the time the reply is returned.
 
-**A rerouted-to action is guarded.** Only the action you name skips `preDispatch()`; a reroute goes
-through the dispatcher, so its target's permission checks apply.
-
-The toggle and delete plugins read the same request, so they work too. **A toggle's input is keyed
-by the column it toggles** - `active` unless the controller says otherwise - so turning a notice off
-is `['active' => [$id => false]]` to the `toggle` action. Send the wrong key and the plugin finds
-nothing to change, saves nothing, and still returns its "your changes have been saved" message, so
-assert the row rather than the reply.
+**A toggle's input is keyed by the column it toggles** - `active` unless the controller says
+otherwise - so turning a notice off is `['active' => [$id => false]]` to the `toggle` action. With
+the wrong key nothing is saved and the success message is still returned, so assert the row rather
+than the reply.
 
 **It writes.** Use `UsesDatabaseTransactions` on the test class, and `fakesRegistry()` where the
-action rebuilds a cache - a registry write outlives the rollback if your forum caches it.
+action rebuilds a cache.
 
-A missing controller or action throws `LogicException` rather than returning nothing.
+A missing controller or action throws a `LogicException`.
 
 ### assertReplyIsView / assertReplyTemplate / assertReplyViewClass
 Assert that a reply is a view, optionally rendering a given template or using a given view class.
@@ -423,8 +343,8 @@ $this->assertReplyTemplate($reply, 'option_group_list');
 $this->assertReplyViewClass($reply, 'XF:Option\GroupList');
 ```
 
-When a dispatch does not produce the view you expected, the failure message says what it did
-produce - including an error reply's own text, which is usually the answer.
+When the reply is not the view expected, the failure message describes what it was, including an
+error reply's text.
 
 ### assertReplyParam / replyParam
 Assert that a view reply passed a given parameter to its template, and read it.
@@ -461,18 +381,16 @@ $this->assertSame('Admin', $this->replyApiResult($reply)->me->username);
 ```
 
 Rendering is **not recursive**: a nested entity comes back as another result object needing its own
-`render()` rather than as data.
+`render()`.
 
-`XF::apiKey()` never returns null - XenForo builds a fallback key which is not a super user - so a
-dispatch with no key set up is the un-bypassed shape rather than an error. A route whose scope that
-key does not carry returns an error with a 403, which is how a test shows an api scope is enforced.
+Without `actingAsApiKey()`, an api dispatch uses XenForo's fallback key, which is not a super user.
+A route needing a scope that key does not carry returns an error with a 403.
 
 ### assertReplyIsRedirect / assertReplyIsError / assertReplyIsMessage
 Assert that a reply is a redirect, an error or a plain message.
 
-A route that does not exist arrives as an error with a 404, and a route whose permission check
-refuses the visitor as an error with a 403 - so `assertReplyIsError()` is how a test shows that a
-guard actually guards.
+A route that does not exist returns an error with a 404, and a route whose permission check refuses
+the visitor returns an error with a 403.
 
 ##### Parameters:
 
@@ -495,19 +413,13 @@ $this->assertReplyIsError($this->dispatch('options', 'admin'), 403);
 $this->assertReplyIsRedirect($this->dispatch('help/terms'), null, 'permanent');
 ```
 
-**Assert the error text whenever more than one guard denies with the same code.** Two different
-refusals are both a 403, so a test asserting only the code passes whichever fired - and keeps
-passing when the guard it meant to cover is deleted. `replyErrors($reply)` returns the messages as
-plain text if you want to assert on them yourself.
+**Assert the error text when more than one guard can refuse with the same code.** A test asserting
+only a 403 passes whichever guard refused. `replyErrors($reply)` returns the messages as plain text.
 
-**A redirect carries no http status of its own.** `getResponseCode()` answers **200** on a redirect
-reply whether it is permanent or not, because the code is chosen much later, by the renderer, which
-maps permanent to a **301** and temporary to a **303**. So a test asserting the code cannot tell the
-two apart, and `type` is what to assert. Note 303 rather than the 302 most people expect.
+**Assert a redirect's `type`, not its code.** `getResponseCode()` is `200` for every redirect reply;
+the renderer later sends a 301 for permanent and a 303 for temporary.
 
-**The `message` is for a test that dispatches more than one route.** Without it a failure says what
-the reply was but not which route produced it, which in a loop over a list of routes is the part you
-need. It is added to the description rather than replacing it.
+Pass a `message` to identify the route in a test that dispatches several:
 
 ```php
 foreach ($routes AS $route)
@@ -518,9 +430,6 @@ foreach ($routes AS $route)
 
 ### actingAsApiKey
 Run api dispatches as a given api key.
-
-`XF::apiKey()` never returns null - XenForo builds a fallback key which is not a super user - so
-without this an api dispatch is the un-bypassed shape.
 
 ##### Parameters:
 
@@ -534,38 +443,29 @@ $this->actingAsApiKey();                              // a super-user key with a
 $this->actingAsApiKey(['is_super_user' => false]);    // one that is not
 ```
 
-Two fields decide what the guards make of a key, and neither is guessable: `is_super_user` drives
-the `key_type` getter that `assertSuperUserKey()` reads, and `allow_all_scopes` short-circuits
-`hasScope()` ahead of the `scopes` array.
+`is_super_user` sets the key type that `assertSuperUserKey()` checks, and `allow_all_scopes`
+grants every scope.
 
-**`\XF::$apiKey` is a static that nothing else resets**, so a key set by hand leaks into every
-later test in the run. This restores it in teardown, which is the reason to prefer it over calling
-`\XF::setApiKey()` yourself.
+`\XF::$apiKey` is restored after each test.
 
-**A super-user key does not bypass permissions.** `XF::isApiBypassingPermissions()` also needs
-`api_bypass_permissions` on the request, which `dispatch()` cannot send - so an endpoint relying on
-the bypass is not reachable this way, and the visitor's own permissions still apply.
+**A super-user key does not bypass permissions.** That also needs `api_bypass_permissions` on the
+request, which `dispatch()` cannot send, so the visitor's own permissions still apply.
 
 ### renderTemplate / renderReply
-Render a template to HTML, with no web server.
+Render a template to HTML, with no web server - to check that a template modification applied, or
+that a phrase resolved rather than rendering as a raw key.
 
-This covers the two checks a reply cannot: that a **template modification** actually applied, and
-that a **phrase resolved** rather than rendering as a raw key.
-
-**These assertions read what the forum has, not what your working copy has.** An edit to
-`_output/` is invisible until `xf-dev:import`, and a template modification only exists once the
-add-on is installed — XenForo applies modifications when it compiles the template. That is the
-opposite of what a test author expects, so check it first when a render surprises you.
+**What renders is what the forum has installed, not your working copy.** An edit to `_output/` is
+not seen until `xf-dev:import`, and a template modification must be installed.
 
 ##### Parameters:
 
-* `template` - `type:title`, eg `public:thread_view`. XenForo stores three types: `public`, `admin`
-  and `email`
+* `template` - `type:title`, eg `public:thread_view`. The types are `public`, `admin` and `email`
 * `params` - optional - the parameters the template reads
 
 `renderReply($reply)` takes a reply from `dispatch()` instead, and renders the template it named
-with the parameters it passed. The reply carries a bare title, so the type comes from the app class
-type `dispatch()` set — call it from the same test that dispatched.
+with the parameters it passed. Call it in the same test that dispatched, since the template type
+comes from the dispatch.
 
 ##### Example:
 
@@ -578,41 +478,24 @@ $reply = $this->dispatch('options', 'admin');
 $this->assertSee($this->renderReply($reply), 'Option groups');
 ```
 
-**The type is not guessed for you, and a name XenForo cannot find is refused.** A missing title, the
-wrong type, or a type that does not exist all render as an **empty string with no error** — measured
-on 2.3.12 — so an `assertDontSee()` against one would pass while testing nothing. Both cases throw a
-`LogicException` instead.
+**A template that does not exist throws a `LogicException`**, rather than rendering as an empty
+string.
 
-**A template modification has to be installed in the forum the tests run against**, not merely
-present in your working copy: XenForo applies modifications when it compiles the template, so what
-renders here is what the forum has.
+**A template that fails and renders nothing throws too**, naming the error - a PHP error, a missing
+macro or included template, or an exception.
 
-**A template that fails and renders nothing is refused too.** XenForo's templater catches everything
-a template does wrong — a PHP error, a macro or an included template that does not exist, an
-exception part way through — logs it, and carries on. Where that leaves an empty string the failure
-arrives as output rather than as a failure, and `assertDontSee()` passes on it, so `renderTemplate()`
-throws instead and names what went wrong.
+**A template that raises an error but still renders markup is returned as normal.** Use
+`assertNoTemplateErrors()` to fail on those as well.
 
-**A render that errored and still produced markup comes back to you.** That is much the commoner
-case — a template missing a parameter it reads usually renders most of itself anyway, measured at
-103 of 400 core templates rendered bare, of which 101 still produced markup — and a test asserting
-on markup that is really there passes for a good enough reason. `assertNoTemplateErrors()` below is
-the opt-in if you want the stricter guarantee.
+A template that throws is detected in either debug mode: with `$config['debug'] = true` XenForo
+renders the exception as markup, which is recognised, and without it the render is empty.
 
-One part of this only works in debug mode. A template that *throws* renders as the exception's markup
-with `$config['debug'] = true`, which is detected, and as an empty string without it, which the empty
-check catches anyway. Another reason to run tests against a development install.
-
-**This renders the template, not the page.** There is no navigation, header or footer around it —
-those come from XenForo's `Pub` and `Admin` app classes rather than from the template. Assertions
-about a page's furniture still want a browser, or a request against a real forum. The values the
-template itself set are readable, though — see `pageParam()` below.
+**This renders the template, not the page** - no navigation, header or footer. `pageParam()` reads
+the values the template set for the page, such as its title.
 
 ### renderMacro
-Render one macro out of a template, with the arguments a caller would pass it.
-
-Worth reaching for when the markup you care about is a macro your add-on adds to a template, or when
-rendering the whole template would need parameters the test has no reason to build.
+Render one macro from a template, with the arguments a caller would pass it - for a macro your
+add-on adds, or where rendering the whole template would need parameters the test does not have.
 
 ##### Parameters:
 
@@ -628,16 +511,12 @@ $html = $this->renderMacro('public:thread_list_macros', 'item', ['thread' => $th
 $this->assertSee($html, $thread->title);
 ```
 
-**A macro that does not exist renders as an empty string**, the same way a missing template does, so
-this refuses one rather than returning it. There is no empty-render check beyond that: a macro that
-renders nothing for the arguments it was given is ordinary.
+A macro that does not exist throws a `LogicException`. A macro that renders nothing for the
+arguments given is returned as an empty string.
 
 ### pageParam
-A page parameter the rendered template set, such as the title from `<xf:title>`.
-
-These never appear in the rendered HTML, because the markup around them belongs to the page wrapper
-rather than to the template — so reading one back is the only way to assert on it. Call it after a
-render.
+A page parameter the rendered template set, such as the title from `<xf:title>`. These do not
+appear in the rendered HTML. Call it after a render.
 
 ##### Parameters:
 
@@ -658,18 +537,11 @@ $html = $this->renderTemplate('public:thread_view', ['thread' => $thread]);
 $this->assertSame('Welcome to the board', $this->pageParam('pageTitle'));
 ```
 
-Returns `null` if the render never set it. The values accumulate on the templater as each template
-sets them, so read the one you want before rendering something else.
+Returns `null` if the render did not set it. Each render can overwrite the values, so read the one
+you want before rendering something else.
 
 ### assertNoTemplateErrors
 Assert that no template this test rendered raised an error.
-
-The strict form of the check `renderTemplate()` makes for you, and opt-in because most renders that
-raise an error still produce the markup a test is asserting on.
-
-Reach for it when you want the render to be *right* rather than merely to contain what you asserted
-— which, for a template of your own rendered with the parameters its controller passes, is a
-reasonable thing to want.
 
 ##### Example:
 
@@ -680,31 +552,13 @@ $this->assertSee($html, 'Reports');
 $this->assertNoTemplateErrors();
 ```
 
-It covers every render the test has made, not only the last one, because the templater accumulates
-them for the life of the application and each test gets its own.
+It covers every render in the test, not only the last.
 
-**A template error is also written to the forum's real `xf_error_log`, and that surprises people.**
-XenForo's error handler turns the templater's `E_USER_WARNING` into an `ErrorException`, the
-templater catches it and calls `$app->logException()`, and on a development forum that logger is
-the real one. Rendering a core template with parameters it does not have is enough —
-`public:account_preferences` with no visitor, say. Measured at **71 rows per run** from a single
-consumer test, against an install several people share.
+**A template error is also written to the forum's `xf_error_log`.** To prevent that, either:
 
-Two things prevent it, and a suite usually wants one of them:
-
-* `fakesErrors()` before the render, which swaps the logger for an in-memory one and gives you
-  `assertExceptionLogged()` into the bargain;
-* `UsesDatabaseTransactions` on the test class, which rolls the insert back with everything else.
-  This package's own template tests are clean only for that reason, which is luck rather than
-  design — worth knowing before you conclude your own suite is clean.
-
-**Whether a template error reaches the real log is yours to decide, and `renderTemplate()`
-deliberately does not decide it for you.** Some suites want the rows; most do not. The reason that
-choice is cheap is that `fakesErrors()` costs nothing in visibility — measured on one render of
-`public:account_preferences`, the fake still returns the same 6,652 characters of markup and
-`getTemplateErrors()` still carries all nine errors, while `xf_error_log` gains **zero** rows.
-Without it the same render writes **nine**. The fake hides the errors from the forum, not from
-your test.
+* call `fakesErrors()` before the render - the errors are still available to
+  `assertNoTemplateErrors()`, and `assertExceptionLogged()` can assert on them; or
+* use `UsesDatabaseTransactions` on the test class, which rolls the rows back.
 
 ### assertSee / assertDontSee / assertSeeInOrder
 Assert on rendered output.
@@ -723,34 +577,25 @@ $this->assertSeeInOrder($html, ['First', 'Second']);
 $this->assertSee($html, '<div class="block">', false);
 ```
 
-**The expected value is escaped by default**, because a template escapes what it outputs —
-`XF::escapeString()` is `htmlspecialchars($value, ENT_QUOTES, 'utf-8')`, and this matches it. Pass
-`false` to match raw markup instead.
+**The expected value is escaped by default**, matching `XF::escapeString()`. Pass `false` to match
+raw markup.
 
-**`assertDontSee()` is the one to write carefully.** It passes against an empty string, so it is
-only meaningful once something has rendered — which is why a template that cannot be found throws
-rather than returning nothing.
-
-**To check a phrase resolved, name the key — never the prefix.** A phrase XenForo cannot find
-renders as its own key, so the absence of a specific key is meaningful. The absence of your add-on's
-whole prefix is not: field names and CSS classes carry it too. Measured on a real add-on, its
-preference field renders as `name="option[whatsnewdigest_email]"`, so `assertDontSee($html,
-'whatsnewdigest_')` fails against perfectly correct output.
+**To check a phrase resolved, assert its key is absent - not your add-on's prefix.** A phrase
+XenForo cannot find renders as its key; your prefix also appears legitimately in field names and CSS
+classes.
 
 ```php
 // a phrase resolved: its text is present, and its key is not
 $this->assertSee($html, 'Email me a digest');
-$this->assertDontSee($html, 'whatsnewdigest_preference_label');
+$this->assertDontSee($html, 'myaddon_preference_label');
 ```
 
-**Always pair the negative with the positive.** If the block stops rendering altogether, the
-absence assertion still passes — the positive is the half that catches it.
+**Pair every `assertDontSee()` with an `assertSee()`.** An absence assertion alone still passes if
+nothing rendered.
 
 ### assertTemplateModificationApplied
-Assert that a template modification is actually matching something.
-
-More direct than hunting for its effect in the HTML, and it works for a modification whose
-insertion has no distinctive markup to search for.
+Assert that a template modification has applied, using its apply count - useful where its insertion
+has no distinctive markup to search for.
 
 ##### Parameters:
 
@@ -759,24 +604,17 @@ insertion has no distinctive markup to search for.
 ##### Example:
 
 ```php
-$this->assertTemplateModificationApplied('whatsnewdigest_helper_account');
+$this->assertTemplateModificationApplied('myaddon_helper_account');
 ```
 
-**XenForo logs a modification that matches nothing as `ok`.** The status only records that the
-modification ran, not that its `find` still matches — so one silently broken by a XenForo upgrade
-stays `ok` with an apply count of zero. The count is what answers the question, and this reads the
-count.
+A modification whose `find` no longer matches still has status `ok`, with an apply count of zero.
 
-**A modification that inserts an `<xf:include>` does not put the included template's name in the
-output** — the include renders the included markup instead. So asserting on the included template's
-name finds nothing, however correct the modification is. Assert on the markup it produces, or use
-this.
+A modification inserting an `<xf:include>` does not put the included template's name in the output,
+so assert on the markup it produces instead.
 
 ### assertSeeText / assertDontSeeText / textOf
-Assert on the text of rendered output, ignoring the markup.
-
-Tags are stripped and entities decoded first, so this matches what a reader sees rather than what
-the template emitted — and text split across a tag boundary still matches.
+Assert on the text of rendered output, ignoring the markup. Tags are stripped and entities decoded
+first, so text split across a tag boundary still matches.
 
 ##### Parameters:
 
@@ -892,9 +730,8 @@ class MockTest extends TestCase
 ### spy
 Record what the container's object was asked to do, and assert it afterwards.
 
-`mock()` declares up front what must happen and fails if it does not. `spy()` declares nothing,
-records everything, and lets the assertions come after the code under test has run — which suits
-code you want to observe rather than constrain.
+`mock()` declares up front what must happen. `spy()` records every call, and the assertions come
+after the code under test has run.
 
 ##### Parameters:
 
@@ -920,9 +757,8 @@ asserted as:
 $request->shouldHaveReceived('getIp')->with(false);
 ```
 
-**A spy answers `null` for every method it was not explicitly told about**, which is the cost of not
-declaring the call up front. Where the code under test uses what it gets back, either give the spy a
-closure:
+**A spy returns `null` from every method it was not told about.** Where the code under test uses
+the return value, give the spy a closure:
 
 ```php
 $request = $this->spy('request', \XF\Http\Request::class, function ($mock)
@@ -933,8 +769,7 @@ $request = $this->spy('request', \XF\Http\Request::class, function ($mock)
 
 or reach for `mock()` instead.
 
-It is a `swap()` underneath, so the caveat in that section applies here too: a spy installed after
-something has already been built from the key it replaces does not reach it.
+Like `swap()`, a spy does not reach anything already built from the key it replaces.
 
 ### mockFactory
 Mock a factory builder in the container.
@@ -977,19 +812,13 @@ Mock a service factory builder in the container.
 * `shortName` - the short name of the service class to be mocked
 * `mock` - optional - the mock closure to define expectations on
 
-Three things about this helper are not obvious from its name, and all three have cost someone time:
-
-* **It replaces the container's entire `service` factory.** It does not mock only the service you
-  name - every `$app->service(...)` call for the rest of the test returns the same mock, whatever
-  short name is asked for. If the subject of your test is itself a service, resolve it *before*
-  calling `mockService()`, or you will be testing the mock.
-* **The short name must resolve to a class that exists**, and since v4.0 it throws a `LogicException`
-  if it does not. Before that, Mockery built an untyped double of a name that resolved to nothing,
-  every expectation on it was met, and the test passed while asserting against nothing at all.
-  Remember XenForo 2.3 renamed service classes with a `Service` suffix: `MyAddon:MessageEvent` wants
-  a `Service\MessageEvent`, and the class is most likely called `MessageEventService`.
-* **The mock is typed as the class XenForo would really have built** - resolved through the class
-  alias map and the extension chain, so an addon's own extension of the service is honoured.
+* **It replaces the container's entire `service` factory.** Every `$app->service(...)` call for the
+  rest of the test returns the same mock, whatever short name is asked for. If the subject of your
+  test is itself a service, resolve it *before* calling `mockService()`.
+* **The short name must resolve to a class that exists**, or it throws a `LogicException`. XenForo
+  2.3 service classes carry a `Service` suffix: `MyAddon:MessageEvent` resolves to
+  `MessageEventService`.
+* **The mock is typed as the class XenForo would build**, including an add-on's extension of it.
 
 #### Example:
 
@@ -1016,17 +845,12 @@ class ServiceTest extends TestCase
 ```
 
 ### UsesDatabaseTransactions
-Wrap each test in a database transaction and roll it back afterwards, so tests can exercise real
-entity saves, finders and repositories without leaving anything behind.
+Wrap each test in a database transaction and roll it back afterwards, so tests can save entities
+and run real queries without leaving anything behind. Add the trait to each test class that needs it.
 
-Unlike every other helper here, this one is a trait you opt into per test class - it needs a real
-database connection and it changes how your test behaves, so it is not switched on for you.
+Code under test may open and commit its own transactions; they nest inside the wrapper.
 
-Nested transactions are safe: XenForo's database adapter issues a `SAVEPOINT` rather than a second
-`BEGIN`, so code under test may run its own `beginTransaction()` and `commit()` - as entity saves
-do - without escaping the wrapper.
-
-Two things it cannot roll back, both MySQL behaviour rather than XenForo's:
+Two things it cannot roll back:
 
 * DDL implicitly commits, so anything altering the schema - a `Setup.php` step, for instance -
   escapes the transaction and must clean up after itself.
@@ -1102,16 +926,8 @@ Mock the database adapter.
 
 * `mock` - optional - the mock closure to define expectations on
 
-**Call it before `mockRepository()`, `mockFinder()` or `mockEntity()`.** Mocking the database
-rebuilds the entity manager so that it holds the mock, and the rebuilt manager does not carry over
-the repository, finder and entity mocks registered on the previous one. They are discarded without
-a word, and the real repository runs.
-
-**Until v5 its `fetchAll` also had to return an array rather than `null`**, and it no longer does.
-Rebuilding the entity manager used to re-run the listener query behind `$addonsToLoad` through your
-mock, where a `null` failed inside the framework rather than in your test. The filtered extension
-is resolved while the application boots now, so the rebuilt manager reads the resolved instance
-instead of running that query again, and a mock with no expectations at all is fine.
+**Call it before `mockRepository()`, `mockFinder()` or `mockEntity()`.** It rebuilds the entity
+manager, which discards any repository, finder and entity mocks registered before it.
 
 ##### Example: 
 
@@ -1147,12 +963,7 @@ Mock a repository.
 * `mock` - optional - the mock closure to define expectations on
 
 Any spelling `$app->repository()` accepts works here too, and reaches the same mock: `XF:User`,
-`XF:UserRepository`, or the full `\XF\Repository\UserRepository`. They are normalised to one
-identifier, the same way XenForo normalises before looking a repository up.
-
-Before v4.0 they were not, so a mock registered under one spelling was invisible to code asking for
-another: the real repository ran instead, and the unmet expectations were never reported. Note that
-a genuine typo - a `/` where a `\` belongs, say - is still a typo, and will still miss.
+`XF:UserRepository`, or the full `\XF\Repository\UserRepository`.
 
 ##### Example: 
 
@@ -1187,21 +998,13 @@ Build an entity with the given values. `makeEntity` leaves it unsaved and touche
 `createEntity` writes real rows, so use it with `UsesDatabaseTransactions` unless you want them to
 outlive the test.
 
-**If your test classes already have a helper called `makeEntity` or `createEntity`, rename it.** Both
-are `protected` here, and PHP will not let a private method of the same name exist in a subclass - the
-class fails to load with `Access level to ... must be protected (as in class Hampel\Testing\TestCase)
-or weaker`, before any test runs. Check which one your helper matches before deleting it to inherit
-ours: one saves and one does not, and swapping a build-only helper for `createEntity` starts writing
-rows without any other sign that something changed.
+**If your test classes already have a method called `makeEntity` or `createEntity`, rename it** -
+otherwise the class fails to load with `Access level to ... must be protected`.
 
 ##### Setting an id on an unsaved entity
 
-`makeEntity` passes `values` to `bulkSet()`, which validates them - and a primary key is normally a
-**read-only** column, so passing one there throws
-`Column 'node_id' is read only, can only be set with forceSet`. Even where a key is writable,
-assigning one sends the entity to the finder for a uniqueness check, which wants a database.
-
-Use XenForo's `setTrusted()`, which casts the value and writes the column directly:
+A primary key is usually a read-only column, so passing one in `values` throws
+`Column 'node_id' is read only, can only be set with forceSet`. Use XenForo's `setTrusted()`:
 
 ```php
 $user = $this->makeEntity('XF:User', ['username' => 'Alice']);
@@ -1210,10 +1013,8 @@ $user->setTrusted('user_id', 42);
 
 ##### Building a fixture that spans relations
 
-`makeEntity` builds one entity. Code under test frequently reaches through a relation -
-`$thread->Forum->Node->node_id` - and an unsaved entity has no database behind it to resolve that
-against. XenForo's own `hydrateRelation()` links entities in memory, so build each one, give it its
-id, and join them up:
+An unsaved entity cannot load its relations from the database. Link entities in memory with
+XenForo's `hydrateRelation()`:
 
 ```php
 $node = $this->makeEntity('XF:Node', ['title' => 'Test node']);
@@ -1231,8 +1032,6 @@ $thread->hydrateRelation('Forum', $forum);
 // $thread->Forum->Node->node_id now resolves, with no database at all
 ```
 
-This is the shape a permission test usually needs, since the permission is generally checked against
-a node reached through the content entity.
 
 ##### Parameters:
 
@@ -1340,17 +1139,9 @@ class EntityTest extends TestCase
 }	
 ```
 
-_Warning:_ while we can mock an entity, we cannot stop it from interacting with the database because the `save()` method
-on the base Entity class is marked `final` - meaning that our mocks can't actually stop that method from executing by 
-overriding it.
-
-_Solution:_ add the `UsesDatabaseTransactions` trait to your test class. The `save()` still runs and still reaches the
-database, but the transaction is rolled back when the test finishes, so nothing it wrote outlives the test. That tests
-the query you actually wrote rather than your mock of it.
-
-Without that trait you can still dodge the final method instead: provided that we don't set type expectations for our
-entities, we can create a fake mock class that does not inherit from our base entity class. The 2nd parameter to
-`mockEntity` can be set to `false` to disable inheritance.
+`save()` on the base Entity class is `final`, so a mock cannot stop it reaching the database. Use
+`UsesDatabaseTransactions` so the save is rolled back, or pass `false` as the second parameter to
+build a mock that does not inherit from the entity class.
 
 ### fakesErrors
 Allow us to assert that certain errors were (or were not) thrown as a result of executing our test code, without
@@ -1401,10 +1192,9 @@ functions.
 
 ### ~~isolateAddon~~
 
-_Removed in v2.1.0 - see notes on addon isolation near the start of this document_
+_Removed in v2.1.0 - use `$addonsToLoad`, described under Unit Test Configuration_
 
-Allow us to prevent class extensions and code event listeners from other addons from being loaded during tests to avoid
-side effects and unexpected code-paths.
+Prevented class extensions and code event listeners from other addons being loaded during tests.
 
 This should be run in the `setup()` function for the test class - it will affect all tests in that class.
 
@@ -1440,26 +1230,17 @@ class IsolationTest extends TestCase
 Allow us to swap out the local filesystem with a memory based filesystem which is non-persistent. Ideal for avoiding
 side-effects when writing to the filesystem.
 
-Requires `league/flysystem-memory: ^1.0` in your addon's `require-dev`. XenForo 2.3 ships Flysystem 1.x, and the
-2.x and 3.x releases of the memory adapter do not provide the adapter class this uses.
+Requires `league/flysystem-memory: ^1.0` in your addon's `require-dev`; later versions do not work
+with XenForo 2.3.
 
 **This only helps when every access goes through `$app->fs()`.** Code that writes to a real path -
-`XF\Util\File::getTempDir()`, `File::getNamedTempFile()` - and then reads it back through an
-abstracted path breaks under a swapped filesystem: in production those are the same directory, but
-with `internal-data://` in memory they stop pointing at the same place, so the write lands on disk
-and the read finds nothing. That fails in a way that looks like a bug in the code under test. Test
-such code against the real filesystem instead, writing to a namespaced path you delete in
+`XF\Util\File::getTempDir()`, `File::getNamedTempFile()` - and reads it back through an abstracted
+path such as `internal-data://` fails under a swapped filesystem, because the two no longer point at
+the same place. Test such code against the real filesystem, writing to a path you delete in
 `tearDown()`.
 
-Both `swapFs()` and `mockFs()` discard XenForo's cached filesystem mounts, so they work whether or not
-anything has touched the filesystem already. Before v4.0 they did not: the mounts are built once from
-the config, and `fs` is its own cached container entry, so a swap after any filesystem access returned
-the **real local adapter**. The test then read and wrote the real data directory - the side effects the
-helper exists to prevent - and reported nothing wrong.
-
-Note also that `$fs->has()` does not reliably report **directories**, so the obvious
-`if ($fs->has($dir)) { $fs->deleteDir($dir); }` cleanup silently does nothing and leaks state into
-the next test. Call `deleteDir()` unconditionally inside a try/catch.
+`$fs->has()` does not reliably report directories, so call `deleteDir()` unconditionally, in a
+try/catch, when cleaning up.
 
 ##### Parameters
 
@@ -1543,22 +1324,15 @@ none
 * `assertEventNotFired`
 * `assertNoEventsFired`
 
-Call it **before** the code under test resolves anything, the same ordering every other fake here
-needs: it swaps the container's `extension` key, and anything already holding the real one keeps it.
+Call it **before** the code under test resolves anything that holds the extension.
 
-Truth-test callbacks receive `($args, $hint)` - the arguments the event was fired with, and its
-hint. Declaring only `$args` is fine, and is what most callbacks do; PHP does not require a closure
-to accept every argument it is passed. `getFiredEvents()` returns them all, each as
-`['event' => ..., 'args' => [...], 'hint' => ...]`.
+Truth-test callbacks receive `($args, $hint)`; declaring only `$args` is fine. `getFiredEvents()`
+returns every event, each as `['event' => ..., 'args' => [...], 'hint' => ...]`.
 
-Arguments are recorded **as they were when the event fired**. This matters because XenForo's idiom
-for an extension point passes the argument by reference - `$app->fire('some_event', [&$map])` - and
-copying an array in PHP preserves the references inside it, so a recorder that kept them would hand
-your assertion whatever the caller left in the variable afterwards. Objects are still recorded as
-the same instance, so an assertion can compare identity with the entity that was passed.
+Arguments are recorded as they were when the event fired, including ones passed by reference.
+Objects are recorded as the same instance.
 
-Requires `enableListeners` in `config.php`; without it XenForo installs a plain extension with no
-listeners at all, and `fakesEvents()` throws to say so.
+Requires `enableListeners` in `config.php`, and throws without it.
 
 ##### Example:
 
@@ -1652,9 +1426,7 @@ class HttpTest extends TestCase
 ### fakesHttpByUrl
 Mock the Http client, choosing the response by URL rather than by call order.
 
-`fakesHttp` hands out responses from a queue, so a test breaks when the code under test changes
-the order it makes requests in, or makes one more than expected. This matches on the request URL
-instead.
+Unlike `fakesHttp`, the test does not depend on the order the requests are made in.
 
 ##### Parameters:
 
@@ -1663,8 +1435,7 @@ instead.
   to throw, or a callable receiving the request and returning a response
 * `untrusted` - optional - set to true when using the untrusted client
 
-A request matching no pattern throws, rather than returning nothing: a test should say which calls
-it expects.
+A request matching no pattern throws.
 
 The same assertions as `fakesHttp` apply - `assertHttpRequestSent`, `assertHttpRequestSentTimes`,
 `assertHttpRequestNotSent`, `assertNoHttpRequestSent`.
@@ -1740,8 +1511,7 @@ class JobTest extends TestCase
 }	
 ```
 
-**The callback receives an array, not a job object.** It is the row the fake recorded, with
-XenForo's own column names:
+**The callback receives an array, not a job object**, with XenForo's own column names:
 
 | key | holds |
 |---|---|
@@ -1751,15 +1521,10 @@ XenForo's own column names:
 | `manual_execute` | whether it was queued to run manually |
 | `trigger_date` | the run time |
 
-So the parameters are `$job['execute_data']`, and the job has not been constructed — there is no
-instance to call a method on.
-
-**Match the name the code under test used.** `enqueue()` records the class string it was given and
-XenForo does not resolve it, so neither form is canonical: code calling
-`enqueue('XF:FileCleanUp', …)` is asserted as `assertJobQueued('XF:FileCleanUp')`, and code
-calling `enqueue(\XF\Job\FileCleanUp::class, …)` as
-`assertJobQueued(\XF\Job\FileCleanUp::class)`. The two do not match each other. (The parameter
-is named `$shortName`, which is a misnomer — a fully qualified class name is equally valid.)
+**Match the job name exactly as the code under test queued it.** Code calling
+`enqueue('XF:FileCleanUp', …)` is asserted as `assertJobQueued('XF:FileCleanUp')`, and code calling
+`enqueue(\XF\Job\FileCleanUp::class, …)` as `assertJobQueued(\XF\Job\FileCleanUp::class)`; the
+two do not match each other.
 
 Refer to the `Hampel\Testing\Concerns\InteractsWithJobs` trait for full details of available job validation 
 functions.
@@ -1864,21 +1629,13 @@ functions.
 Allow us to assert that emails were (or were not) sent as a result of executing our test code, without
 side-effects (ie no emails actually get sent). Mail queueing is disabled, so all mail goes via the test transport.
 
-Mail sent with `queue()` is captured as well as mail sent with `send()`. Before v4.0 it was not: queueing
-was switched off by setting an *option* named `enableMailQueue`, but that is a **config.php** value and
-XenForo has never had an option of that name, so `queue()` went on enqueuing a `MailSend` job which the
-test transport never saw. Since batch and job code normally queues rather than sends, that was most of
-the mail an addon sends, and it failed as the thoroughly misleading "The expected mail was not sent."
-
-Call it before the code under test resolves the mailer if you can, though it no longer matters: the
-queue flag and the transport are both constructor arguments of `XF\Mail\Mailer`, so `fakesMail()` has
-to discard an already-built mailer, and it does.
+Mail sent with `queue()` is captured as well as mail sent with `send()`. It works whether or not the
+mailer has already been built.
 
 ##### What the assertions receive
 
-Captured mail is a `Symfony\Component\Mime\Email`. `getTo()` therefore returns an array of
-`Symfony\Component\Mime\Address` objects, not the `email => name` map Swiftmailer used before XenForo
-2.2:
+Captured mail is a `Symfony\Component\Mime\Email`, and `getTo()` returns an array of
+`Symfony\Component\Mime\Address` objects:
 
 ```php
 $to = $mail->getTo();
@@ -1887,8 +1644,8 @@ $to[0]->getAddress() == 'foo@example.com';   // not array_key_exists('foo@exampl
 $to[0]->getName()    == 'Foo';               // not $to['foo@example.com'] == 'Foo'
 ```
 
-An assertion written in the old shape does not fail as a type error - it simply never matches, and
-reports "The expected mail was not sent." as though nothing had been sent at all.
+An assertion comparing against an `email => name` array never matches, and fails with "The expected
+mail was not sent."
 
 ##### Parameters:
 
@@ -1943,16 +1700,11 @@ Refer to the `Hampel\Testing\Concerns\InteractsWithMail` trait for full details 
 functions.
 
 ### setConfig
-Set a value in the application config - the values from `config.php`. **These are not options**, and the
-distinction matters more than it looks: `setOption()` on a config key writes somewhere nothing reads, and
-nothing reports it. That is what broke `fakesMail()` for two years.
+Set a value in the application config - the values from `config.php`. **These are not options**:
+`setOption()` on a config key has no effect.
 
-The two behave differently at runtime, too. An option is read on demand, so setting one takes effect
-whenever the code under test next looks. A config value is usually read **once**, where the container
-builds whatever consumes it, and the consumer then keeps the value rather than the config - so a config
-change only reaches something that has not been built yet.
-
-So call `setConfig()` before the code under test resolves anything. If the consuming container key may
+A config value is usually read once, when the container builds whatever uses it, so call
+`setConfig()` before the code under test resolves anything. If the consuming container key may
 already exist, discard it as well:
 
 ```php
@@ -1960,8 +1712,7 @@ $this->setConfig('enableMailQueue', false);
 $this->app()->container()->decache('mailer');
 ```
 
-Helpers in this package that change config already do that for you - `fakesMail()` decaches `mailer`,
-`swapFs()` and `mockFs()` decache `fs`.
+`fakesMail()`, `swapFs()` and `mockFs()` already do this for the keys they change.
 
 ##### Parameters:
 
