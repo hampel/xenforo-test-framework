@@ -1,8 +1,6 @@
-CHANGELOG
-=========
+# Changelog
 
-5.1.0 (unreleased)
-------------------
+## 5.1.0 (unreleased)
 
 * new `callAction()` calls one controller action directly with a `POST` request and returns its
   reply - the half of a controller `dispatch()` cannot reach, because XenForo asserts a CSRF token
@@ -22,8 +20,7 @@ CHANGELOG
   drawn first. A 386-test suite with a known offender passed six random seeds out of six
 * docs: the renamed-class extension fix affected 61 extensions across **20** add-ons, not 18
 
-5.0.0 (2026-09-21)
-------------------
+## 5.0.0 (2026-09-21)
 
 * **the framework boots the application now, and `tests/CreatesApplication.php` has left the
   scaffold.** `Hampel\Testing\TestCase::createApplication()` reads `$rootDir` and `$addonsToLoad`
@@ -125,8 +122,7 @@ CHANGELOG
   you re-copy that file. This is loud on purpose: the silent version of it has cost people days,
   and a suite in that state was never testing what it claimed to
 
-4.3.2 (2026-09-21)
-------------------
+## 4.3.2 (2026-09-21)
 
 * fix: **with `$addonsToLoad` set, a class extension registered on a pre-2.3 class name was silently
   not applied.** XenForo 2.3 renamed most services, finders, repositories and controllers with a
@@ -141,8 +137,7 @@ CHANGELOG
   including collapsing both spellings into one entry so a class is not extended twice. Unaffected:
   a suite with `$addonsToLoad` empty, and the real application
 
-4.3.1 (2026-09-20)
-------------------
+## 4.3.1 (2026-09-20)
 
 A documentation release - nothing in `src/` changed, so it cannot affect how a test runs. Two of the
 entries below correct things the previous documentation stated as fact.
@@ -174,8 +169,7 @@ entries below correct things the previous documentation stated as fact.
 * docs: `README.md`'s "Compatibilty" heading is spelled correctly
 * changelog: the 3.0.7 entry, brought across from the `3.x` branch
 
-4.3.0 (2026-09-20)
-------------------
+## 4.3.0 (2026-09-20)
 
 * fix: `dispatch()` never ran the work a controller deferred. XenForo drains its run-once queue in
   `XF\Mvc\Dispatcher::dispatchLoop()`, and `dispatch()` resolves reroutes in its own loop instead -
@@ -233,8 +227,7 @@ entries below correct things the previous documentation stated as fact.
   every test file while building the suite, before XenForo has booted, so the parent does not exist
   yet and the whole run stops with `Class "..." not found`
 
-4.2.0 (2026-09-19)
-------------------
+## 4.2.0 (2026-09-19)
 
 * new: `renderTemplate()` renders a template to HTML with no web server, and `renderReply()` renders
   the one a dispatched reply named, with `assertSee()`, `assertDontSee()`, `assertSeeText()`,
@@ -252,8 +245,7 @@ entries below correct things the previous documentation stated as fact.
 * rendering covers the template, not the whole page: navigation, header and footer come from
   XenForo's own app classes rather than from the template
 
-4.1.0 (2026-09-18)
-------------------
+## 4.1.0 (2026-09-18)
 
 * new: `dispatch()` runs one of your routes the way XenForo does and returns the reply its
   controller produced, with `assertReplyIsView()`, `assertReplyTemplate()`,
@@ -281,8 +273,7 @@ entries below correct things the previous documentation stated as fact.
   offered `mockEntity($name, false)` as the way round it. `UsesDatabaseTransactions` answered that
   in 4.0.0 and the README was updated at the time; this file was missed
 
-4.0.3 (2026-09-17)
-------------------
+## 4.0.3 (2026-09-17)
 
 * bugfix: a user built by `buildVisitor()` - and so by `actingAsMember()` and `actingAsGuest()` -
   inherited an administrator record from the forum the tests run against. XenForo's guest user
@@ -293,8 +284,7 @@ entries below correct things the previous documentation stated as fact.
   same test could fail on someone else's forum. `hasAdminPermission()` is now always false for a
   built user; pass a user you loaded yourself to `actingAs()` if you need a real administrator
 
-4.0.2 (2026-09-10)
-------------------
+## 4.0.2 (2026-09-10)
 
 * bugfix: a faked response reached the caller with its body already read, so
   `$response->getBody()->getContents()` returned an empty string under both `fakesHttp()` and
@@ -306,8 +296,7 @@ entries below correct things the previous documentation stated as fact.
   `(string)` cast was unaffected, because it seeks to the start before reading - which is also why
   nothing here caught it
 
-4.0.1 (2026-09-05)
-------------------
+## 4.0.1 (2026-09-05)
 
 * docs: the README listed `isolateAddon` among the available helpers. It was removed in 3.0.0 and
   calling it is a fatal - use the `$addonsToLoad` property in `tests/TestCase.php` instead
@@ -326,8 +315,7 @@ entries below correct things the previous documentation stated as fact.
 * the 3.0.4 and 3.0.5 entries are included below - those releases were cut on the 3.x branch and
   their entries had not reached this one
 
-4.0.0 (2026-09-05)
-------------------
+## 4.0.0 (2026-09-05)
 
 * new `makeEntity()` and `createEntity()` helpers for building entities with given values
 * new `fakesHttpByUrl()` - chooses the http response by request URL rather than by call order
@@ -444,8 +432,7 @@ entries below correct things the previous documentation stated as fact.
 * the files in tests/ have been restyled, so a diff against your own copies will show
   formatting changes as well as the changes described above
 
-3.0.8 (2026-09-21)
-------------------
+## 3.0.8 (2026-09-21)
 
 Backported from 4.3.2.
 
@@ -462,8 +449,7 @@ Backported from 4.3.2.
   including collapsing both spellings into one entry so a class is not extended twice. Unaffected:
   a suite with `$addonsToLoad` empty, and the real application
 
-3.0.7 (2026-09-20)
-------------------
+## 3.0.7 (2026-09-20)
 
 Backported from 4.3.0.
 
@@ -473,8 +459,7 @@ Backported from 4.3.0.
   what made the constraint look sound - it is mocking an **interface** that fails, with
   `Cannot use "parent" when current class scope has no parent`, before the first test runs
 
-3.0.6 (2026-09-10)
-------------------
+## 3.0.6 (2026-09-10)
 
 Backported from 4.0.2.
 
@@ -486,8 +471,7 @@ Backported from 4.0.2.
   XenForo core reads a response, so an add-on reading one the same way could not be tested through
   the fake. A `(string)` cast was unaffected, because it seeks to the start before reading
 
-3.0.5 (2026-09-04)
-------------------
+## 3.0.5 (2026-09-04)
 
 A documentation and packaging fix. No code changes to the framework itself.
 
@@ -507,8 +491,7 @@ A documentation and packaging fix. No code changes to the framework itself.
   README nor `DOCS.md` mentioned - it is a Composer suggestion, so it is not installed for you
 * docs: the source and issue links pointed at Bitbucket; the package is on GitHub
 
-3.0.4 (2026-09-04)
-------------------
+## 3.0.4 (2026-09-04)
 
 A maintenance release for the v3 line, for anyone who cannot take 4.0's PHP 8.3 floor. Every fix
 below also ships in 4.0.0, which is where they were made; this is the subset that applies to helpers
@@ -555,23 +538,19 @@ prefer 4.x.
   (`XF_ROOT=/srv/www/myforum composer integration`), skips without one, and is export-ignored so it
   never reaches an addon
 
-3.0.3 (2024-12-30)
-------------------
+## 3.0.3 (2024-12-30)
 
 * bugfix: some code related to mail queueing has been removed since we no longer use it 
 
-3.0.2 (2024-08-11)
-------------------
+## 3.0.2 (2024-08-11)
 
 * new expanded extension class - use global static maps to keep track of extensions and aliases between test runs
 
-3.0.1 (2024-08-10)
-------------------
+## 3.0.1 (2024-08-10)
 
 * for some reason our extension class wasn't working correctly - we'll just remove it
 
-3.0.0 (2024-08-10)
-------------------
+## 3.0.0 (2024-08-10)
 
 * compatibilty with XenForo v2.3
 * Hampel\Testing\Job\Manager updated to match changes in XF\Job\Manager, particularly XF\Job\JobParams
@@ -579,8 +558,7 @@ prefer 4.x.
 * Hampel\Testing\Mail\Queue removed - we now simply disable queueing which results in all mails being sent via the test
   transport
 
-2.2.0 (2024-07-10)
-------------------
+## 2.2.0 (2024-07-10)
 
 * php 8.3 compatibility fix - ReflectionProperty::setValue with a single parameter is now deprecated; but as of php 8.1 
   we can simply use ReflectionClass::setStaticValue without needing to explicitly set private or protected properties 
@@ -588,8 +566,7 @@ prefer 4.x.
 * we now need to use a minimum of php 8.1
 * upgrade to PHPUnit v10.x
 
-2.1.0 (2024-03-14)
-------------------
+## 2.1.0 (2024-03-14)
 
 * allow swapping subcontainer keys using either a class or a string to define the app container key
 * new option in TestCase - $addonsToLoad
@@ -601,45 +578,38 @@ prefer 4.x.
 * both `TestCase.php` and `CreatesApplication.php` will need to be updated in addons based on the new versions in this 
   package
 
-2.0.2 (2020-09-23)
-------------------
+## 2.0.2 (2020-09-23)
 
 * should be returning the instance we created when swapping or faking classes
 
-2.0.1 (2020-09-15)
-------------------
+## 2.0.1 (2020-09-15)
 
 * Job Manager - getUniqueJob wasn't returning the job
 * don't serialize job paramaters
 
-2.0.0 (2020-08-28)
-------------------
+## 2.0.0 (2020-08-28)
 
 * compatibility changes for XenForo v2.2
 * XF 2.2 implements Swiftmailer 6 which changes some method/interface signatures
 
-1.2.2 (2020-08-04)
-------------------
+## 1.2.2 (2020-08-04)
 
 * fixed missing use clause in `Hampel\Testing\Concerns\InteractsWithFilesystem` trait
 
-1.2.1 (2020-07-25)
-------------------
+## 1.2.1 (2020-07-25)
 
 * fixed typo in function name: `Hampel\Testing\Concerns\InteractsWithSimpleCache::assertSimpleCacheEqual()` => 
 `assertSimpleCacheEquals()` and `assertSimpleCacheNotEqual()` => `assertSimpleCacheNotEquals()`
 * close the database connection on tearDown to avoid connection limit issues (unless it's been mocked)
 
-1.2.0 (2019-12-13)
-------------------
+## 1.2.0 (2019-12-13)
 
  * Feature: added new functionality to Interacts with Container
    * mockService
  * Feature: Interacts with Http - adds:
    * fakesHttp  
 
-1.1.0 (2019-11-26)
-------------------
+## 1.1.0 (2019-11-26)
 
  * Feature: added new functionality to Interacts with Extension
    * isolateAddon
@@ -653,8 +623,7 @@ prefer 4.x.
  * bugfix: cleaned up function visibility for consistency
  * bugfix: override protected function preLoadData so we can call it directly when faking the registry
 
-1.0.0 (2019-11-19)
-------------------
+## 1.0.0 (2019-11-19)
 
  * first released version
  * The following functionality is included:
