@@ -5,6 +5,11 @@ Most releases need nothing beyond `composer update`. `CHANGELOG.md` lists everyt
 
 `tests/TestCase.php` is copied into your add-on, so a change to it has to be merged by hand.
 
+## 5.2.0
+
+Nothing to do. If one of your test classes overrides `dispatch()` or `callAction()`, add the new
+trailing `array $server = []` parameter to your signature.
+
 ## 5.1.0
 
 Nothing to do. If one of your test classes already defines a `callAction()` method, rename it:

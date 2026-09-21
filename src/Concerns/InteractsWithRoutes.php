@@ -106,10 +106,12 @@ trait InteractsWithRoutes
 	 * @param string $routePath - as it appears after the ? in a URL, eg 'help/terms'
 	 * @param string $type - 'public', 'admin' or 'api'
 	 * @param array $input - GET parameters the route reads, as $_GET would carry them
+	 * @param array $server - request server values, as $_SERVER would carry them - eg REMOTE_ADDR,
+	 *                        HTTP_USER_AGENT, HTTP_REFERER - merged over the defaults
 	 *
 	 * @return AbstractReply
 	 */
-	protected function dispatch($routePath, $type = 'public', array $input = [])
+	protected function dispatch($routePath, $type = 'public', array $input = [], array $server = [])
 	{
 		[$classType, $routerKey] = $this->routeTypeConfig($type);
 
@@ -129,7 +131,7 @@ trait InteractsWithRoutes
 		// controller class that does not exist, and dispatching gives 'invalid_controller'.
 		$this->swap('app.classType', $classType);
 
-		$request = $this->buildDispatchRequest($routePath, $input);
+		$request = $this->buildDispatchRequest($routePath, $input, 'GET', $server);
 		$this->swap('request', function () use ($request)
 		{
 			return $request;
@@ -172,6 +174,8 @@ trait InteractsWithRoutes
 	 * @param array $input - the request input, as $_POST would carry it
 	 * @param array $params - route parameters, eg ['advert_id' => 3]
 	 * @param string $method - the request method; POST unless you have a reason
+	 * @param array $server - request server values, as $_SERVER would carry them, merged over the
+	 *                        defaults
 	 *
 	 * @return AbstractReply
 	 */
@@ -181,7 +185,8 @@ trait InteractsWithRoutes
 		$type = 'public',
 		array $input = [],
 		array $params = [],
-		$method = 'POST'
+		$method = 'POST',
+		array $server = []
 	)
 	{
 		[$classType, $routerKey] = $this->routeTypeConfig($type);
@@ -189,7 +194,7 @@ trait InteractsWithRoutes
 		// same reason as dispatch(): the controller class is resolved through app.classType
 		$this->swap('app.classType', $classType);
 
-		$request = $this->buildDispatchRequest('', $input, $method);
+		$request = $this->buildDispatchRequest('', $input, $method, $server);
 		$this->swap('request', function () use ($request)
 		{
 			return $request;
@@ -290,13 +295,18 @@ trait InteractsWithRoutes
 	 * A request a controller will accept. XenForo's own request is built from the superglobals,
 	 * which under PHPUnit describe no request at all.
 	 *
+	 * Server values the caller passes are merged over the defaults here, at construction, because
+	 * Request caches what it derives from them - the IP address and the robot name - on first read.
+	 * REQUEST_METHOD always comes from $method.
+	 *
 	 * @param string $routePath
 	 * @param array $input
 	 * @param string $method
+	 * @param array $server
 	 *
 	 * @return Request
 	 */
-	private function buildDispatchRequest($routePath, array $input = [], $method = 'GET')
+	private function buildDispatchRequest($routePath, array $input = [], $method = 'GET', array $server = [])
 	{
 		$method = strtoupper($method);
 
@@ -311,22 +321,23 @@ trait InteractsWithRoutes
 		// carries them in the body, so its query string stays empty
 		$queryString = $method === 'GET' ? http_build_query($input) : '';
 
+		$defaults = [
+			'REQUEST_URI' => '/index.php?' . $routePath
+				. ($queryString !== '' ? '&' . $queryString : ''),
+			'SCRIPT_NAME' => '/index.php',
+			'QUERY_STRING' => $queryString,
+			'HTTP_HOST' => $host,
+			// a public controller's assertIpNotBanned() throws 'Invalid string IP' on an
+			// empty one, which is what a CLI request has
+			'REMOTE_ADDR' => '127.0.0.1',
+		];
+
 		$request = new Request(
 			$container['inputFilterer'],
 			$input,
 			[],
 			[],
-			[
-				'REQUEST_METHOD' => $method,
-				'REQUEST_URI' => '/index.php?' . $routePath
-					. ($queryString !== '' ? '&' . $queryString : ''),
-				'SCRIPT_NAME' => '/index.php',
-				'QUERY_STRING' => $queryString,
-				'HTTP_HOST' => $host,
-				// a public controller's assertIpNotBanned() throws 'Invalid string IP' on an
-				// empty one, which is what a CLI request has
-				'REMOTE_ADDR' => '127.0.0.1',
-			]
+			['REQUEST_METHOD' => $method] + array_replace($defaults, $server)
 		);
 		$request->setCookiePrefix($container['config']['cookie']['prefix']);
 

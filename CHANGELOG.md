@@ -1,5 +1,12 @@
 # Changelog
 
+## 5.2.0 (unreleased)
+
+* `dispatch()` and `callAction()` take an optional `$server` argument - request server values such
+  as `REMOTE_ADDR`, `HTTP_USER_AGENT` and `HTTP_REFERER`, merged over the defaults. `REQUEST_METHOD`
+  cannot be changed this way
+* docs: on XenForo 2.3 `Request::getFromSearch()` always returns an empty string
+
 ## 5.1.0 (2026-09-21)
 
 * new `callAction()` calls a controller action directly with a `POST` request and returns its

@@ -224,6 +224,8 @@ directly does not do.
 * `routePath` - the route as it appears after the `?` in a URL, eg `help/terms`
 * `type` - optional - `public` (the default), `admin` or `api`
 * `input` - optional - the `GET` parameters the route reads, as `$_GET` would carry them
+* `server` - optional - request server values, as `$_SERVER` would carry them, merged over the
+  defaults. `REQUEST_METHOD` cannot be changed
 
 ##### Example:
 
@@ -268,6 +270,27 @@ $reply = $this->dispatch('my-addon/user', 'api', ['user_id' => 1]);
 **`dispatch()` sends a `GET` only.** XenForo requires a CSRF token for anything else, so an action
 opening with `assertPostOnly()` returns a 405. Use `callAction()` to test the action itself.
 
+**Pass the server values the code under test reads** - IP address, user agent, referrer:
+
+```php
+$reply = $this->dispatch('help/terms', 'public', [], [
+    'REMOTE_ADDR' => '2001:db8::7',
+    'HTTP_USER_AGENT' => 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)',
+    'HTTP_REFERER' => 'https://forum.example.com/threads/1/',
+]);
+
+$this->app()->request()->getIp();          // '2001:db8::7'
+$this->app()->request()->getRobotName();   // 'google'
+```
+
+Without them, `REMOTE_ADDR` is `127.0.0.1` and the user agent and referrer are empty.
+
+* `getIp()` applies the forum's trusted-proxy setting to `REMOTE_ADDR`, so on a forum with trusted
+  proxies configured the address read back can differ from the one sent. `getIp(true)` reads
+  `HTTP_X_FORWARDED_FOR` and `HTTP_CLIENT_IP`.
+* On XenForo 2.3 `getFromSearch()` always returns an empty string: search referrals are not
+  detected, whatever the referrer.
+
 ### callAction
 Call a controller action directly with a `POST` request, and return the reply it produced. Use it
 to test saving, toggling and deleting.
@@ -299,6 +322,7 @@ $this->assertDatabaseHas('xf_notice', ['title' => 'Maintenance']);
 * `input` - optional - the request input, as `$_POST` would carry it
 * `params` - optional - route parameters, eg `['notice_id' => 3]`
 * `method` - optional - `'POST'` (default) or `'GET'`
+* `server` - optional - request server values, as for `dispatch()`
 
 **A validation failure comes back as an `Error` reply**, and `replyErrors()` returns its errors
 keyed by field:
