@@ -10,9 +10,7 @@ Unit testing framework for XenForo
 
 ## Compatibility
 
-**Install the newest version your XenForo and PHP allow.** Each major line targets one XenForo version, and the older
-lines stay on Packagist for anyone who cannot move - a tag you have already released keeps installing whatever changes
-here later.
+Install the newest version your XenForo and PHP allow. Older lines stay on Packagist.
 
 |version|XenForo|PHP|still gets fixes|
 |---|---|---|---|
@@ -22,36 +20,16 @@ here later.
 |v2.x|2.2|8.1+|no|
 |v1.x|2.1|5.5+|no|
 
-**Three lines target XenForo 2.3, and only one pair is told apart by PHP.** v4 dropped PHP 8.1 and 8.2 when they left
-security support, and v3 stayed behind for the people still on them, so between those two the PHP column is the
-tiebreaker rather than extra detail.
-
-**v4 and v5 need exactly the same XenForo and PHP, so nothing in your environment chooses between them.** v5 changed how
-the framework boots your suite and made add-on isolation filter listeners as it always claimed to - see
-[UPGRADING.md](UPGRADING.md). Start new addons on v5. An existing suite can move whenever it likes: doing nothing to
-your test files is a supported way to upgrade.
-
-"No longer gets fixes" is not the same as "stopped working" - it means nobody is patching it. v1.x is also the one line
-that predates this package declaring only what it tests: its `>=5.5.0` was never testable, because the PHPUnit 8 it
-installs needs PHP 7.
+v4 and v5 support the same XenForo and PHP versions; v5 is the current line, and
+[UPGRADING.md](UPGRADING.md) describes moving to it.
 
 Put the version you picked in your addon's `require-dev` as `^5.0`, `^3.0` and so on - the installation section below
 shows the whole file.
 
 ## Upgrading
 
-Upgrade notes are in [UPGRADING.md](UPGRADING.md), newest first, back to v2.1. It lists only the
-changes that need something from you - most releases need nothing beyond `composer update`, and
-say so.
-
-Two of them do need action. **v4.0** raised the minimum PHP to 8.3, allowed PHPUnit 12 - which
-stops reading `@dataProvider` and friends from doc comments - and added `makeEntity()` and
-`createEntity()` as protected methods, which collide with a helper of either name in your own test
-classes. **v2.1** changed both scaffold files, and those are copies you own, so Composer cannot
-deliver it for you.
-
-[CHANGELOG.md](CHANGELOG.md) answers the other question: everything that changed, rather than only
-what you have to do about it.
+Upgrade notes are in [UPGRADING.md](UPGRADING.md), newest first. [CHANGELOG.md](CHANGELOG.md) lists everything that
+changed.
 
 ## 1. Introduction
 
@@ -297,26 +275,18 @@ You might need to edit the `$rootDir` variable if you don't include a vendor fol
 
 This class is what your unit tests will extend, and the two properties above are the whole of its configuration.
 
-**Booting XenForo is the framework's job, not yours.** `Hampel\Testing\TestCase::createApplication()` reads those two
-properties, requires XenForo's `XF.php`, starts it and hands the add-on ids to `XF::setupApp()`. There is nothing to
-copy and nothing to keep in step.
+The framework boots XenForo for you. `Hampel\Testing\TestCase::createApplication()` follows the same pattern as
+XenForo's own entry points: it includes `XF.php`, starts XenForo, and sets up the application with the add-on ids from
+`$addonsToLoad`. It runs in `setUp()`, so every test class extending `Tests\TestCase` has the application available.
 
-Before v5 that code shipped as a second file, `tests/CreatesApplication.php`, for you to copy alongside the one above -
-which meant every later change to the boot had to be merged by hand into a file you owned. The v2.1 addon isolation
-arguments are the case that settled it: add-ons are still running the 2020 version of that file today, quietly without
-the isolation they were configured for.
+If you need a different boot, override `createApplication()` in your `tests/TestCase.php` and pass
+`['xf-addons' => $this->addonsToLoad]` to `XF::setupApp()`.
 
-If you genuinely need a different boot, `createApplication()` is an ordinary method - override it in your
-`tests/TestCase.php` and pass `['xf-addons' => $this->addonsToLoad]` to `XF::setupApp()` so isolation still reaches the
-application.
+**A test extending plain `PHPUnit\Framework\TestCase` cannot load your addon's classes by itself.** They are loaded by
+XenForo's autoloader, which exists only once a test has booted the application. Such a test passes in a full run when an
+earlier test has booted XenForo, and fails when run alone with `Class "Vendorly\Addonista\..." not found`.
 
-**A test that skips the boot also skips XenForo's autoloader - and usually passes anyway, by accident.** It is tempting
-to write a class that needs nothing from XenForo as a plain `PHPUnit\Framework\TestCase`, and cheaper, since nothing
-boots. But your addon's own classes, like XenForo's, are loaded by XenForo's autoloader, which exists only once some
-test has booted the application. In a full run an earlier test usually has, so the plain test passes; run it alone with
-`--filter` and it fails with `Class "Vendorly\Addonista\..." not found`. It is passing because of the test before it.
-
-**Run each test class on its own to find them** - it is the check that works at any size:
+To find these tests, run each test class on its own:
 
 ```bash
 for f in $(find tests/Unit tests/Feature -name '*Test.php' | sort); do
@@ -324,16 +294,13 @@ for f in $(find tests/Unit tests/Feature -name '*Test.php' | sort); do
 done
 ```
 
-It costs one boot per class. `--order-by=random` is not a substitute on a large suite, although it looks like one on a
-small suite: once any test has booted XenForo its autoloader stays registered for the rest of the process, so a random
-order only fails when a plain test happens to be drawn first. That is likely with four tests and rare with four
-hundred - a real 386-test suite with a known offender passed six random seeds out of six.
+`--order-by=random` does not reliably find them, because the autoloader stays registered once any test has booted.
 
 Two fixes:
 
-* extend `Tests\TestCase` and pay for the boot - always correct;
-* or map your addon's namespace in your own `composer.json` and run `composer dump-autoload`, which lets Composer load
-  plain classes without XenForo:
+* extend `Tests\TestCase` instead;
+* or map your addon's namespace in your own `composer.json` and run `composer dump-autoload`, so Composer can load plain
+  classes without XenForo:
 
 ```json
 "autoload-dev": {
@@ -344,18 +311,8 @@ Two fixes:
 }
 ```
 
-The second works only for plain classes. A class extending XenForo - anything built on an `XFCP_` proxy - still needs
-the booted application, because the proxy does not exist until XenForo's extension system creates it.
-
-As you can see from our previous discussion about entry points into XenForo, we follow the same pattern - including 
-`XF.php`, booting the framework and then setting up our application container. We don't need to do anything more - we 
-just need the application container available for us to use in our tests.
-
-The code in this trait is called during the setUp function for our base TestClass, so it will make the XenForo 
-application framework available to any class which extends our TestClass.
-
-We expose it here rather than simply including it in the Composer package in case you need to customise the XenForo 
-boot process in any way - you can do so without changing the vendor files.
+The second works only for plain classes. A class built on an `XFCP_` proxy - one extending a XenForo class - still
+needs the booted application.
 
 ## 7. Swapping XenForo Subsystems
 
@@ -395,16 +352,12 @@ mail.
     }
 ```
 
-That last step is the part worth carrying away, because it is not specific to mail: **swapping a container key does not
-reach anything that has already been built from it.** XenForo caches resolved entries, and a resolved object holds the
-values it was constructed with, not the container. So a swap installed after its consumer exists lands somewhere nothing
-looks - silently, since the fake is genuinely in the container and merely unused. `fakesHttp()` has the same shape and
-discards `reader`; `swapFs()` discards `fs`.
+**Swapping a container key does not reach anything already built from it.** A resolved object keeps the values it was
+constructed with, so if you swap a key yourself, `decache()` whatever was built from it, as `fakesMail()` does with
+`mailer` above.
 
-In the above code, the `TestTransport` class we instantiate is a custom class I built which extends Symfony Mailer's
-`AbstractTransport` and so accepts all the same calls a real transport would, but just stores the messages in an array
-rather than sending them. (XenForo used Swiftmailer before 2.2, which is why some older addon test code asserts against
-a `email => name` array where it now gets `Symfony\Component\Mime\Address` objects - see `DOCS.md`.)
+The `TestTransport` class extends Symfony Mailer's `AbstractTransport`, accepting the same calls a real transport would,
+but stores the messages in an array rather than sending them.
 
 `mock()` takes that one step further and lets us swap the closure function with a mock object that we can declare 
 assertions on for testing purposes.
@@ -474,7 +427,7 @@ options repository. It restores options after each test is executed - keeping to
 Carbon library), so that we can test functions that rely on time intervals or comparisons.
 * `swapFs` lets us swap the filesystem from _local_ to _memory_ so that we can make non-persistent changes to the 
 filesystem and avoid side effects. This one needs `league/flysystem-memory: ^1.0` in your own `require-dev`
-* `setConfig` sets a value in `config.php`, which options cannot reach - `setOption` writes somewhere else entirely
+* `setConfig` sets a value in `config.php`
 * `actingAs`, `actingAsMember` and `actingAsGuest` run the code under test as a given visitor, with
 `setVisitorPermissions` and `setVisitorContentPermissions` granting permissions in memory rather than reading them
 from the database
@@ -483,26 +436,24 @@ from the database
 * `dispatch` runs one of your routes the way XenForo does and hands back the reply its controller produced, with
 `assertReplyIsView`, `assertReplyTemplate`, `assertReplyViewClass`, `assertReplyParam`, `replyParam`,
 `assertReplyIsRedirect`, `assertReplyIsError`, `assertReplyIsMessage`, `assertReplyIsApiResult`, `replyApiResult` and
-`replyErrors` to assert against it. Parameters the route reads are passed as the third argument. This is the only way
-to cover an action's own access checks, because a controller invoked directly never runs `preDispatch()`
+`replyErrors` to assert against it. Parameters the route reads are passed as the third argument, and the controller's
+access checks in `preDispatch()` run
+* `callAction` calls a controller action directly with a `POST`, for testing saves, toggles and deletes. It skips
+`preDispatch()`, so pair it with `dispatch` to test access checks
 * `actingAsApiKey` runs api dispatches as a given api key, and restores `\XF::$apiKey` afterwards
 * `renderTemplate` renders a template to HTML with no web server, `renderMacro` renders one macro out of a template,
 and `renderReply` renders the template a dispatched reply named, with `assertSee`, `assertDontSee`, `assertSeeText`,
 `assertDontSeeText` and `assertSeeInOrder` to assert on the output
-* `assertTemplateModificationApplied` says whether a template modification is still matching anything - XenForo logs
-one that matches nothing as `ok`, so only its apply count answers the question
-* `assertNoTemplateErrors` asserts that nothing the test rendered raised an error. XenForo logs a template error and
-carries on rendering, so a render can fail and still produce the markup a test asserts on
+* `assertTemplateModificationApplied` asserts that a template modification has applied, using its apply count
+* `assertNoTemplateErrors` asserts that nothing the test rendered raised an error
 * `pageParam` reads back what a rendered template set with `<xf:title>` and friends, which never appear in the
 template's own output
-* `setVisitorAdminPermissions` grants admin permissions to a built visitor, which come from a different place to the
-ones `setVisitorPermissions` writes
+* `setVisitorAdminPermissions` grants admin permissions to a built visitor
 * `UsesDatabaseTransactions` is a trait you opt into per test class: it wraps each test in a transaction and rolls it
-back, so tests can exercise real entity saves without leaving anything behind. `assertDatabaseHas`,
+back, so tests can save entities without leaving anything behind. `assertDatabaseHas`,
 `assertDatabaseMissing` and `assertDatabaseCount` then assert against rows that are really there
 
-`isolateAddon()` was removed in v3.0.0. Use the `$addonsToLoad` property in your `tests/TestCase.php` instead - it does
-the same job, for the whole test class rather than per test.
+`isolateAddon()` no longer exists; use the `$addonsToLoad` property in your `tests/TestCase.php`.
 
 ## 8. Installing the Framework
 
@@ -560,9 +511,8 @@ $ cp -r vendor/hampel/xenforo-test-framework/tests .
 Inside the tests directory, you'll find the following directories and files:
 
 * `/tests/Feature` this is where feature tests go, if you write any
-* `/tests/Feature/ExampleTest.php` a placeholder, the same shape as the Unit one. It is also what keeps the directory
-  in git: git does not track empty directories, and `phpunit.xml` refuses to run at all without this directory. If you
-  delete it without putting a feature test in its place, commit a `.gitkeep` instead
+* `/tests/Feature/ExampleTest.php` a placeholder that keeps the directory in git - `phpunit.xml` will not run without
+  it. If you delete it before adding a feature test, commit a `.gitkeep` instead
 * `/tests/Unit` this is where all of your unit tests should go
 * `/tests/Unit/ExampleTest.php` this is a simple example test - edit or copy it as the basis for your own test classes
 * `/tests/TestCase.php` this is our base test class (`Tests\TestCase`) that all unit test classes should inherit from if you want to boot the XenForo application framework for use in your tests. It is the only file here you own and edit
@@ -606,23 +556,12 @@ options - they tell PHPUnit where to find our unit tests.
 </phpunit>
 ```
 
-The `failOn*` flags are worth understanding rather than just copying. They fail the suite on deprecations, notices,
-warnings, risky tests, PHPUnit's own deprecations, and a run that executes no tests at all. A library should hear about
-deprecations before its users do, and the last two are the ones that catch a suite which has quietly stopped testing
-anything.
+The `failOn*` flags fail the suite on deprecations, notices, warnings, risky tests, PHPUnit's own deprecations, and a
+run that executes no tests - such as a `--filter` that matches nothing.
 
-You will most often meet `failOnEmptyTestSuite` when you mistype a `--filter`. A filter matching nothing used to print
-`No tests executed!` and exit 0, which looks a lot like a test that passed; it now exits 1. That is the same defect as a
-CI job silently testing nothing, just caught at the moment it is obvious rather than months later.
-
-**It fires on an empty run, not an empty suite**, and there is no flag that does the latter. So if your Unit suite
-passes, a Feature suite collecting nothing still exits 0 - and so does one holding a feature test PHPUnit never picked
-up, because the file is named `SomethingFeature.php` rather than `SomethingTest.php`, or sits in the wrong directory.
-Nothing in `phpunit.xml` will tell you.
-
-When you add your first feature test, run `vendor/bin/phpunit --testsuite Feature` once and **read the count, not the
-exit code**. The example test means that suite always collects something, so the command exits 0 whether or not your own
-test was picked up - `OK (1 test, 1 assertion)` where you expected two is the only thing that tells you.
+`failOnEmptyTestSuite` fires on an empty run, not an empty suite. A Feature suite that collects nothing - or misses a
+test file not named `*Test.php` - still exits 0 while the Unit suite passes. When you add your first feature test, run
+`vendor/bin/phpunit --testsuite Feature` and check the test count includes it.
 
 Finally, update your `build.json` file to clean up unit test code when we build our addon releases. Assuming you only 
 use Composer for unit testing:
@@ -707,29 +646,13 @@ requirements in `composer.json` correctly and aren't picking up packages from ot
 
 Leaving the array empty will load all addons as normal.
 
-**What isolation covers, and what it did not before v5**
-
-Isolation filters three things: Composer autoloading, class extensions, and code event listeners.
-
-**That third one is new in v5, and on v4 and earlier it did not work at all.** XenForo fires `app_setup` at the very
-end of `XF\App::setup()`, and older versions of this package installed their filtered listener set after that - too
-late to stop anything. So on v4, every installed addon's `app_setup` listener ran whatever you put in `$addonsToLoad`:
-measured on a development forum carrying 13 of them, all 13 ran. An addon you had excluded could still register
-container entries and still throw while the application booted, and a suite failing inside code belonging to an addon
-you never listed was the usual way to find out.
-
-If you are upgrading and a test breaks on this, the addon it was quietly relying on belongs in `$addonsToLoad` - which
-is the question isolation exists to ask.
+Isolation filters three things: Composer autoloading, class extensions, and code event listeners - `app_setup`
+included. On v4 and earlier it did not filter listeners.
 
 **A note on `failOnRisky`**
 
-The supplied `phpunit.xml` turns `failOnRisky` on. That is only safe because `TestCase` hands PHPUnit back its error and
-exception handlers after every test: `XF::start()` installs its own and never removes them, which PHPUnit 11 and 12
-report as risky on every test that boots XenForo.
-
-The side effect is that `failOnRisky` no longer guards **your** code against handler leaks either - a test which leaves
-a handler installed is cleaned up silently rather than reported. That is the right trade, since otherwise the flag is
-unusable here, but it means the flag is catching less than it appears to.
+`XF::start()` installs its own error and exception handlers, and `TestCase` removes them after each test so that
+`failOnRisky` can be used. As a result, a handler your own code leaves installed is removed rather than reported.
 
 ## 10. Running Unit Tests
 
@@ -764,59 +687,37 @@ See the file DOCS.md
 
 ## 12. Limitations
 
-There are still things we can't effectively test, or which are problematic to test. Note that the database
-limitations which used to be listed here have largely gone away in v4.0 - see `UsesDatabaseTransactions` and the
-`assertDatabaseHas` family in DOCS.md.
+There are still things we can't effectively test, or which are problematic to test.
 
 ### Controllers
 
-Controllers used to be out of reach here: session data, routing data, request data and validators all have to be
-configured before one will run. As of v4.1.0 `dispatch()` does that configuring for you - it runs a route in process
-and hands back the reply the controller produced, for public, admin and api routes alike. See DOCS.md.
+`dispatch()` runs a route in process and returns the reply the controller produced, for public, admin and api routes.
+It covers the view returned, the parameters passed to the template, and the controller's access checks in
+`preDispatch()` - which a controller invoked directly never runs. `renderReply()` renders the template the reply named.
 
-What that covers is the controller's own behaviour: which view it returned, the parameters it passed to the template,
-and whether its access checks refuse the wrong visitor. That last one matters more than it sounds, because a controller
-invoked directly never runs `preDispatch()` - which is where XenForo's own generated controllers put their access
-checks - so an action tested that way is tested with its authorisation skipped.
+Out of reach: the **whole page** - navigation, header and footer come from XenForo's own app classes rather than from
+the template, though `pageParam()` reads the values the template set for that wrapper, such as the page title. Also
+anything needing the real front controller - `index.php`'s bootstrap order, session cookies, web server rewrites - and
+JavaScript and visual appearance.
 
-As of v4.2.0 it covers the rendered template too: pass the reply to `renderReply()`, or render any template directly
-with `renderTemplate()`, and assert on the HTML with `assertSee()` and friends. What is still out of reach is the
-**whole page** - navigation, header and footer come from XenForo's own app classes rather than from the template. The
-values the template set for that wrapper are readable with `pageParam()`, so a page title is assertable even though the
-markup around it is not. Nor does it cover anything needing the real front controller - `index.php`'s bootstrap order, session cookies, web
-server rewrites - or JavaScript and visual appearance.
+`dispatch()` sends a `GET` only: XenForo asserts a CSRF token in `preDispatch()` for anything else, so an action opening
+with `assertPostOnly()` returns a 405. `callAction()` calls an action directly with a `POST` instead, skipping
+`preDispatch()` - and with it the CSRF check and the controller's permission check. Use `dispatch()` to test the guard
+and `callAction()` to test what the action does.
 
-A `POST` route dispatches, but only as far as the refusal: XenForo asserts a CSRF token in `preDispatch()` for anything
-that is not a `GET`, so an action opening with `assertPostOnly()` returns a 405 rather than running. For the action
-itself, `callAction()` calls it directly with a `POST` - skipping `preDispatch()`, and so the CSRF check and the
-controller's permission check with it. Use `dispatch()` to prove the guard refuses and `callAction()` to prove what the
-action does once let through; neither proves both.
+A public route also needs the visitor to hold `general.view`, which a built visitor does not, so a public dispatch
+returns a 403 until the test grants it. See `dispatch()` in DOCS.md.
 
-A public route also needs the visitor to hold `general.view`, which a built visitor does not - every public controller
-asserts it, so a public dispatch refuses with a 403 until the test grants it. See `dispatch()` in DOCS.md.
- 
 ### Database queries
 
-While we can mock the database adapter or entities and finders, for anything more than simple queries it quickly becomes
-cumbersome to unit test code which makes complex queries.
-
-These days you often don't have to. Using the `UsesDatabaseTransactions` trait, you can run the real query against the
-real database and assert on what it did with `assertDatabaseHas()` - the transaction is rolled back when the test
-finishes, so nothing is left behind. That tests the query you actually wrote rather than your mock of it.
+Mocking the database adapter, entities and finders quickly becomes cumbersome for anything beyond simple queries. With
+the `UsesDatabaseTransactions` trait you can run the real query against the real database and assert on the result with
+`assertDatabaseHas()`; the transaction is rolled back when the test finishes.
 
 ### Entity saving
 
-While we can mock an entity, we cannot stop it from interacting with the database because the `save()` method on the
-base Entity class is marked `final` - meaning that our mocks can't actually stop that method from executing by 
-overriding it.
-
-That used to mean you couldn't test code which calls `save()` at all, because running your tests would cause side
-effects from database updates. As of v4.0 you can: add the `UsesDatabaseTransactions` trait to your test class and every
-write the test makes is rolled back when it finishes. The `save()` still runs and still hits the database - we just take
-it all away again afterwards.
-
-The entity is still `final` where it counts, so this is not a way to *avoid* the database. It is a way to use it without
-leaving a mess behind.
+`save()` on the base Entity class is `final`, so a mock cannot stop it reaching the database. Use
+`UsesDatabaseTransactions`: the save still runs, and is rolled back when the test finishes.
 
 ### Functions which use `time()` rather than `\XF::$time`
 
@@ -831,33 +732,19 @@ difficulty testing in some circumstances.
 
 ### UI changes & template modifications
 
-This used to be out of reach entirely. As of v4.2.0 `renderTemplate()` renders a template to HTML with no web server,
-so a template modification applying, and a phrase resolving rather than showing a raw key, are both assertable - see
-`assertSee()` in DOCS.md. Note the modification has to be **installed** in the forum the tests run against, not merely
-present in your working copy, because XenForo applies modifications when it compiles the template.
+`renderTemplate()` renders a template to HTML, so a template modification applying, and a phrase resolving rather than
+showing a raw key, can both be asserted - see `assertSee()` in DOCS.md. The modification must be **installed** in the
+forum the tests run against, not only present in your working copy.
 
-What remains a human job is the whole page rather than the template - navigation, header and footer - along with
-anything about appearance, and JavaScript behaviour.
+The whole page, appearance and JavaScript behaviour still need checking by hand.
 
 ### Code which checks what kind of application is running
 
-This framework boots the base `XF\App`, not `XF\Pub\App` or `XF\Admin\App`. Those classes carry the page wrapper,
-which is what puts the whole page out of reach - but the consequence worth knowing is narrower and easier to miss:
-**your own code that asks which application is running takes the other branch here.**
+This framework boots the base `XF\App`, not `XF\Pub\App` or `XF\Admin\App`, so code that checks
+`$app instanceof \XF\Pub\App` - typically a `templater_global_data` listener - does not run its body under a test.
 
-The usual shape is a `templater_global_data` listener opening with `if ($app instanceof \XF\Pub\App)`. That is false
-under a test, so the body never runs, and a test written against it passes while asserting nothing. `dispatch()` swaps
-the `app.classType` container key rather than the application object, because all three routers live on the base app
-and a subclass was not needed for routing.
-
-There is no way around it from here. What you can do is ask the question the way XenForo itself asks it:
-`$app->container('app.classType') === 'Pub'` sees what `dispatch()` set. **That is not a testability compromise** -
-`XF\App.php` uses `app.classType` four times, including `if ($c['app.classType'] != 'Pub')` at line 1291, so
-`instanceof` is the less canonical of the two forms. The other option is to move the body into a method the test calls
-directly, which is worth doing anyway for anything with logic in it.
-
-Once the listener checks the class type, testing it takes no double and no dispatch - swap the key and hand it the
-application:
+Check `$app->container('app.classType') === 'Pub'` instead, as XenForo itself does; `dispatch()` sets that key. Or move
+the body into a method the test can call directly. A listener checking the class type can be tested like this:
 
 ```php
 $this->swap('app.classType', 'Pub');
@@ -868,41 +755,26 @@ $data = [];
 $this->assertArrayHasKey('myAddonData', $data);
 ```
 
-Pair it with a negative that asserts the test app's own class type is not `Pub`, or the positive proves only that the
-swap worked.
-
 ### Data in the database
 
-Any code which relies on certain data being present in the database at a given point in time is problematic, since that
-data could change from external sources - thus breaking our unit tests in future runs.
+Code which relies on particular data being present in the database is problematic, since that data can change.
 
-Creating and saving your own data is no longer part of that problem. `UsesDatabaseTransactions` wraps each test in a
-database transaction and rolls it back afterwards, so anything the test writes is gone by the time the next one runs.
-XenForo's own transactions nest inside it safely - the adapter issues a `SAVEPOINT` rather than a second `BEGIN` - so
-code under test can run its own transaction, and commit it, without escaping the wrapper.
+`UsesDatabaseTransactions` removes anything a test writes. XenForo's own transactions nest inside it, so code under test
+can open and commit its own. Two things it cannot roll back: DDL commits implicitly in MySQL, so a test that alters the
+schema must clean up after itself; and uncommitted rows are visible only to the connection that wrote them.
 
-Two things it can't take back, both of them MySQL behaviour rather than anything XenForo does. DDL implicitly commits,
-so a test which alters the schema - running a `Setup.php` step, for instance - escapes the transaction and has to clean
-up after itself. And only the connection inside the transaction can see the uncommitted rows, so code which reads
-through a second connection won't see what your test wrote.
-
-What is still missing is **seeding**. Relying on data that happens to exist in your development forum makes for fragile
-tests, and there is currently no good way to build up a known set of data for a test to work against. An in-memory
-database such as SQLite would help here, and XenForo may support it in future - though there are many MySQL-specific
-functions built into XenForo, so it will not be a trivial exercise. Even then, the question of how to quickly seed a
-newly created database with everything a functioning XenForo instance needs remains an open one.
+There is no way to seed a known set of data for a test to work against. Tests that rely on data already in your
+development forum are fragile.
 
 ### Filesystem paths which aren't abstracted
 
-`swapFs()` only helps when **every** access goes through `$app->fs()`. Code which writes to a real path -
-`XF\Util\File::getTempDir()`, `File::getNamedTempFile()` - and then reads the result back through an abstracted path
-such as `internal-data://` will break under a swapped filesystem. In production those two are the same directory; with
-the abstracted one swapped for an in-memory filesystem they are not, so the write lands on disk and the read finds
-nothing. It fails as though the code under test were broken, which makes it an expensive one to diagnose.
+`swapFs()` only helps when every access goes through `$app->fs()`. Code which writes to a real path -
+`XF\Util\File::getTempDir()`, `File::getNamedTempFile()` - and reads the result back through an abstracted path such as
+`internal-data://` fails under a swapped filesystem, because the two no longer point at the same place. Test that code
+against the real filesystem, writing to a path you delete in `tearDown()`.
 
-Test that code against the real filesystem instead, writing to a namespaced path you delete in `tearDown()`. And note
-that `$fs->has()` does not reliably report **directories**, so the obvious `if ($fs->has($dir)) { $fs->deleteDir($dir); }`
-cleanup silently does nothing and leaks state into the next test - call `deleteDir()` unconditionally in a try/catch.
+`$fs->has()` does not reliably report directories, so call `deleteDir()` unconditionally, in a try/catch, when cleaning
+up.
 
 ### Static classes
 
@@ -910,9 +782,8 @@ If we can't swap out a class with our own instance, because it relies on static 
 much more difficult or impossible to test. This is a general limitation on unit testing rather than something specific 
 to XenForo.
 
-Some of XenForo's own statics are handled for you, where it was worth the effort - `\XF::$time` via `setTestTime()`, and
-`\XF::visitor()` via `actingAs()`, which also puts the previous visitor back afterwards so it doesn't leak into the next
-test. Statics in your own code are still yours to deal with, and are usually a sign the code wants restructuring.
+`\XF::$time` can be set with `setTestTime()`, and `\XF::visitor()` with `actingAs()`, which restores the previous
+visitor afterwards.
 
 ## 13. Writing testable code and other unit testing tips
 
@@ -967,9 +838,8 @@ help you do this for API calls).
 Don't send emails. Don't write to the filesystem. Don't leave anything behind that the next test can trip over. We
 should be testing our code in isolation in a repeatable and consistent manner.
 
-Database writes are the one exception worth naming, because v4.0 changed the answer. With the
-`UsesDatabaseTransactions` trait the write happens and is then rolled back, so it causes no side effect that outlives
-the test - which is what the rule was always really about. Without that trait, the old advice stands: don't.
+Database writes are the exception: with the `UsesDatabaseTransactions` trait the write is rolled back when the test
+finishes. Without that trait, don't write to the database.
 
 Feature and integration tests are important too - but right now we are focused on unit testing.
 
@@ -1024,7 +894,7 @@ for code which interacts with the database, you can then test the repository in 
 testing other code.
 
 That leaves the question of how you test the repository itself. You can mock the database for it, in isolation to the
-rest of your program logic - but as of v4.0 you usually shouldn't have to. Use `UsesDatabaseTransactions` and let the
+rest of your program logic - but you usually don't have to. Use `UsesDatabaseTransactions` and let the
 repository run its real queries against the real database, then assert on the result with `assertDatabaseHas()`. A test
 against a mocked adapter only proves your code sends the query you expected; a test against the database proves the
 query does what you think it does.
@@ -1063,9 +933,8 @@ Use `fakesLogger()` instead.
 
 ### Don't mock `XF\Mail\Transport`
 
-Use `fakesMail()` instead. It switches XenForo's mail queue off rather than faking it, so mail sent with `queue()` goes
-through the test transport just as `send()` does, and there is no `MailSend` job to run. (v3.0 removed the queue *fake*
-that used to do this; the queue itself is XenForo's and is very much still there.)
+Use `fakesMail()` instead. It switches XenForo's mail queue off, so mail sent with `queue()` goes through the test
+transport just as `send()` does.
 
 ### Don't mock `XF\SimpleCache`
 
@@ -1178,15 +1047,13 @@ public function test_the_handler_reports_what_it_did()
 }
 ```
 
-At file scope it cannot work, and the failure is worse than it looks. PHPUnit loads every test file while it is
-building the suite, **before any test runs**, so XenForo has not booted and its autoloader is not registered. The
-parent class does not exist yet, and what you get is `Class "XF\Entity\User" not found` with a stack trace through
-`TestSuiteLoader` - the whole run stops, not just that test, and nothing points at the class declaration as the cause.
+PHPUnit loads every test file while building the suite, before XenForo has booted, so at file scope the parent class
+does not exist yet. The whole run stops with `Class "XF\Entity\User" not found` and a stack trace through
+`TestSuiteLoader`.
 
-An anonymous class is the shortest fix. If the class has to have a name - because something in the test refers to it by
-one - put it in a file PHPUnit does not collect (anything not ending in `Test.php`, `tests/Support/` is a reasonable
-home) and `require_once` it from inside the test method. A named class cannot be declared inside a method: PHP refuses
-with `Class declarations may not be nested`.
+If the class needs a name, put it in a file PHPUnit does not collect - anything not ending in `Test.php`, such as
+`tests/Support/` - and `require_once` it from inside the test method. PHP does not allow a named class to be declared
+inside a method.
 
 ### Don't treat your test code as unimportant
 
