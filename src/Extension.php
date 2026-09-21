@@ -218,11 +218,40 @@ class Extension extends BaseExtension
 			ORDER BY extension.execute_order, extension.to_class
 		");
 
+		return self::mapClassExtensions($extensions);
+	}
+
+	/**
+	 * Key each extension by the class XenForo will actually ask to extend.
+	 *
+	 * This is XF 2.3's own ClassExtensionRepository::buildExtensionCacheData(), and it has to
+	 * be. 2.3 renamed services, finders, repositories and controllers with a suffix and aliases
+	 * the old names forward, so an add-on that also supports 2.2 must register its extension on
+	 * the old spelling - XF\Service\User\Login - while 2.3 resolves the class to LoginService
+	 * and asks for that. Keyed on the raw spelling, the extension sat under a key nothing looked
+	 * up, and the isolated application ran XenForo's own class instead, silently. It did so for
+	 * 61 of the 106 extensions on the development forum where it was found, XenForo's own XFMG,
+	 * XFRM and XFES among them.
+	 *
+	 * The dedupe is core's too: once both spellings share a bucket, an add-on naming both would
+	 * otherwise get the same proxy built twice.
+	 *
+	 * @param array $extensions - rows with from_class and to_class
+	 *
+	 * @return array<string, string[]>
+	 */
+	private static function mapClassExtensions(array $extensions)
+	{
 		$cache = [];
 
 		foreach ($extensions AS $extension)
 		{
-			$cache[$extension['from_class']][] = $extension['to_class'];
+			$cache[\XF::getClassForAlias($extension['from_class'])][] = $extension['to_class'];
+		}
+
+		foreach ($cache AS $fromClass => $toClasses)
+		{
+			$cache[$fromClass] = array_values(array_unique($toClasses));
 		}
 
 		return $cache;

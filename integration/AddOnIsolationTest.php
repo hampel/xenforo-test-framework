@@ -97,9 +97,14 @@ class AddOnIsolationTest extends TestCase
 
 		$filtered = Extension::forAddOns([$extension['addon_id']], $this->app()->db());
 
+		// looked up by the class XenForo will ask for, not the spelling it was registered under.
+		// This test used the raw from_class until the renamed-class fix, and passed - because it
+		// filed and fetched the same wrong way the code did. It happened to pick
+		// XF\Admin\Controller\Option, a renamed class, so it was consistent with the bug rather
+		// than a check on it
 		$this->assertContains(
 			$extension['to_class'],
-			$this->classExtensionsOf($filtered)[$extension['from_class']]
+			$this->classExtensionsOf($filtered)[\XF::getClassForAlias($extension['from_class'])]
 		);
 	}
 
@@ -181,6 +186,62 @@ class AddOnIsolationTest extends TestCase
 		");
 	}
 
+	/**
+	 * XenForo 2.3 renamed most services, finders, repositories and controllers with a suffix and
+	 * aliases the old names forward. An add-on supporting 2.2 has to extend the old spelling, and
+	 * 2.3 then asks for the new one - so the map must be keyed the way 2.3's own cache builder
+	 * keys it, or the extension is silently not applied under isolation.
+	 *
+	 * Reported by the ArchiveSite add-on's first suite, 2026-09-21: a test of its Login extension
+	 * came back clean because the extension was never loaded and core's class ran instead.
+	 * Control: key on the raw from_class and this fails; end to end, the same revert makes
+	 * extendClass() return XF\Service\User\LoginService rather than the add-on's class.
+	 */
+	public function test_an_extension_on_a_renamed_class_is_keyed_by_the_class_xenforo_asks_for()
+	{
+		$renamed = null;
+
+		foreach ($this->activeClassExtensions() AS $extension)
+		{
+			if (\XF::getClassForAlias($extension['from_class']) !== $extension['from_class'])
+			{
+				$renamed = $extension;
+				break;
+			}
+		}
+
+		if (!$renamed)
+		{
+			$this->markTestSkipped(
+				'No add-on on this forum extends a class by a pre-2.3 name, so nothing here could '
+				. 'be dropped. Skipped rather than passed, because a pass would mean nothing.'
+			);
+		}
+
+		$map = $this->classExtensionsOf(Extension::forAddOns([$renamed['addon_id']], $this->app()->db()));
+		$askedFor = \XF::getClassForAlias($renamed['from_class']);
+
+		$this->assertArrayHasKey($askedFor, $map, "{$renamed['from_class']} should be filed under {$askedFor}");
+		$this->assertContains($renamed['to_class'], $map[$askedFor]);
+		$this->assertArrayNotHasKey($renamed['from_class'], $map, 'nothing should be left under the old spelling');
+	}
+
+	public function test_both_spellings_of_one_class_share_a_bucket_without_duplicates()
+	{
+		// an add-on naming both spellings - or two add-ons, one on each - must not get the same
+		// proxy built twice, which is the other half of what core's cache builder does
+		$map = $this->mapClassExtensions([
+			['from_class' => 'XF\\Service\\User\\Login', 'to_class' => 'Vendor\\A\\Login'],
+			['from_class' => 'XF\\Service\\User\\LoginService', 'to_class' => 'Vendor\\A\\Login'],
+			['from_class' => 'XF\\Service\\User\\LoginService', 'to_class' => 'Vendor\\B\\Login'],
+		]);
+
+		$this->assertSame(
+			['XF\\Service\\User\\LoginService' => ['Vendor\\A\\Login', 'Vendor\\B\\Login']],
+			$map
+		);
+	}
+
 	public function test_a_mocked_database_no_longer_re_runs_the_listener_query()
 	{
 		// this lives here because the cause is boot-time resolution rather than anything about
@@ -193,6 +254,35 @@ class AddOnIsolationTest extends TestCase
 		$this->mockDatabase();
 
 		$this->assertInstanceOf(Manager::class, $this->app()->em());
+	}
+
+	/**
+	 * @return array
+	 */
+	private function activeClassExtensions()
+	{
+		return $this->app()->db()->fetchAll("
+			SELECT extension.addon_id, extension.from_class, extension.to_class
+			FROM xf_class_extension AS extension
+			LEFT JOIN xf_addon AS addon ON (extension.addon_id = addon.addon_id)
+			WHERE extension.active = 1
+				AND addon.active = 1
+				AND addon.is_processing = 0
+			ORDER BY extension.addon_id, extension.from_class
+		");
+	}
+
+	/**
+	 * @param array $rows
+	 *
+	 * @return array
+	 */
+	private function mapClassExtensions(array $rows)
+	{
+		$method = new \ReflectionMethod(Extension::class, 'mapClassExtensions');
+		$method->setAccessible(true);
+
+		return $method->invoke(null, $rows);
 	}
 
 	/**

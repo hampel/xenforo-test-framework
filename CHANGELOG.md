@@ -45,6 +45,20 @@ CHANGELOG
   never have covered it either, because an add-on's classes resolve through XenForo's own autoload
   path whether or not its Composer autoloader was registered. `Hampel\Testing\App::setup()` now
   installs the extension before it calls `parent::setup()`
+* fix: **with `$addonsToLoad` set, a class extension registered on a pre-2.3 class name was silently
+  not applied.** XenForo 2.3 renamed most services, finders, repositories and controllers with a
+  suffix - `XF\Service\User\Login` became `LoginService` - and aliases the old names forward, so an
+  add-on that also supports 2.2 must register its extension on the old spelling, and 2.3 then asks
+  to extend the new one. XenForo's own cache builder files each extension under the class it will
+  be asked for; the isolated test application filed it under the spelling it was registered with,
+  where nothing ever looked. The add-on's class was skipped and XenForo's ran instead, with nothing
+  to say so. On the development forum where it was found that was **61 of 106 active extensions**,
+  across 18 add-ons including XenForo's own XFMG, XFRM and XFES - and the add-on that reported it
+  had a test come back clean only because the extension under test was never loaded. The
+  map is now built the way XenForo 2.3 builds it, including collapsing both spellings into one
+  entry so a class is not extended twice. Unaffected: a suite with `$addonsToLoad` empty, and the
+  real application. **Present in every 4.x and 3.x release too**, since both key the map the same
+  way
 * new `Hampel\Testing\Extension::forAddOns()` builds an extension carrying only the listeners and
   class extensions belonging to the given add-ons. It is where the filtering logic lives now, so
   the boot and the test-time hook share one copy of it
