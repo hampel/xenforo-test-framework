@@ -101,9 +101,7 @@ trait InteractsWithRoutes
 	/**
 	 * Dispatch a route and return the reply its controller produced, without rendering it.
 	 *
-	 * This runs the controller the way XenForo does, which is the point: a directly constructed
-	 * controller never runs preDispatch(), and XenForo's own xf-make:controller stub puts access
-	 * checks there - so an action invoked directly is tested with its authorisation skipped.
+	 * The controller's preDispatch() runs, so its access checks are exercised.
 	 *
 	 * @param string $routePath - as it appears after the ? in a URL, eg 'help/terms'
 	 * @param string $type - 'public', 'admin' or 'api'
@@ -152,26 +150,20 @@ trait InteractsWithRoutes
 	}
 
 	/**
-	 * Call one controller action directly, with a POST request by default - the half of a
-	 * controller that dispatch() cannot reach.
+	 * Call one controller action directly, with a POST request by default, for the actions
+	 * dispatch() cannot reach - dispatch() sends GET only, since XenForo requires a CSRF token for
+	 * anything else.
 	 *
-	 * dispatch() only sends a GET, because XenForo asserts a CSRF token in preDispatch() for
-	 * anything else and a test has no session to build one from. So saving, toggling and
-	 * deleting went untested. This builds the controller the way the dispatcher does and calls
-	 * the action, **without preDispatch()** - which means without the CSRF check and without
-	 * preDispatchController(), where access checks usually live. It proves what an action does
-	 * once let through, never that the guard lets through the right people. Pair it with
-	 * dispatch() for that: a GET to a POST-only action returns 405, and 403 without permission.
+	 * The action runs **without preDispatch()**, so neither the CSRF check nor the controller's
+	 * access checks run. Use dispatch() to test those.
 	 *
-	 * Everything else matches the dispatcher, and each part is something a hand-written version
-	 * gets wrong:
+	 * Otherwise it matches the dispatcher:
 	 *
-	 * - a PrintableException - what FormAction::run() throws for an entity with errors, so every
-	 *   standard admin save - comes back as an Error reply whose errors stay keyed by field;
+	 * - a PrintableException, as FormAction::run() throws for an entity with errors, comes back
+	 *   as an Error reply with its errors keyed by field;
 	 * - a reply thrown as XF\Mvc\Reply\Exception, by assertPostOnly(), assertRecordExists() and
 	 *   the permission asserts, comes back as that reply;
-	 * - the request is swapped into the container as well as handed to the controller, so code
-	 *   reading $app->request() sees the same request as the action's $this->request;
+	 * - the request is placed in the container as well as passed to the controller;
 	 * - a Reroute is followed, and deferred work queued with \XF::runOnce() runs afterwards.
 	 *
 	 * @param string $controller - 'XF:Option' or a full class name
@@ -498,8 +490,7 @@ trait InteractsWithRoutes
 	 *
 	 * @param AbstractReply $reply
 	 * @param int|null $code - optional http response code
-	 * @param string|null $errorText - optional, matched as a substring of the error text. Named
-	 *                                 $message before 4.3.0; positional calls are unaffected
+	 * @param string|null $errorText - optional, matched as a substring of the error text
 	 * @param string|null $message - added to the failure, for a test that dispatches several routes
 	 *
 	 * @return void

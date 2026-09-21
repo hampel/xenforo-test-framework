@@ -84,13 +84,6 @@ trait InteractsWithFilesystem
 	}
 
 	/**
-	 * XF builds its filesystem mounts once, from the config as it stood at the time, and `fs` is its
-	 * own cached container entry - so swapping the config does not reach mounts that already exist.
-	 * Without this, a swapFs() after anything has touched the filesystem hands back the REAL local
-	 * adapter, and the test goes on to read and write the real data directory: the side effects the
-	 * helper exists to prevent, with nothing reported.
-	 */
-	/**
 	 * The adapter behind one of XenForo's mounted filesystems.
 	 *
 	 * MountManager::getFilesystem() is typed to FilesystemInterface, which does not declare
@@ -116,6 +109,11 @@ trait InteractsWithFilesystem
 		return $filesystem->getAdapter();
 	}
 
+	/**
+	 * XenForo builds its filesystem mounts once and caches them under `fs`, so swapping the config
+	 * does not reach mounts already built. Without this, a swap after the filesystem has been used
+	 * returns the real local adapter.
+	 */
 	private function decacheFs()
 	{
 		$this->app()->container()->decache('fs');

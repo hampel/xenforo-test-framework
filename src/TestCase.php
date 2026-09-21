@@ -84,15 +84,9 @@ abstract class TestCase extends BaseTestCase
 	/**
 	 * Boot the XenForo application this test runs against.
 	 *
-	 * The framework owns this as of 5.0.0. It used to ship as tests/CreatesApplication.php for
-	 * you to copy, which meant every later change to the boot had to be merged by hand into a
-	 * file you owned - and a copy nobody merged is indistinguishable from one nobody needed to.
-	 * The v2.1.0 add-on isolation arguments are the case that proves it: add-ons are still
-	 * running the 2020 version of that file today.
-	 *
-	 * It is an ordinary method, so override it if you genuinely need a different boot. An
-	 * add-on that kept its own tests/CreatesApplication.php also keeps exactly the behaviour it
-	 * had, because a trait method wins over an inherited one.
+	 * Override it for a different boot, passing $addonsToLoad to XF::setupApp() as 'xf-addons'.
+	 * A CreatesApplication trait in the consuming add-on overrides it too, since a trait method
+	 * takes precedence over an inherited one.
 	 *
 	 * @return App
 	 */
@@ -132,16 +126,10 @@ abstract class TestCase extends BaseTestCase
 	}
 
 	/**
-	 * Refuse a suite that asked for add-on isolation and did not get it.
+	 * Refuse a suite that asked for add-on isolation and did not get it - $addonsToLoad set, with
+	 * a CreatesApplication that does not pass it to XF::setupApp().
 	 *
-	 * The v2.1.0 scaffold change needed both files: $addonsToLoad in tests/TestCase.php, and
-	 * tests/CreatesApplication.php passing it to XF::setupApp(). Taking one without the other
-	 * has always been silent - the suite runs with every installed add-on active, which is the
-	 * state $addonsToLoad was set to avoid, and the failure that follows looks like a bug in
-	 * the add-on rather than a half-finished upgrade.
-	 *
-	 * Only the missing case is refused. A suite that deliberately boots with a different list
-	 * than the property names is doing something of its own and is left alone.
+	 * Only the missing case is refused; a boot given a different list is allowed.
 	 *
 	 * @param string[] $wanted - the ids the test class asks for
 	 * @param string[] $applied - the ids the application was actually given
@@ -160,9 +148,9 @@ abstract class TestCase extends BaseTestCase
 				. 'application was booted without it, so no add-on isolation is in effect: every '
 				. 'add-on installed on the forum is active, including any shipping their own '
 				. 'PHPUnit and Mockery for yours to collide with.' . "\n\n"
-				. 'Your tests/CreatesApplication.php predates v2.1.0 and never passes the ids on. '
-				. 'As of v5.0.0 this framework boots the application for you, so the fix is to '
-				. 'delete that file and the "use CreatesApplication;" line in tests/TestCase.php.'
+				. 'Your tests/CreatesApplication.php does not pass the ids on. This framework boots '
+				. 'the application itself, so delete that file and the "use CreatesApplication;" '
+				. 'line in tests/TestCase.php.'
 				. "\n\n"
 				. 'If you need a boot of your own, pass the ids to it:' . "\n\n"
 				. '    return \XF::setupApp(\'Hampel\Testing\App\', '

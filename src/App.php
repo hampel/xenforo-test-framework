@@ -9,11 +9,8 @@ use XF\Db\Exception as DbException;
 class App extends BaseApp
 {
 	/**
-	 * The add-on ids this application was told to keep, exactly as setup() received them.
-	 *
-	 * Empty means no isolation was asked for. That is not the same as asking for it and having
-	 * the request never arrive, and TestCase uses the difference to refuse a half-upgraded
-	 * scaffold rather than running without the isolation it was configured for.
+	 * The add-on ids this application was told to keep, exactly as setup() received them. Empty
+	 * means no isolation was asked for. TestCase compares this with $addonsToLoad.
 	 *
 	 * @var string[]
 	 */
@@ -72,18 +69,13 @@ class App extends BaseApp
 	/**
 	 * Install the extension this package uses, before parent::setup() fires `app_setup`.
 	 *
-	 * The ordering is the whole point, and it was wrong until 5.0.0. `XF\App::setup()` fires
-	 * `app_setup` as its last step, so an extension swapped in afterwards - which is what a
-	 * test-time helper can do - arrives too late to stop a single listener. Every installed
-	 * add-on's `app_setup` listener ran whatever $addonsToLoad said, registering container
-	 * entries and occasionally throwing, out of a suite that had asked for none of them.
+	 * It must be installed here: `XF\App::setup()` fires `app_setup` as its last step, so an
+	 * extension installed later cannot stop excluded add-ons' listeners running. Filtering
+	 * `addon.composer` does not prevent it either, since add-on classes also load through
+	 * XenForo's own autoloader.
 	 *
-	 * Filtering `addon.composer` cannot substitute for this: add-on classes are reachable
-	 * through XenForo's own autoload path, so a listener resolves whether or not its add-on's
-	 * Composer autoloader was registered.
-	 *
-	 * With no ids given, this still installs our Extension rather than XenForo's, because
-	 * `fakesEvents()` needs one - the listener set is XenForo's own in that case.
+	 * With no ids given it still installs this package's Extension, carrying XenForo's full
+	 * listener set, because `fakesEvents()` requires it.
 	 *
 	 * @param string[] $addOnIds - the add-ons to keep, or an empty array to keep all of them
 	 *

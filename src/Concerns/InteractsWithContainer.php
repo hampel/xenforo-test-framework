@@ -44,11 +44,9 @@ trait InteractsWithContainer
 	/**
 	 * Set a value in the application config - the values from config.php, which are NOT options.
 	 *
-	 * The two are easy to confuse and fail differently: setOption() writes somewhere XenForo reads
-	 * on demand, while a config value is usually read ONCE, where the container builds whatever
-	 * consumes it, and the consumer then keeps the value rather than the config. So call this before
-	 * the code under test resolves anything - and if the consuming container key may already have
-	 * been built, decache it, the way fakesMail() decaches `mailer`.
+	 * A config value is usually read once, when the container builds whatever uses it. Call this
+	 * before the code under test resolves anything, and decache any container key already built
+	 * from it, as fakesMail() does with `mailer`.
 	 *
 	 * @param string $key - the config key to set
 	 * @param mixed $value - the value to set it to

@@ -175,15 +175,8 @@ trait InteractsWithTemplates
 	/**
 	 * Assert that no template this test rendered raised an error.
 	 *
-	 * The strict form of the guard above, and opt-in for the reason given there: **a template
-	 * missing a parameter it reads usually renders most of its markup anyway.** Measured on 2.3.12:
-	 * rendering 400 core templates with no parameters raised an error in 103 of them, and 101 of
-	 * those still produced over 50 characters - so failing every one would break tests that assert
-	 * on markup which is really there.
-	 *
-	 * Reach for it when you want the render to be right rather than merely to contain what you
-	 * asserted, which for a template of your own rendered with its controller's parameters is a
-	 * reasonable thing to want.
+	 * The strict form of the guard above. It is opt-in because a template missing a parameter
+	 * usually still renders most of its markup.
 	 *
 	 * @return void
 	 */
@@ -272,13 +265,8 @@ trait InteractsWithTemplates
 	/**
 	 * Assert that a template modification is actually matching something.
 	 *
-	 * More direct than looking for its effect in rendered HTML, and it works for a modification
-	 * whose insertion has no distinctive markup to search for.
-	 *
-	 * **XenForo logs a modification that matches nothing as `ok`.** The status only says the
-	 * modification ran, not that its `find` still matches - so a modification silently stopped
-	 * applying by a XenForo upgrade stays `ok` with an apply count of zero. The count is the part
-	 * that answers the question.
+	 * A modification whose `find` matches nothing is still logged with status `ok`, so this reads
+	 * its apply count instead.
 	 *
 	 * @param string $modificationKey - as in `_output/template_modifications/`
 	 *
