@@ -1,5 +1,11 @@
 # Changelog
 
+## 5.4.1 (unreleased)
+
+* docs: on a development install, a template with an `_output/` copy renders from that copy, and a
+  template changed only in the database is replaced before it renders. Template modifications still
+  need `xf-dev:import`
+
 ## 5.4.0 (2026-09-22)
 
 * `renderTemplate()`, `renderReply()` and `renderMacro()` set the `xf` template parameter as XenForo

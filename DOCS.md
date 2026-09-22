@@ -481,8 +481,18 @@ request, which `dispatch()` cannot send, so the visitor's own permissions still 
 Render a template to HTML, with no web server - to check that a template modification applied, or
 that a phrase resolved rather than rendering as a raw key.
 
-**What renders is what the forum has installed, not your working copy.** An edit to `_output/` is
-not seen until `xf-dev:import`, and a template modification must be installed.
+**On a development install, a template with an `_output/` copy renders from that copy.** XenForo
+re-imports the file before rendering whenever it differs from what was last compiled, so an edit to
+`_output/` is seen without `xf-dev:import`, and a template changed only in the database is replaced
+before it renders. The re-import saves the template and rewrites its compiled file, which a
+transaction cannot roll back. With `$config['development']['enabled']` off, the database copy
+renders.
+
+To check that a template test fails when the template is wrong, break the `_output/` file rather
+than the database copy, and restore it and `_metadata.json` afterwards.
+
+**Template modifications are not re-imported this way.** An edit to
+`_output/template_modifications/` is not seen until `xf-dev:import`.
 
 ##### Parameters:
 
@@ -646,6 +656,8 @@ $this->assertTemplateModificationApplied('myaddon_helper_account');
 ```
 
 A modification whose `find` no longer matches still has status `ok`, with an apply count of zero.
+
+The apply count is the one recorded when the template was last compiled.
 
 A modification inserting an `<xf:include>` does not put the included template's name in the output,
 so assert on the markup it produces instead.

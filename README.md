@@ -733,8 +733,10 @@ difficulty testing in some circumstances.
 ### UI changes & template modifications
 
 `renderTemplate()` renders a template to HTML, so a template modification applying, and a phrase resolving rather than
-showing a raw key, can both be asserted - see `assertSee()` in DOCS.md. The modification must be **installed** in the
-forum the tests run against, not only present in your working copy.
+showing a raw key, can both be asserted - see `assertSee()` in DOCS.md. A template modification must be **installed**
+in the forum the tests run against. On a development install, a template with an `_output/` copy renders from that
+copy, so an edit to it is seen without `xf-dev:import`, and a change made only in the database is not - see
+`renderTemplate()` in DOCS.md.
 
 The whole page, appearance and JavaScript behaviour still need checking by hand.
 
