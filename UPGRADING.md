@@ -5,9 +5,11 @@ Most releases need nothing beyond `composer update`. `CHANGELOG.md` lists everyt
 
 `tests/TestCase.php` is copied into your add-on, so a change to it has to be merged by hand.
 
-## 5.4.1
+## 5.5.0
 
-Nothing to do.
+Nothing to do, but check any test that both fakes HTTP and expects a request to be sent for real.
+A client built with `$app->http()->createClient()` after the fake is installed is now faked, where
+it previously made a live request.
 
 ## 5.4.0
 

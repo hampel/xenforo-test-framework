@@ -1425,6 +1425,12 @@ This function relies on the Mock Handler and History Middleware provided by the 
 Refer to the Guzzle documentation [Testing Guzzle Clients](http://docs.guzzlephp.org/en/stable/testing.html) for more
 information on how the Mock Handler and History Middleware works. 
 
+**It covers the shared client and any client your add-on builds with
+`$app->http()->createClient()`**, which is what an add-on needing its own `base_uri`, headers or
+timeouts has to use. A client created while a fake is installed is built on the fake handler, with
+the rest of its configuration kept; one created before the fake keeps the real handler, so install
+the fake first.
+
 ##### Parameters:
 
 * `array responseStack` - an array of Psr7 Responses or Request Exceptions to return - one for each request made

@@ -24,6 +24,17 @@ class Extension extends BaseExtension
 	protected $firedEvents = [];
 
 	/**
+	 * Listeners the test framework installs itself, which run whether or not events are faked.
+	 *
+	 * fakesEvents() stops an add-on's listeners running, which is its purpose. A listener the
+	 * framework relies on to install a fake is not one of those: dropping it would let the code
+	 * under test reach the real thing.
+	 *
+	 * @var array
+	 */
+	protected $internalListeners = [];
+
+	/**
 	 * @param bool $enabled
 	 *
 	 * @return void
@@ -50,6 +61,19 @@ class Extension extends BaseExtension
 	}
 
 	/**
+	 * Add a listener belonging to the test framework itself.
+	 *
+	 * @param string $event
+	 * @param callable $callback
+	 *
+	 * @return void
+	 */
+	public function addInternalListener($event, callable $callback)
+	{
+		$this->internalListeners[$event][] = $callback;
+	}
+
+	/**
 	 * Record the event, and in fake mode stop it reaching any listener.
 	 *
 	 * @param string $event
@@ -62,6 +86,8 @@ class Extension extends BaseExtension
 	{
 		if (!$this->fakeEvents)
 		{
+			$this->fireInternalListeners($event, $args);
+
 			return parent::fire($event, $args, $hint);
 		}
 
@@ -71,8 +97,24 @@ class Extension extends BaseExtension
 			'hint' => $hint,
 		];
 
-		// no listener ran, so nothing vetoed the event
+		$this->fireInternalListeners($event, $args);
+
+		// no listener of the add-on's ran, so nothing vetoed the event
 		return true;
+	}
+
+	/**
+	 * @param string $event
+	 * @param array $args - passed on as given, so a listener still receives them by reference
+	 *
+	 * @return void
+	 */
+	private function fireInternalListeners($event, array $args)
+	{
+		foreach ($this->internalListeners[$event] ?? [] AS $callback)
+		{
+			call_user_func_array($callback, $args);
+		}
 	}
 
 	/**

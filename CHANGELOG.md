@@ -1,7 +1,12 @@
 # Changelog
 
-## 5.4.1 (unreleased)
+## 5.5.0 (unreleased)
 
+* `fakesHttp()` and `fakesHttpByUrl()` now also fake clients built with
+  `$app->http()->createClient()`, which an add-on uses when it needs its own `base_uri`, headers or
+  timeouts. Previously only the shared `client` and `clientUntrusted` were faked, so those requests
+  were sent for real. A client created before the fake is installed still uses the real handler
+* the fake reaches those clients while `fakesEvents()` is active as well
 * docs: on a development install, a template with an `_output/` copy renders from that copy, and a
   template changed only in the database is replaced before it renders. Template modifications still
   need `xf-dev:import`

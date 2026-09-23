@@ -7,6 +7,7 @@ use GuzzleHttp\Handler\MockHandler;
 use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Middleware;
 use GuzzleHttp\Promise\Create;
+use Hampel\Testing\Extension;
 use PHPUnit\Framework\Assert as PHPUnit;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
@@ -15,6 +16,12 @@ use Psr\Http\Message\StreamInterface;
 trait InteractsWithHttp
 {
 	private $history = [];
+
+	/** @var HandlerStack[] - the fake handler stacks installed in this test, by client kind */
+	private $httpFakeStacks = [];
+
+	/** @var bool - whether the http_client_config listener has been added in this test */
+	private $httpClientInterceptInstalled = false;
 
 	/**
 	 * Mock the Http client
@@ -131,7 +138,62 @@ trait InteractsWithHttp
 		$container->decache('reader');
 		$container->decache('metadataFetcher');
 
+		$this->httpFakeStacks[$key] = $handlerStack;
+		$this->interceptCreatedHttpClients();
+
 		return $container[$key];
+	}
+
+	/**
+	 * Arrange for clients built with $app->http()->createClient() to use the installed fake.
+	 *
+	 * Swapping the container key reaches the shared `client` and `clientUntrusted` only.
+	 * XF\SubContainer\Http::createClient() constructs a new Guzzle client on every call, which an
+	 * add-on needing its own base_uri, headers or timeouts has to use - so without this a test that
+	 * fakes HTTP still sends that add-on's requests to the real service.
+	 *
+	 * XenForo fires `http_client_config` with the new client by reference, which is the one place
+	 * to reach it. The client is rebuilt on the fake handler with the rest of its configuration
+	 * kept, so the add-on's own options still apply.
+	 *
+	 * @return void
+	 */
+	private function interceptCreatedHttpClients()
+	{
+		if ($this->httpClientInterceptInstalled)
+		{
+			return;
+		}
+
+		$this->httpClientInterceptInstalled = true;
+
+		$extension = $this->app()->extension();
+
+		$listener = function (&$client)
+		{
+			$handlerStack = $this->httpFakeStacks['client'] ?? $this->httpFakeStacks['clientUntrusted'] ?? null;
+
+			if (!$handlerStack || !($client instanceof Client))
+			{
+				return;
+			}
+
+			$config = $client->getConfig();
+			$config['handler'] = $handlerStack;
+
+			$client = new Client($config);
+		};
+
+		// fakesEvents() stops add-on listeners running, and this one must survive that - otherwise
+		// faking events would quietly restore the live client
+		if ($extension instanceof Extension)
+		{
+			$extension->addInternalListener('http_client_config', $listener);
+		}
+		else
+		{
+			$extension->addListener('http_client_config', $listener);
+		}
 	}
 
 	/**
