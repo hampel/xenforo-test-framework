@@ -64,10 +64,11 @@ trait UsesDatabaseTransactions
 					. 'MySQL commits implicitly - any DDL, including the TRUNCATE that XenForo runs '
 					. 'when a template is compiled. On a development install that compile happens '
 					. 'whenever a rendered template\'s _output/ file does not match the hash in '
-					. '_metadata.json, which is the state an edit leaves it in. Loading a page that '
-					. 'renders the template, outside any test, lets the watcher re-import it and '
-					. 'write that hash - after which the compile stops happening. Note xf-dev:import '
-					. 'does not clear it: it reads _metadata.json and does not write it.'
+					. '_metadata.json, which is the state an edit leaves it in. Load a page that '
+					. 'renders the template, outside any test: the watcher re-imports it from the '
+					. 'file and writes that hash, after which the compile stops happening. Neither '
+					. 'xf-dev:import nor xf-dev:export is the answer - import reads _metadata.json '
+					. 'without writing it, and export writes the database over your edited file.'
 				);
 			}
 		});
