@@ -1,5 +1,15 @@
 # Changelog
 
+## 5.6.1 (unreleased)
+
+* `dispatch()`, `callAction()` and `runJobToCompletion()` no longer write XenForo's `autoJobRun`
+  registry row when they run deferred work. Under `UsesDatabaseTransactions` on MariaDB 11.8 or
+  later that write could fail with `Record has changed since last read`, on some runs and not
+  others, when the forum's own traffic or cron had touched the row
+* docs: `renderRawReply()` on a view that streams its output returns an `XF\Http\ResponseStream`,
+  read with `getContents()`
+* docs: `UsesDatabaseTransactions` puts the test in a race for any row the live forum also writes
+
 ## 5.6.0 (2026-09-23)
 
 * `callAction()` takes an optional `$files` argument, so an action reading

@@ -39,7 +39,7 @@ trait InteractsWithJobs
 
 			$result = $job->run($maxRunTime);
 
-			\XF::triggerRunOnce(true);
+			$this->drainRunOnce();
 
 			// JobResult::$completed is also true for a failed job, so check failure first
 			if ($result->result === JobResult::RESULT_FAILED)
@@ -237,5 +237,34 @@ trait InteractsWithJobs
 		{
 			return $job['execute_class'] == $shortName;
 		});
+	}
+
+	/**
+	 * Run the work queued with \XF::runOnce(), less XenForo's own job bookkeeping.
+	 *
+	 * Enqueuing a job that is not manual queues a registry write of `autoJobRun` - when the next
+	 * automatic run is due. It is bookkeeping about the request rather than anything a test
+	 * asserts on, and it writes to a row the forum's own traffic and cron also write. Under
+	 * UsesDatabaseTransactions that write sits inside the test's transaction, and MariaDB 11.8
+	 * onwards, where snapshot isolation is on by default, refuses it with "Record has changed
+	 * since last read" if anything else has touched the row since - an error that arrives on some
+	 * runs and not others, in whichever test happened to dispatch.
+	 *
+	 * A job enqueued from inside other deferred work can still schedule it, because that happens
+	 * within XenForo's own loop.
+	 *
+	 * @return void
+	 */
+	private function drainRunOnce()
+	{
+		$runOnce = $this->getStaticProperty(\XF::class, 'runOnce');
+
+		if (is_array($runOnce) && isset($runOnce['autoJobRun']))
+		{
+			unset($runOnce['autoJobRun']);
+			$this->setStaticProperty(\XF::class, 'runOnce', $runOnce);
+		}
+
+		\XF::triggerRunOnce(true);
 	}
 }

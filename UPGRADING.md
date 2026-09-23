@@ -5,6 +5,10 @@ Most releases need nothing beyond `composer update`. `CHANGELOG.md` lists everyt
 
 `tests/TestCase.php` is copied into your add-on, so a change to it has to be merged by hand.
 
+## 5.6.1
+
+Nothing to do.
+
 ## 5.6.0
 
 Nothing to do. If one of your test classes already defines an `uploadedFile()`,

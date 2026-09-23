@@ -58,6 +58,21 @@ trait UsesReflection
 	}
 
 	/**
+	 * Read a static property.
+	 *
+	 * @param string $class
+	 * @param string $property
+	 *
+	 * @return mixed
+	 */
+	protected function getStaticProperty($class, $property)
+	{
+		$reflectionClass = new \ReflectionClass($class);
+
+		return $reflectionClass->getStaticPropertyValue($property);
+	}
+
+	/**
 	 * Set a static property to a given value, where null is not the right empty value.
 	 *
 	 * @param string $class

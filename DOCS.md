@@ -708,6 +708,10 @@ $this->assertStringContainsString('text/csv', $response->contentType());
 $this->assertStringContainsString('id,name', $response->body());
 ```
 
+**A view that streams its output gives you an `XF\Http\ResponseStream` rather than a string.** A
+view built with `$this->response->responseStream($resource, $size)` - XenForo's own attachment view
+among them - needs `$response->body()->getContents()` to read it.
+
 ### assertTemplateModificationApplied
 Assert that a template modification has applied, using its apply count - useful where its insertion
 has no distinctive markup to search for.
@@ -977,6 +981,13 @@ Two things it cannot roll back:
 * An entity that compiles something into the code cache on save writes a file, and a transaction
   cannot roll back a file. `XF:Widget` is one: saving it queues a compile that `dispatch()` and
   `callAction()` then run. Insert the rows directly where a test only needs the record to exist.
+
+A transaction also puts the test in a race with the rest of the forum for any row both write. On
+MariaDB 11.8 and later, where snapshot isolation is on by default, the loser gets
+`Record has changed since last read`, on some runs and not others. `dispatch()`, `callAction()` and
+`runJobToCompletion()` leave XenForo's own `autoJobRun` registry row alone for that reason. If your
+own code writes a row the live forum also writes, `fakesRegistry()` and the other fakes keep it out
+of the database.
 
 It cannot be combined with `mockDatabase()`, and throws if you try.
 
