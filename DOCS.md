@@ -984,9 +984,15 @@ Two things it cannot roll back:
 
 **If something commits the transaction, the wrapper says so and fails the test.** MySQL commits
 implicitly on any DDL, and the adapter cannot see it happen - so without the check, teardown rolls
-back nothing and everything the test wrote stays. The commonest source on a development install is
-rendering a template whose `_output/` copy is newer than the imported one: XenForo compiles it,
-which truncates the CSS cache. Run `xf-dev:import` and the compile stops happening.
+back nothing and everything the test wrote stays.
+
+The commonest source on a development install is rendering a template whose `_output/` file does not
+match the hash recorded in `_metadata.json` - the state an edit leaves it in. XenForo re-imports and
+compiles it, which truncates the CSS cache.
+
+**`xf-dev:import` does not clear that state**: it reads `_metadata.json` and does not write it, so
+the next render re-imports again. What writes the hash is the re-import itself - so load a page that
+renders the template, outside any test - or `xf-dev:export --addon <id>`.
 
 A transaction also puts the test in a race with the rest of the forum for any row both write. On
 MariaDB 11.8 and later, where snapshot isolation is on by default, the loser gets

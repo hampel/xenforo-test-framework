@@ -63,8 +63,11 @@ trait UsesDatabaseTransactions
 					. 'that point is now permanent in the database. The usual cause is a statement '
 					. 'MySQL commits implicitly - any DDL, including the TRUNCATE that XenForo runs '
 					. 'when a template is compiled. On a development install that compile happens '
-					. 'whenever a rendered template is newer in _output/ than the copy that was '
-					. 'imported, so running xf-dev:import may be all this needs.'
+					. 'whenever a rendered template\'s _output/ file does not match the hash in '
+					. '_metadata.json, which is the state an edit leaves it in. Loading a page that '
+					. 'renders the template, outside any test, lets the watcher re-import it and '
+					. 'write that hash - after which the compile stops happening. Note xf-dev:import '
+					. 'does not clear it: it reads _metadata.json and does not write it.'
 				);
 			}
 		});
