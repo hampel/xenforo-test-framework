@@ -5,9 +5,12 @@ Most releases need nothing beyond `composer update`. `CHANGELOG.md` lists everyt
 
 `tests/TestCase.php` is copied into your add-on, so a change to it has to be merged by hand.
 
-## 5.6.1
+## 5.7.0
 
-Nothing to do.
+Nothing to do, unless a test of yours deliberately runs schema changes inside
+`UsesDatabaseTransactions`. That committed the transaction silently before; it now fails the test.
+Move the schema change out of the transactional class, or clean up after it and reopen a
+transaction for teardown to roll back.
 
 ## 5.6.0
 

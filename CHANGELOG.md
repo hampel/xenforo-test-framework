@@ -1,7 +1,12 @@
 # Changelog
 
-## 5.6.1 (unreleased)
+## 5.7.0 (unreleased)
 
+* `UsesDatabaseTransactions` now fails the test when something has committed its transaction,
+  rather than rolling back nothing and leaving every row the test wrote in the database. MySQL
+  commits implicitly on any DDL, which includes the `TRUNCATE` XenForo runs when it compiles a
+  template - as it does on a development install for any template whose `_output/` copy has not
+  been imported
 * `dispatch()`, `callAction()` and `runJobToCompletion()` no longer write XenForo's `autoJobRun`
   registry row when they run deferred work. Under `UsesDatabaseTransactions` on MariaDB 11.8 or
   later that write could fail with `Record has changed since last read`, on some runs and not

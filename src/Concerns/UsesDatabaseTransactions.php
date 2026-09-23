@@ -3,6 +3,9 @@
 namespace Hampel\Testing\Concerns;
 
 use Mockery\MockInterface;
+use PHPUnit\Framework\Assert as PHPUnit;
+use XF\Db\AbstractAdapter;
+use XF\Db\Exception as DbException;
 
 /**
  * Wrap each test in a database transaction and roll it back afterwards, so tests can exercise
@@ -46,10 +49,65 @@ trait UsesDatabaseTransactions
 
 		$this->beforeApplicationDestroyed(function () use ($db)
 		{
+			$lost = $this->transactionWasCommitted($db);
+
 			if ($db->inTransaction())
 			{
 				$db->rollbackAll();
 			}
+
+			if ($lost)
+			{
+				PHPUnit::fail(
+					'Something committed this test\'s transaction, so everything it wrote before '
+					. 'that point is now permanent in the database. The usual cause is a statement '
+					. 'MySQL commits implicitly - any DDL, including the TRUNCATE that XenForo runs '
+					. 'when a template is compiled. On a development install that compile happens '
+					. 'whenever a rendered template is newer in _output/ than the copy that was '
+					. 'imported, so running xf-dev:import may be all this needs.'
+				);
+			}
 		});
+	}
+
+	/**
+	 * Ask the server whether the transaction is still open.
+	 *
+	 * The adapter cannot answer this: an implicit commit happens inside the server, so its own
+	 * flag still says a transaction is open and rollbackAll() then rolls back nothing.
+	 *
+	 * @param AbstractAdapter $db
+	 *
+	 * @return bool - true when the transaction this test opened is gone
+	 */
+	private function transactionWasCommitted(AbstractAdapter $db)
+	{
+		if (!$db->inTransaction())
+		{
+			// the test rolled back or committed deliberately, and knows what it did
+			return false;
+		}
+
+		try
+		{
+			// MariaDB
+			return !$db->fetchOne('SELECT @@in_transaction');
+		}
+		catch (DbException $e)
+		{
+		}
+
+		try
+		{
+			// MySQL has no such variable
+			return !$db->fetchOne(
+				'SELECT COUNT(*) FROM information_schema.innodb_trx WHERE trx_mysql_thread_id = CONNECTION_ID()'
+			);
+		}
+		catch (DbException $e)
+		{
+			// no answer available, so do not invent one
+			return false;
+		}
 	}
 }

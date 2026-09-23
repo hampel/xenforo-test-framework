@@ -982,6 +982,12 @@ Two things it cannot roll back:
   cannot roll back a file. `XF:Widget` is one: saving it queues a compile that `dispatch()` and
   `callAction()` then run. Insert the rows directly where a test only needs the record to exist.
 
+**If something commits the transaction, the wrapper says so and fails the test.** MySQL commits
+implicitly on any DDL, and the adapter cannot see it happen - so without the check, teardown rolls
+back nothing and everything the test wrote stays. The commonest source on a development install is
+rendering a template whose `_output/` copy is newer than the imported one: XenForo compiles it,
+which truncates the CSS cache. Run `xf-dev:import` and the compile stops happening.
+
 A transaction also puts the test in a race with the rest of the forum for any row both write. On
 MariaDB 11.8 and later, where snapshot isolation is on by default, the loser gets
 `Record has changed since last read`, on some runs and not others. `dispatch()`, `callAction()` and
