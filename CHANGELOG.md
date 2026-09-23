@@ -1,6 +1,6 @@
 # Changelog
 
-## 5.5.0 (unreleased)
+## 5.5.0 (2026-09-23)
 
 * `fakesHttp()` and `fakesHttpByUrl()` now also fake clients built with
   `$app->http()->createClient()`, which an add-on uses when it needs its own `base_uri`, headers or
@@ -10,6 +10,7 @@
 * docs: on a development install, a template with an `_output/` copy renders from that copy, and a
   template changed only in the database is replaced before it renders. Template modifications still
   need `xf-dev:import`
+* docs: the README's install example requires `^5.5`
 
 ## 5.4.0 (2026-09-22)
 
