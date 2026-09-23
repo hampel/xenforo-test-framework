@@ -5,9 +5,12 @@ Most releases need nothing beyond `composer update`. `CHANGELOG.md` lists everyt
 
 `tests/TestCase.php` is copied into your add-on, so a change to it has to be merged by hand.
 
-## 5.5.1
+## 5.6.0
 
-Nothing to do.
+Nothing to do. If one of your test classes already defines an `uploadedFile()`,
+`uploadedFileFromPath()`, `assertNoUnresolvedPhrases()` or `renderRawReply()` method, rename it:
+`TestCase` now has protected methods of those names. If one overrides `callAction()`, add the new
+trailing `array $files = []` parameter to your signature.
 
 ## 5.5.0
 

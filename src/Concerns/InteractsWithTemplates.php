@@ -3,6 +3,7 @@
 namespace Hampel\Testing\Concerns;
 
 use PHPUnit\Framework\Assert as PHPUnit;
+use XF\Http\Response;
 use XF\Mvc\Reply\AbstractReply;
 use XF\Mvc\Reply\View;
 use XF\Template\Templater;
@@ -153,6 +154,67 @@ trait InteractsWithTemplates
 	 *
 	 * @return void
 	 */
+	/**
+	 * Render a reply through the raw renderer and return the response it produced.
+	 *
+	 * A file download or other raw view builds its body and its headers in renderRaw(), which the
+	 * HTML renderer never calls - so renderReply() cannot see either. The body is set on the
+	 * response, so one object carries both.
+	 *
+	 * @param AbstractReply $reply - a view reply from dispatch() or callAction()
+	 *
+	 * @return Response
+	 */
+	protected function renderRawReply(AbstractReply $reply)
+	{
+		PHPUnit::assertInstanceOf(View::class, $reply, 'only a view reply names a view class');
+
+		/** @var View $reply */
+		$renderer = $this->app()->renderer('raw');
+		$templateName = $reply->getTemplateName();
+		$params = $reply->getParams();
+
+		$body = $renderer->renderView($reply->getViewClass(), $templateName, $params);
+
+		$response = $this->app()->response();
+		$response->body($body);
+
+		return $response;
+	}
+
+	/**
+	 * Assert that every phrase in the rendered output resolved.
+	 *
+	 * A phrase XenForo cannot find renders as its own key, so an add-on's phrase keys appearing in
+	 * the output means a phrase is missing. Searching for the key alone is not enough: for an
+	 * administrator with the embedTemplateNames option on, the templater writes each template's own
+	 * name into its first tag, and that name carries your prefix too. Those attributes are stripped
+	 * before the search.
+	 *
+	 * Pair this with an assertion that the text you expect IS present - output that never rendered
+	 * carries no unresolved key either.
+	 *
+	 * @param string $html
+	 * @param string $prefix - your add-on's phrase prefix, eg `myaddon_`
+	 * @param string $message
+	 *
+	 * @return void
+	 */
+	protected function assertNoUnresolvedPhrases($html, $prefix, $message = '')
+	{
+		$stripped = preg_replace('/\sdata-(template|inner-template)-name="[^"]*"/i', '', $html);
+
+		preg_match_all('/\b' . preg_quote($prefix, '/') . '[a-z0-9_]+/i', $stripped, $matches);
+
+		$keys = array_values(array_unique($matches[0]));
+
+		PHPUnit::assertSame(
+			[],
+			$keys,
+			$message ?: 'these phrases did not resolve and rendered as their own keys: ' . implode(', ', $keys)
+		);
+	}
+
 	private function installGlobalTemplateData(Templater $templater, ?AbstractReply $reply)
 	{
 		$defaultParams = new \ReflectionProperty(Templater::class, 'defaultParams');

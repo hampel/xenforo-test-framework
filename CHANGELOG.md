@@ -1,7 +1,20 @@
 # Changelog
 
-## 5.5.1 (unreleased)
+## 5.6.0 (unreleased)
 
+* `callAction()` takes an optional `$files` argument, so an action reading
+  `$this->request->getFile()` can be tested with a file. Build the entry with the new
+  `uploadedFile()` or `uploadedFileFromPath()`, which write a real temporary file and remove it
+  when the test finishes
+* new `assertNoUnresolvedPhrases()` asserts that no phrase rendered as its own key, ignoring the
+  template names the templater embeds for an administrator. Named so it does not collide with an
+  `assertPhrasesResolved()` of your own
+* new `renderRawReply()` renders a reply through the raw renderer and returns the response, with
+  its body, for an action whose view builds its output in `renderRaw()`
+* docs: `callAction()`'s action argument is the controller's own action - a route's `action_prefix`
+  is not applied
+* docs: `UsesDatabaseTransactions` cannot roll back a file, including what an entity compiles into
+  the code cache when it saves
 * docs: `getHttpRequests()` and `getHttpHistory()` read the requests a test sent, and the history
   is kept for the whole test rather than reset by a second `fakesHttp()`
 

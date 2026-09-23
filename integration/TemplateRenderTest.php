@@ -321,6 +321,34 @@ class TemplateRenderTest extends TestCase
 		$this->assertSame('option_group_list', $defaultParams->getValue($this->app()->templater())['xf']['reply']['template']);
 	}
 
+	public function test_phrases_resolved_ignores_the_template_name_attribute()
+	{
+		// for an admin visitor with embedTemplateNames on, the templater writes the template's own
+		// name into the first tag - and that name carries the add-on's prefix, so a bare search for
+		// the prefix finds it and fails
+		$this->actingAsMember(['is_admin' => true]);
+		$this->setOption('embedTemplateNames', true);
+		$this->makeTemplate('probeph_widget', '<div>Hello</div>');
+
+		$html = $this->renderTemplate('public:probeph_widget');
+
+		$this->assertStringContainsString('data-template-name="public:probeph_widget"', $html);
+		$this->assertNoUnresolvedPhrases($html, 'probeph_');
+	}
+
+	public function test_phrases_resolved_fails_on_a_key_in_the_output()
+	{
+		$this->expectException(AssertionFailedError::class);
+		$this->expectExceptionMessage('probeph_missing_label');
+
+		$this->assertNoUnresolvedPhrases('<p>probeph_missing_label</p>', 'probeph_');
+	}
+
+	public function test_phrases_resolved_passes_when_the_phrase_rendered()
+	{
+		$this->assertNoUnresolvedPhrases('<p>A real label</p>', 'probeph_');
+	}
+
 	private function makeTemplate($title, $content)
 	{
 		$this->createEntity('XF:Template', [

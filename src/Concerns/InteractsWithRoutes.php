@@ -186,7 +186,8 @@ trait InteractsWithRoutes
 		array $input = [],
 		array $params = [],
 		$method = 'POST',
-		array $server = []
+		array $server = [],
+		array $files = []
 	)
 	{
 		[$classType, $routerKey] = $this->routeTypeConfig($type);
@@ -194,7 +195,7 @@ trait InteractsWithRoutes
 		// same reason as dispatch(): the controller class is resolved through app.classType
 		$this->swap('app.classType', $classType);
 
-		$request = $this->buildDispatchRequest('', $input, $method, $server);
+		$request = $this->buildDispatchRequest('', $input, $method, $server, $files);
 		$this->swap('request', function () use ($request)
 		{
 			return $request;
@@ -306,7 +307,68 @@ trait InteractsWithRoutes
 	 *
 	 * @return Request
 	 */
-	private function buildDispatchRequest($routePath, array $input = [], $method = 'GET', array $server = [])
+	/**
+	 * Build a `$_FILES` entry for callAction(), from the contents you want the file to have.
+	 *
+	 * XF\Http\Upload needs a readable `tmp_name`, so this writes a real temporary file. It is
+	 * removed when the test finishes.
+	 *
+	 * @param string $contents
+	 * @param string $name - the filename the upload reports
+	 * @param string|null $type - the mime type; guessed from the contents when not given
+	 *
+	 * @return array
+	 */
+	protected function uploadedFile($contents, $name = 'upload.txt', $type = null)
+	{
+		$tempFile = tempnam(sys_get_temp_dir(), 'xftf');
+
+		if ($tempFile === false)
+		{
+			throw new \LogicException('Could not create a temporary file for the upload');
+		}
+
+		file_put_contents($tempFile, $contents);
+
+		$this->beforeApplicationDestroyed(function () use ($tempFile)
+		{
+			if (file_exists($tempFile))
+			{
+				unlink($tempFile);
+			}
+		});
+
+		return [
+			'name' => $name,
+			'type' => $type ?: (new \finfo(FILEINFO_MIME_TYPE))->buffer($contents) ?: 'application/octet-stream',
+			'size' => strlen($contents),
+			'tmp_name' => $tempFile,
+			'error' => UPLOAD_ERR_OK,
+		];
+	}
+
+	/**
+	 * Build a `$_FILES` entry for callAction() from a file on disk.
+	 *
+	 * The file is copied, so the code under test cannot move or delete your fixture.
+	 *
+	 * @param string $path
+	 * @param string|null $name - the filename the upload reports; the file's own by default
+	 * @param string|null $type
+	 *
+	 * @return array
+	 */
+	protected function uploadedFileFromPath($path, $name = null, $type = null)
+	{
+		if (!is_readable($path))
+		{
+			throw new \LogicException("Cannot read '$path' to upload it");
+		}
+
+		return $this->uploadedFile(file_get_contents($path), $name ?: basename($path), $type);
+	}
+
+	private function buildDispatchRequest($routePath, array $input = [], $method = 'GET', array $server = [], array $files = [])
 	{
 		$method = strtoupper($method);
 
@@ -335,7 +397,7 @@ trait InteractsWithRoutes
 		$request = new Request(
 			$container['inputFilterer'],
 			$input,
-			[],
+			$files,
 			[],
 			['REQUEST_METHOD' => $method] + array_replace($defaults, $server)
 		);

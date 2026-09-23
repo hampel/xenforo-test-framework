@@ -318,13 +318,34 @@ $this->assertDatabaseHas('xf_notice', ['title' => 'Maintenance']);
 ##### Parameters:
 
 * `controller` - `'XF:Notice'` or a full class name
-* `action` - as it appears in a route, slashes included: `'save'`, `'toggle'`, `'archive-users/run'`
-  calls `actionArchiveUsersRun()`
+* `action` - the controller's own action, not a route: `'save'` calls `actionSave()`, and
+  `'archive-users/run'` calls `actionArchiveUsersRun()`. Nothing about routing applies, so a route's
+  `action_prefix` is not added for you - an action reached at `links/save` under the prefix `link`
+  is called here as `'link-save'`. An action the controller does not have is refused, and the
+  message names the method it looked for
 * `type` - optional - `'public'` (default), `'admin'` or `'api'`
 * `input` - optional - the request input, as `$_POST` would carry it
 * `params` - optional - route parameters, eg `['notice_id' => 3]`
 * `method` - optional - `'POST'` (default) or `'GET'`
 * `server` - optional - request server values, as for `dispatch()`
+* `files` - optional - uploaded files, keyed as the form names them. Build each one with
+  `uploadedFile()` or `uploadedFileFromPath()`
+
+##### Uploading a file:
+
+An action reading `$this->request->getFile('...')` needs one, and without it only its no-file
+branch can be tested.
+
+```php
+$reply = $this->callAction('MyVendor\MyAddon:Thing', 'save', 'admin', [], [], 'POST', [], [
+    'upload' => $this->uploadedFile('id,name' . "\n" . '1,Probe', 'import.csv'),
+]);
+```
+
+`uploadedFile($contents, $name, $type)` writes a real temporary file, because XenForo's `Upload`
+needs a readable one, and removes it when the test finishes. `uploadedFileFromPath($path, $name,
+$type)` takes a fixture from disk and copies it, so the code under test cannot move or delete your
+fixture. The mime type is guessed from the contents unless you pass one.
 
 **A validation failure comes back as an `Error` reply**, and `replyErrors()` returns its errors
 keyed by field:
@@ -641,6 +662,52 @@ $this->assertDontSee($html, 'myaddon_preference_label');
 **Pair every `assertDontSee()` with an `assertSee()`.** An absence assertion alone still passes if
 nothing rendered.
 
+### assertNoUnresolvedPhrases
+Assert that no phrase in the rendered output came out as its own key - which is what XenForo renders
+for a phrase it cannot find.
+
+##### Parameters:
+
+* `html`
+* `prefix` - your add-on's phrase prefix, eg `myaddon_`
+* `message` - optional
+
+##### Example:
+
+```php
+$html = $this->renderTemplate('public:account_preferences');
+
+$this->assertSee($html, 'Send me a weekly digest');
+$this->assertNoUnresolvedPhrases($html, 'myaddon_');
+```
+
+Searching for the prefix yourself is not enough: for an administrator with the `embedTemplateNames`
+option on, the templater writes each template's own name into its first tag, and that name carries
+your prefix. Those attributes are stripped before the search.
+
+**Pair it with an assertion that the text you expect is present.** Output that never rendered
+carries no unresolved key either.
+
+### renderRawReply
+Render a reply through the raw renderer and return the `XF\Http\Response` it produced, with the
+body set on it. For a file download or any other action whose view builds its output in
+`renderRaw()`, which `renderReply()` never calls.
+
+##### Parameters:
+
+* `reply` - a view reply from `dispatch()` or `callAction()`
+
+##### Example:
+
+```php
+$reply = $this->callAction('MyVendor\MyAddon:Export', 'download', 'admin', [], [], 'GET');
+
+$response = $this->renderRawReply($reply);
+
+$this->assertStringContainsString('text/csv', $response->contentType());
+$this->assertStringContainsString('id,name', $response->body());
+```
+
 ### assertTemplateModificationApplied
 Assert that a template modification has applied, using its apply count - useful where its insertion
 has no distinctive markup to search for.
@@ -907,6 +974,9 @@ Two things it cannot roll back:
   escapes the transaction and must clean up after itself.
 * Only this connection sees the uncommitted rows, so a test that reads the database through a
   second connection will not see what it wrote.
+* An entity that compiles something into the code cache on save writes a file, and a transaction
+  cannot roll back a file. `XF:Widget` is one: saving it queues a compile that `dispatch()` and
+  `callAction()` then run. Insert the rows directly where a test only needs the record to exist.
 
 It cannot be combined with `mockDatabase()`, and throws if you try.
 
