@@ -1439,9 +1439,22 @@ the fake first.
 ##### Assertions available:
 
 * `assertHttpRequestSent`
-* `assertHttpRequestSentTimes`
 * `assertHttpRequestNotSent`
+* `assertHttpRequestSentTimes`
 * `assertNoHttpRequestSent`
+
+##### Reading the requests:
+
+* `getHttpRequests()` - the requests sent, in order
+* `getHttpHistory()` - the same, each request with the response it received
+
+Use these where the assertion needs to take a request apart - decoding a JSON body and comparing
+its fields reads better as `$this->getHttpRequests()[0]` than as a callback that has to match and
+assert at once.
+
+**The history belongs to the test, not to the fake.** A second `fakesHttp()` in the same test keeps
+what the first recorded, so to assert on what a second run sent, compare the count before and
+after rather than expecting to start from nothing.
 
 ##### Example:
 

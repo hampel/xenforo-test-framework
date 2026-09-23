@@ -1,5 +1,10 @@
 # Changelog
 
+## 5.5.1 (unreleased)
+
+* docs: `getHttpRequests()` and `getHttpHistory()` read the requests a test sent, and the history
+  is kept for the whole test rather than reset by a second `fakesHttp()`
+
 ## 5.5.0 (2026-09-23)
 
 * `fakesHttp()` and `fakesHttpByUrl()` now also fake clients built with
