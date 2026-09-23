@@ -1,6 +1,6 @@
 # Changelog
 
-## 5.6.0 (unreleased)
+## 5.6.0 (2026-09-23)
 
 * `callAction()` takes an optional `$files` argument, so an action reading
   `$this->request->getFile()` can be tested with a file. Build the entry with the new
@@ -17,6 +17,7 @@
   the code cache when it saves
 * docs: `getHttpRequests()` and `getHttpHistory()` read the requests a test sent, and the history
   is kept for the whole test rather than reset by a second `fakesHttp()`
+* docs: the README's install example requires `^5.6`
 
 ## 5.5.0 (2026-09-23)
 
