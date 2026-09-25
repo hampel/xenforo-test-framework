@@ -261,6 +261,17 @@ $this->setVisitorPermissions($member, ['general' => ['view' => true]]);
 $reply = $this->dispatch('members');
 ```
 
+**A route that requires registration refuses a guest with a view, not an error.**
+`assertRegistrationRequired()` returns the `login` template with a 403, so `assertReplyIsError()`
+fails on it:
+
+```php
+$reply = $this->dispatch('account');
+
+$this->assertReplyTemplate($reply, 'login');
+$this->assertSame(403, $reply->getResponseCode());
+```
+
 **Parameters go in `input`, not in the route path.** `dispatch('my-addon/user?user_id=1')` is a
 404:
 
@@ -972,12 +983,37 @@ and run real queries without leaving anything behind. Add the trait to each test
 Code under test may open and commit its own transactions; they nest inside the wrapper, and are
 rolled back with it - including when the code commits and then throws.
 
-Two things it cannot roll back:
+Things it cannot roll back:
 
 * DDL implicitly commits, so anything altering the schema - a `Setup.php` step, for instance -
   escapes the transaction and must clean up after itself.
 * Only this connection sees the uncommitted rows, so a test that reads the database through a
   second connection will not see what it wrote.
+* An `AUTO_INCREMENT` counter advances inside the transaction and stays advanced after it, so the
+  next id is not the next number. Assert that an id is greater than the last one rather than equal
+  to a particular value.
+
+**A test that needs a table to exist cannot use this trait.** Code gated on
+`SchemaManager::tableExists()` - an install step that reads another add-on's table, for instance -
+needs a real `CREATE TABLE`, because `SHOW TABLE STATUS` does not list temporary tables. That is
+DDL, so it commits the transaction and the check above fails the test. Leave the trait off that
+class and undo the test's writes in `tearDown()`:
+
+```php
+protected function setUp(): void
+{
+    parent::setUp();
+
+    $this->app()->db()->query('CREATE TABLE xf_probe_source (id INT)');
+}
+
+protected function tearDown(): void
+{
+    $this->app()->db()->query('DROP TABLE IF EXISTS xf_probe_source');
+
+    parent::tearDown();
+}
+```
 * An entity that compiles something into the code cache on save writes a file, and a transaction
   cannot roll back a file. `XF:Widget` is one: saving it queues a compile that `dispatch()` and
   `callAction()` then run. Insert the rows directly where a test only needs the record to exist.
@@ -1160,6 +1196,11 @@ A primary key is usually a read-only column, so passing one in `values` throws
 $user = $this->makeEntity('XF:User', ['username' => 'Alice']);
 $user->setTrusted('user_id', 42);
 ```
+
+**Never do this to a visitor built by `actingAs()`.** Re-keying `user_id` drops the relations the
+visitor was hydrated with, and the next public dispatch then fails inside XenForo with
+`Attempt to read property is_discouraged on null`, which points nowhere near the cause. Pass the id
+in instead: `actingAsMember(['user_id' => 42])`.
 
 ##### Building a fixture that spans relations
 
@@ -2125,5 +2166,4 @@ class TimeTest extends TestCase
 }	
 ```
 
-Refer to the `Hampel\Testing\Concerns\InteractsWithSimpleCache` trait for full details of available cache validation 
-functions.
+Refer to the `Hampel\Testing\Concerns\InteractsWithTime` trait for full details.

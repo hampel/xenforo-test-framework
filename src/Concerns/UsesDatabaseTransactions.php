@@ -23,12 +23,13 @@ use XF\Db\Exception as DbException;
  * BEGIN, so code under test may run its own beginTransaction()/commit() - as entity saves do -
  * without escaping the wrapper. rollbackAll() unwinds the lot.
  *
- * Two things it cannot roll back, both MySQL rather than XenForo:
+ * What it cannot roll back, all of it MySQL rather than XenForo:
  *
  *  - DDL implicitly commits, so anything that alters the schema (a Setup.php step, say) escapes
- *    and has to clean up after itself.
+ *    and has to clean up after itself. Teardown notices and fails the test.
  *  - Only this connection sees the uncommitted rows, so nothing that reads the database through
  *    a second connection will see what the test wrote.
+ *  - An AUTO_INCREMENT counter advances inside the transaction and stays advanced afterwards.
  */
 trait UsesDatabaseTransactions
 {

@@ -2,6 +2,16 @@
 
 ## 5.7.0 (unreleased)
 
+* docs: the README's `build.json` examples no longer run `composer install` without a
+  `--working-dir`, which stripped the dev dependencies from the addon you are developing in; they
+  remove `.phpunit.cache`, which otherwise ships inside the release; and they use `rm -fv`
+* docs: an `AUTO_INCREMENT` counter is not rolled back with the transaction
+* docs: `setTrusted()` must not be used on the id of a visitor built by `actingAs()`
+* docs: a route requiring registration refuses a guest with the `login` view and a 403, not an error
+* docs: a test needing a real table cannot use `UsesDatabaseTransactions`, with the pattern to use
+* docs: raising `config.platform.php` to install this stops Composer guarding your runtime
+  dependencies' own PHP floor, and an addon's dev dependencies are visible to other addons' suites
+
 * `UsesDatabaseTransactions` now fails the test when something has committed its transaction,
   rather than rolling back nothing and leaving every row the test wrote in the database. MySQL
   commits implicitly on any DDL, which includes the `TRUNCATE` XenForo runs when it compiles a

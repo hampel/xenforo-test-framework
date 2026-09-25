@@ -492,6 +492,17 @@ use Composer, you can simply create a `composer.json` file with the following in
 
 Note that `nesbot/carbon` is optional, but really useful.
 
+**If your addon pins `config.platform.php` below 8.3, raising it to install this has a
+consequence.** Composer uses that pin to guard every dependency's PHP requirement, so once it says
+8.3 nothing stops a runtime dependency resolving to a release needing more than your addon's own
+floor. Check the `packages` array in `composer.lock` after each update.
+
+**Your dev dependencies are visible to other addons' test suites on the same install.** If your
+addon declares `composer_autoload`, XenForo registers its whole `vendor/` - dev tree included - on
+the class loader, so your copy of PHPUnit is present in another addon's test run unless that suite
+sets `$addonsToLoad`. Setting it in your own `tests/TestCase.php` protects your suite from theirs;
+it does not protect theirs from yours.
+
 Change directory to your addon root, then run `composer update` to install the framework. We install PHPUnit and 
 Mockery automatically for you.
 
@@ -569,14 +580,24 @@ use Composer for unit testing:
 ```json
 {
     "exec": [
-        "rm -v _build/upload/src/addons/{addon_id}/composer.json",
-        "rm -v _build/upload/src/addons/{addon_id}/composer.lock",
-        "rm -v _build/upload/src/addons/{addon_id}/phpunit.xml",
-        "rm -v -r _build/upload/src/addons/{addon_id}/tests",
-        "rm -v -r _build/upload/src/addons/{addon_id}/vendor"
+        "rm -fv _build/upload/src/addons/{addon_id}/composer.json",
+        "rm -fv _build/upload/src/addons/{addon_id}/composer.lock",
+        "rm -fv _build/upload/src/addons/{addon_id}/phpunit.xml",
+        "rm -rfv _build/upload/src/addons/{addon_id}/tests",
+        "rm -rfv _build/upload/src/addons/{addon_id}/.phpunit.cache",
+        "rm -rfv _build/upload/src/addons/{addon_id}/vendor"
     ]
 }
 ```
+
+`-f` because a path that is not there is not a problem: without it the build prints an error for
+every file you have already removed.
+
+**`.phpunit.cache` has to be named.** XenForo skips a dot-entry by its own name but still walks into
+it, so `.phpunit.cache/test-results` reaches the zip unless the directory is removed.
+
+**Removals go before any `mv` of your documentation into `_build/`**, if your build does that -
+`exec` runs in order.
 
 (you can literally use the string `{addon_id}` - you don't need to hard code your addon ID in the `build.json` file !!)
 
@@ -596,17 +617,22 @@ add the following to your `build.json` instead:
 
 ... and make sure you specify the `--no-dev` option when running `composer install` during your build process.
 
-For example, one of my addons which uses Composer for both dev and non-dev purposes has the following `build.json` file:
+For example, an addon which uses Composer for both dev and non-dev purposes:
 ```json
 {
     "exec": [
         "composer install --working-dir=_build/upload/src/addons/{addon_id}/ --no-dev --optimize-autoloader",
-        "composer install --no-dev --optimize-autoloader",
-        "rm -v _build/upload/src/addons/{addon_id}/phpunit.xml",
-        "rm -v -r _build/upload/src/addons/{addon_id}/tests"
+        "rm -fv _build/upload/src/addons/{addon_id}/phpunit.xml",
+        "rm -rfv _build/upload/src/addons/{addon_id}/tests",
+        "rm -rfv _build/upload/src/addons/{addon_id}/.phpunit.cache"
     ]
 }
 ```
+
+**Give every `composer install` a `--working-dir` pointing into `_build/`.** XenForo runs each
+`exec` line from your addon's own root, so a bare `composer install --no-dev` strips the dev
+dependencies out of the working copy you develop in - this framework among them - every time you
+build. Reinstalling them is `composer install`, but nothing tells you it happened.
 
 ## 9. Configuring the Framework
 
