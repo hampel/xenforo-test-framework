@@ -1,6 +1,6 @@
 # Changelog
 
-## 5.8.0 (unreleased)
+## 5.8.0 (2026-09-26)
 
 * `dispatch('')` reaches the board index instead of returning a permanent redirect to it. The
   request uri carried a trailing `?`, which does not match the canonical url XenForo compares it
@@ -13,6 +13,7 @@
 * `makeEntity()` throws when a value it was given did not land. XenForo verifies many columns as
   they are set - a unique key already in use, an invalid email - and records a failure rather than
   throwing, which left the entity quietly missing the value. `setTrusted()` sets one anyway
+* docs: the README's install example requires `^5.8`
 
 ## 5.7.0 (2026-09-26)
 
