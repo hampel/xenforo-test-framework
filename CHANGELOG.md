@@ -1,6 +1,6 @@
 # Changelog
 
-## 5.7.0 (unreleased)
+## 5.7.0 (2026-09-26)
 
 * new `renderBbCode()` renders BB code and returns the HTML, for asserting on part of the output
   where `assertBbCode()`'s exact comparison cannot be used
@@ -24,6 +24,7 @@
 * docs: a test needing a real table cannot use `UsesDatabaseTransactions`, with the pattern to use
 * docs: raising `config.platform.php` to install this stops Composer guarding your runtime
   dependencies' own PHP floor, and an addon's dev dependencies are visible to other addons' suites
+* docs: the README's install example requires `^5.7`
 
 * `UsesDatabaseTransactions` now fails the test when something has committed its transaction,
   rather than rolling back nothing and leaving every row the test wrote in the database. MySQL
