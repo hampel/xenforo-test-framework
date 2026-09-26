@@ -29,6 +29,9 @@ Naming ids in `$addonsToLoad` filters three things:
 * **code event listeners** - other add-ons' listeners do not run, including `app_setup`
 
 Nothing else is filtered: the forum's database, options, phrases and templates are the real ones.
+**Your own add-on's listeners do run**, including while the container builds something your test is
+not otherwise interested in - so a mock standing in for one subsystem may still need expectations
+for whatever your listeners ask of it.
 
 The framework boots the application: `Hampel\Testing\TestCase::createApplication()` requires
 XenForo's `XF.php`, starts it, and passes `$addonsToLoad` to `XF::setupApp()`. A
@@ -1439,6 +1442,20 @@ class EntityTest extends TestCase
 `save()` on the base Entity class is `final`, so a mock cannot stop it reaching the database. Use
 `UsesDatabaseTransactions` so the save is rolled back, or pass `false` as the second parameter to
 build a mock that does not inherit from the entity class.
+
+**Set expectations on `get()`, not on `__get()`.** `Entity::__get()` delegates to `get()`, so an
+expectation on the magic method never applies - the real `__get()` runs and calls a `get()` nothing
+has stubbed. The failure names `get()` with a trace pointing into XenForo rather than at your test:
+
+```php
+$user = Mockery::mock(\XF\Entity\User::class);
+$user->allows()->get('user_state')->andReturns('valid');
+
+$user->user_state;      // 'valid'
+```
+
+**Array access needs its own expectation.** `offsetGet()` delegates to `get()` as well, but a double
+replaces `offsetGet()` too, so `$user['user_state']` fails unless it is stubbed in its own right.
 
 ### fakesErrors
 Allow us to assert that certain errors were (or were not) thrown as a result of executing our test code, without

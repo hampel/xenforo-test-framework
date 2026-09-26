@@ -1,5 +1,12 @@
 # Changelog
 
+## 5.8.1 (unreleased)
+
+* docs: an entity double takes its expectations on `get()`, since `Entity::__get()` delegates to it
+  and an expectation on the magic method never applies; array access needs its own expectation
+* docs: the isolated add-on's own code event listeners do run, including while the container builds
+  something the test is not otherwise interested in
+
 ## 5.8.0 (2026-09-26)
 
 * `dispatch('')` reaches the board index instead of returning a permanent redirect to it. The
