@@ -1232,6 +1232,16 @@ $user = $this->makeEntity('XF:User', ['username' => 'Alice']);
 $user->setTrusted('user_id', 42);
 ```
 
+**A unique key that is not read-only fails differently, and quietly.** A column XenForo verifies
+for uniqueness - `XF:Option`'s `option_id`, say - is checked against the real table as the value is
+set, so passing one that already exists records an error on the entity and leaves the column null.
+Nothing throws, and the value is simply missing. `setTrusted()` bypasses that too:
+
+```php
+$option = $this->makeEntity('XF:Option');
+$option->setTrusted('option_id', 'myaddon_slots');
+```
+
 **Never do this to a visitor built by `actingAs()`.** Re-keying `user_id` drops the relations the
 visitor was hydrated with, and the next public dispatch then fails inside XenForo with
 `Attempt to read property is_discouraged on null`, which points nowhere near the cause. Pass the id

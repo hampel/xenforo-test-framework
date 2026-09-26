@@ -137,6 +137,31 @@ class RouteDispatchTest extends TestCase
 		$this->assertFalse(\XF::apiKey()->is_super_user);
 	}
 
+	public function test_the_board_index_dispatches_rather_than_redirecting_to_itself()
+	{
+		// the index is an empty route path, and its canonical url carries no query string - so a
+		// request uri of '/index.php?' does not match it and the controller redirects
+		$member = $this->actingAsMember();
+		$this->setVisitorPermissions($member, ['general' => ['view' => true]]);
+
+		$reply = $this->dispatch('');
+
+		$this->assertReplyIsView($reply);
+	}
+
+	public function test_input_reaches_an_empty_route_without_a_stray_separator()
+	{
+		$member = $this->actingAsMember();
+		$this->setVisitorPermissions($member, ['general' => ['view' => true]]);
+
+		$this->dispatch('', 'public', ['probe' => 'value']);
+
+		$this->assertSame(
+			'/index.php?probe=value',
+			$this->app()->request()->getServer('REQUEST_URI')
+		);
+	}
+
 	public function test_an_unknown_route_type_is_rejected()
 	{
 		$this->expectException(\LogicException::class);

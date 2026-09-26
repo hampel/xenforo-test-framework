@@ -383,9 +383,17 @@ trait InteractsWithRoutes
 		// carries them in the body, so its query string stays empty
 		$queryString = $method === 'GET' ? http_build_query($input) : '';
 
+		// the board index is routed by an empty path, and its canonical url is 'index.php' with no
+		// query at all - so a trailing '?' here makes assertCanonicalUrl() redirect the request to
+		// itself rather than dispatching it
+		$queryParts = array_filter([$routePath, $queryString], function ($part)
+		{
+			return $part !== '';
+		});
+		$query = implode('&', $queryParts);
+
 		$defaults = [
-			'REQUEST_URI' => '/index.php?' . $routePath
-				. ($queryString !== '' ? '&' . $queryString : ''),
+			'REQUEST_URI' => '/index.php' . ($query !== '' ? '?' . $query : ''),
 			'SCRIPT_NAME' => '/index.php',
 			'QUERY_STRING' => $queryString,
 			'HTTP_HOST' => $host,

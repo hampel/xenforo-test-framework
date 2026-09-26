@@ -5,6 +5,10 @@ Most releases need nothing beyond `composer update`. `CHANGELOG.md` lists everyt
 
 `tests/TestCase.php` is copied into your add-on, so a change to it has to be merged by hand.
 
+## 5.7.1
+
+Nothing to do.
+
 ## 5.7.0
 
 If one of your test classes already defines a `renderBbCode()` or `mockFind()` method, rename it:

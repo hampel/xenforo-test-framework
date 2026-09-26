@@ -1,5 +1,13 @@
 # Changelog
 
+## 5.7.1 (unreleased)
+
+* `dispatch('')` reaches the board index instead of returning a permanent redirect to it. The
+  request uri carried a trailing `?`, which does not match the canonical url XenForo compares it
+  against. An empty route with input no longer gets a stray `&` either
+* docs: `makeEntity()` with a unique key that XenForo verifies - `XF:Option`'s `option_id`, for
+  instance - records an error and leaves the column null rather than throwing; `setTrusted()` sets it
+
 ## 5.7.0 (2026-09-26)
 
 * new `renderBbCode()` renders BB code and returns the HTML, for asserting on part of the output
