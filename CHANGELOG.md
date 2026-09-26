@@ -1,12 +1,18 @@
 # Changelog
 
-## 5.7.1 (unreleased)
+## 5.8.0 (unreleased)
 
 * `dispatch('')` reaches the board index instead of returning a permanent redirect to it. The
   request uri carried a trailing `?`, which does not match the canonical url XenForo compares it
   against. An empty route with input no longer gets a stray `&` either
-* docs: `makeEntity()` with a unique key that XenForo verifies - `XF:Option`'s `option_id`, for
-  instance - records an error and leaves the column null rather than throwing; `setTrusted()` sets it
+* `dispatch()` and `callAction()` put one of XenForo's own application classes in `\XF::app()` for
+  the type being dispatched, sharing the test application's container, and fire that type's setup
+  event - `app_pub_setup`, `app_admin_setup` or `app_api_setup` - once per test. A container key an
+  add-on registers there now exists, and a listener gated on `$app instanceof \XF\Pub\App` runs.
+  The new `setAppClassType()` does the same before a render that needs it
+* `makeEntity()` throws when a value it was given did not land. XenForo verifies many columns as
+  they are set - a unique key already in use, an invalid email - and records a failure rather than
+  throwing, which left the entity quietly missing the value. `setTrusted()` sets one anyway
 
 ## 5.7.0 (2026-09-26)
 

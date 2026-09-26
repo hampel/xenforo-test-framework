@@ -94,6 +94,28 @@ class BbCodeTest extends TestCase
 - is not worth matching character for character. Use `renderBbCode()` below and assert on what
 matters.
 
+### setAppClassType
+Put one of XenForo's own application classes in `\XF::app()`, as a request of that type would have.
+
+`dispatch()` and `callAction()` call it, so a test usually does not. Call it before
+`renderTemplate()` or `renderMacro()` when what you render depends on the application type.
+
+##### Parameters:
+
+* `type` - `'public'`, `'admin'` or `'api'`
+
+##### Example:
+
+```php
+$this->setAppClassType('public');
+
+$html = $this->renderTemplate('public:my_addon_block');
+```
+
+The stand-in shares this application's container, so container keys, fakes and swaps are the same
+objects, and the type's setup event - `app_pub_setup`, `app_admin_setup` or `app_api_setup` - fires
+once per test. `app()` still returns the application the framework booted.
+
 ### renderBbCode
 Render BB code and return the HTML, for asserting on part of it. The BB code twin of
 `renderTemplate()`.
@@ -284,6 +306,13 @@ one.
 **It does not render the page.** The reply carries the template name, view class and parameters. To
 assert on HTML, pass the reply to `renderReply()` below, which renders the template but not the page
 wrapper around it.
+
+**The application is one of XenForo's own for the duration.** `dispatch()` puts an `XF\Pub\App`,
+`XF\Admin\App` or `XF\Api\App` in `\XF::app()`, sharing this application's container, and fires
+that type's setup event - `app_pub_setup` and its siblings - once per test. Without it a container
+key an add-on registers in that event never exists, and a listener gated on
+`$app instanceof \XF\Pub\App` never runs its body. Call `setAppClassType('public')` yourself
+before `renderTemplate()` or `renderMacro()` when the markup depends on it. `app()` is unchanged.
 
 **A public route needs `general.view`**, which a built visitor does not have, so a public dispatch
 returns a 403 until the test grants it:
@@ -1232,10 +1261,13 @@ $user = $this->makeEntity('XF:User', ['username' => 'Alice']);
 $user->setTrusted('user_id', 42);
 ```
 
-**A unique key that is not read-only fails differently, and quietly.** A column XenForo verifies
-for uniqueness - `XF:Option`'s `option_id`, say - is checked against the real table as the value is
-set, so passing one that already exists records an error on the entity and leaves the column null.
-Nothing throws, and the value is simply missing. `setTrusted()` bypasses that too:
+**`makeEntity()` refuses a value that did not land.** XenForo verifies many columns as they are
+set rather than at save time - a unique key already in use, an email that is not one, a username
+below the minimum length - and records a failure instead of throwing, leaving the column null. That
+used to hand back an entity quietly missing what the test asked for. It now throws, naming the
+column and XenForo's own reason. An error the entity carries for any other reason is left alone.
+
+So a test that wants a value a verifier would reject sets it with `setTrusted()`:
 
 ```php
 $option = $this->makeEntity('XF:Option');

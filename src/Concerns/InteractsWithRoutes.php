@@ -4,6 +4,7 @@ namespace Hampel\Testing\Concerns;
 
 use PHPUnit\Framework\Assert as PHPUnit;
 use XF\Api\Mvc\Reply\ApiResult;
+use XF\App;
 use XF\Entity\ApiKey;
 use XF\Http\Request;
 use XF\Mvc\Dispatcher;
@@ -36,6 +37,9 @@ trait InteractsWithRoutes
 
 	/** @var bool */
 	private $apiKeyActing = false;
+
+	/** @var array - the class types whose setup event has already fired in this test */
+	private $appSetupFired = [];
 
 	protected function setUpRoutes()
 	{
@@ -129,7 +133,8 @@ trait InteractsWithRoutes
 		// stringToClass('%s\%s\Controller\%s', $c['app.classType'])), and this package's app
 		// forces 'Cli' so that cmd.php-style code works. Every route therefore resolves to a
 		// controller class that does not exist, and dispatching gives 'invalid_controller'.
-		$this->swap('app.classType', $classType);
+		// This also puts an application of that type in \XF::app() and fires its setup event.
+		$this->setAppClassType($type);
 
 		$request = $this->buildDispatchRequest($routePath, $input, 'GET', $server);
 		$this->swap('request', function () use ($request)
@@ -192,8 +197,9 @@ trait InteractsWithRoutes
 	{
 		[$classType, $routerKey] = $this->routeTypeConfig($type);
 
-		// same reason as dispatch(): the controller class is resolved through app.classType
-		$this->swap('app.classType', $classType);
+		// same reason as dispatch(): the controller class is resolved through app.classType, and
+		// an add-on may rely on the setup event for this type having fired
+		$this->setAppClassType($type);
 
 		$request = $this->buildDispatchRequest('', $input, $method, $server, $files);
 		$this->swap('request', function () use ($request)
@@ -419,6 +425,58 @@ trait InteractsWithRoutes
 	 *
 	 * @return array - [app class type, router container key]
 	 */
+	/**
+	 * Put an application of the given type in place, as a real request would have.
+	 *
+	 * dispatch() calls this, so a test usually does not. Call it directly before renderTemplate()
+	 * or renderMacro() when what you are rendering depends on the application type.
+	 *
+	 * The framework boots XF\App itself, which is what makes the container usable from PHPUnit, so
+	 * two things an add-on may rely on are otherwise missing: the `app_pub_setup` event and its
+	 * siblings never fire, so a container key registered by one does not exist; and a listener
+	 * gated on `$app instanceof \XF\Pub\App` - the usual way of saying "only on public pages" -
+	 * never runs its body, silently.
+	 *
+	 * So \XF::app() becomes an instance of XenForo's own app class for that type, sharing this
+	 * application's container, and the setup event fires with it once per test. The application
+	 * the framework itself uses, and that app() returns, is unchanged.
+	 *
+	 * @param string $type - 'public', 'admin' or 'api'
+	 *
+	 * @return App - the stand-in now in \XF::app()
+	 */
+	protected function setAppClassType($type)
+	{
+		[$classType] = $this->routeTypeConfig($type);
+
+		$this->swap('app.classType', $classType);
+
+		$appClass = "XF\\$classType\\App";
+
+		if (!(\XF::app() instanceof $appClass))
+		{
+			// built without its constructor, because that would re-register every container entry
+			// over the top of whatever this test has swapped into it
+			$standIn = (new \ReflectionClass($appClass))->newInstanceWithoutConstructor();
+
+			$container = new \ReflectionProperty(App::class, 'container');
+			$container->setAccessible(true);
+			$container->setValue($standIn, $this->app()->container());
+
+			$this->setStaticProperty(\XF::class, 'app', $standIn);
+		}
+
+		if (!isset($this->appSetupFired[$classType]))
+		{
+			$this->appSetupFired[$classType] = true;
+
+			// the event XenForo fires at the end of its own setup for this app type
+			$this->app()->fire('app_' . strtolower($classType) . '_setup', [\XF::app()]);
+		}
+
+		return \XF::app();
+	}
+
 	private function routeTypeConfig($type)
 	{
 		if (!isset(self::ROUTE_TYPES[$type]))

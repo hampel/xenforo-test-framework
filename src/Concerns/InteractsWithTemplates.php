@@ -255,7 +255,11 @@ trait InteractsWithTemplates
 			return;
 		}
 
-		$data = $this->app()->getGlobalTemplateData($reply);
+		// on the application in \XF::app() rather than this one: setAppClassType() puts a Pub, Admin
+		// or Api application there, and getGlobalTemplateData() fires templater_global_data with
+		// whichever application built it - which is what a listener gated on the app type reads.
+		// Without a stand-in installed the two are the same object.
+		$data = \XF::app()->getGlobalTemplateData($reply);
 		$templater->addDefaultParam('xf', $data);
 		$this->installedGlobalTemplateData = $data;
 	}

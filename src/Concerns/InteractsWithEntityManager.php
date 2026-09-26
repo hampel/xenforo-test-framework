@@ -124,9 +124,51 @@ trait InteractsWithEntityManager
 		if ($values)
 		{
 			$entity->bulkSet($values);
+			$this->requireValuesWereSet($entity, $values, $shortName);
 		}
 
 		return $entity;
+	}
+
+	/**
+	 * Refuse an entity that did not take one of the values it was given.
+	 *
+	 * XenForo verifies some columns as they are set, and a value that fails is recorded as an error
+	 * on the entity rather than thrown: a unique key already in use - XF:Option's option_id, say -
+	 * leaves the column null. The test then works with an entity quietly missing the value it asked
+	 * for, and fails somewhere else entirely.
+	 *
+	 * Only a value that did not land is refused. An entity carrying an error for some other reason
+	 * is returned as it is, because building one deliberately invalid is a legitimate thing for a
+	 * test to do.
+	 *
+	 * @param Entity $entity
+	 * @param array $values - what was passed to bulkSet()
+	 * @param string $shortName
+	 *
+	 * @return void
+	 */
+	private function requireValuesWereSet(Entity $entity, array $values, $shortName)
+	{
+		$errors = $entity->getErrors();
+
+		foreach ($values AS $column => $value)
+		{
+			if ($value === null || $entity->get($column) !== null)
+			{
+				continue;
+			}
+
+			$reason = $errors[$column] ?? reset($errors);
+
+			throw new \LogicException(
+				"$shortName did not take the value given for '$column'"
+				. ($reason ? ': ' . $reason : '')
+				. '. XenForo verifies some columns as they are set and records a failure rather than'
+				. ' throwing - a read-only column and a unique key already in use both do this.'
+				. " Use setTrusted('$column', ...) to set it anyway."
+			);
+		}
 	}
 
 	/**

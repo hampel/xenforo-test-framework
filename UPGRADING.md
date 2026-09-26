@@ -5,9 +5,19 @@ Most releases need nothing beyond `composer update`. `CHANGELOG.md` lists everyt
 
 `tests/TestCase.php` is copied into your add-on, so a change to it has to be merged by hand.
 
-## 5.7.1
+## 5.8.0
 
-Nothing to do.
+Nothing to do, with two things to know.
+
+`makeEntity()` now throws when a value it was given did not land, rather than returning an entity
+missing it. A test relying on the old silence will fail where the value is set; use `setTrusted()`
+for a value XenForo's verifiers reject.
+
+`dispatch()` and `callAction()` now fire `app_pub_setup`, `app_admin_setup` or `app_api_setup` for
+the type being dispatched, so a listener of your own on those events runs during tests where it
+previously did not.
+
+If one of your test classes already defines a `setAppClassType()` method, rename it.
 
 ## 5.7.0
 
