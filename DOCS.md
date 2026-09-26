@@ -64,6 +64,10 @@ Type options:
 *  `html` - the default fully rendered HTML output for browsers
 *  `simpleHtml` - a simplified HTML suitable for display in signatures and so on
 
+**`html` and `emailHtml` wrap the output** in `<div class="bbWrapper">`, so the expected value has to
+include it. `simpleHtml` does not wrap, `bbCodeClean` returns BB code, and `editorHtml` renders
+different markup again - `[b]x[/b]` becomes `<p><strong>x</strong></p>`.
+
 ##### Example:
 
 ```php
@@ -77,11 +81,24 @@ class BbCodeTest extends TestCase
 	{
 		$bbCode = '[b]this should be bold[/b]';
 
-		$expectedHtml = '<b>this should be bold</b>';
+		$expectedHtml = '<div class="bbWrapper"><b>this should be bold</b></div>';
 		$this->assertBbCode($expectedHtml, $bbCode, 'html');
+
+		// simpleHtml does not wrap
+		$this->assertBbCode('<b>this should be bold</b>', $bbCode, 'simpleHtml');
 	}
 }	
-``` 
+```
+
+**It compares exactly.** A tag whose output goes through a template - an image with a lightbox, say
+- is not worth matching character for character; render it yourself and assert on what matters:
+
+```php
+$html = $this->app()->bbCode()->render($bbCode, 'html', 'unitTest', null);
+
+$this->assertSee($html, 'data-fancybox');
+$this->assertNoTemplateErrors();
+```
 
 ### actingAs / actingAsMember / actingAsGuest
 Run a test as a given user, so code that reads `\XF::visitor()` or checks permissions behaves as
@@ -621,7 +638,8 @@ Returns `null` if the render did not set it. Each render can overwrite the value
 you want before rendering something else.
 
 ### assertNoTemplateErrors
-Assert that no template this test rendered raised an error.
+Assert that no template this test rendered raised an error. That covers a BB code render too, since
+a tag rendering through a template goes to the same templater.
 
 ##### Example:
 
@@ -799,7 +817,7 @@ class SwapTest extends TestCase
 		
 		// now check that the simpleCache contains the key/value that we expect
 		$this->assertTrue(
-			$simpleCache()->keyExists('MyAddon', 'foo'),
+			$simpleCache->keyExists('MyAddon', 'foo'),
 			"The expected [foo] key does not exist."
 		);
 	}
@@ -1295,6 +1313,21 @@ class FinderTest extends TestCase
 	}
 }	
 ```
+
+**Code that looks an entity up with `\XF::em()->find()` needs this too, not `mockEntity()`.**
+`find()` goes through a finder, so a mocked entity is never consulted. Stub the chain the call makes,
+returning the entity or `null` for the missing case:
+
+```php
+$this->mockFinder('MyVendor\MyAddon:MyEntity', function ($finder) use ($entity) {
+	$finder->shouldReceive('whereId')->with(1)->andReturnSelf();
+	$finder->shouldReceive('with')->andReturnSelf();
+	$finder->shouldReceive('fetchOne')->andReturn($entity);
+});
+```
+
+`find()` checks the entity manager's cache first, so a test that has already loaded that entity gets
+the cached one rather than the mock.
 
 ### mockEntity
 Mock an Entity.

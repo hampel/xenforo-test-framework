@@ -2,6 +2,15 @@
 
 ## 5.7.0 (unreleased)
 
+* docs: `assertBbCode()`'s example expected unwrapped output - `html` and `emailHtml` wrap in
+  `<div class="bbWrapper">`, `simpleHtml` does not - and it compares exactly, so a tag rendering
+  through a template is better rendered and asserted on with `assertSee()`
+* docs: the `swap()` example called the value the container returns, which is already the object
+* docs: `\XF::em()->find()` goes through a finder, so it needs `mockFinder()` rather than
+  `mockEntity()`, and it consults the entity cache first
+* docs: `assertNoTemplateErrors()` covers a BB code render, which uses the same templater
+* the scaffold's `$addonsToLoad` comment says to name your own addon, and what an empty value costs
+  on a forum where another addon vendors its own PHPUnit
 * docs: the README's `build.json` examples no longer run `composer install` without a
   `--working-dir`, which stripped the dev dependencies from the addon you are developing in; they
   remove `.phpunit.cache`, which otherwise ships inside the release; and they use `rm -fv`

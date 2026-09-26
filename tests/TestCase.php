@@ -19,10 +19,13 @@ abstract class TestCase extends BaseTestCase
 	/**
 	 * @var array $addonsToLoad an array of XenForo addon ids to load
 	 *
-	 * Specifying an array of addon ids will cause only those addons to be loaded - useful for isolating your addon for
-	 * testing purposes
+	 * Name your own addon here, eg ['MyVendor/MyAddon']. Only those addons are loaded, which keeps
+	 * other addons' class extensions, code event listeners and Composer autoloading out of your
+	 * tests.
 	 *
-	 * Leave empty to load all addons
+	 * Leaving it empty loads every installed addon. On a forum where another addon vendors its own
+	 * copy of PHPUnit, that copy can win on the class loader and the run dies before the first test
+	 * with an error naming PHPUnit internals rather than anything about isolation.
 	 */
 	protected $addonsToLoad = [];
 
