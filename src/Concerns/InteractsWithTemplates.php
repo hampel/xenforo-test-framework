@@ -155,6 +155,35 @@ trait InteractsWithTemplates
 	 * @return void
 	 */
 	/**
+	 * Render BB code and return the HTML, for asserting on part of it.
+	 *
+	 * assertBbCode() compares the whole output, which is no use for a tag that renders through a
+	 * template - there is too much markup to match exactly. This hands back the string for
+	 * assertSee() and friends, and for assertNoTemplateErrors().
+	 *
+	 * @param string $bbCode
+	 * @param string $type - html (the default), simpleHtml, emailHtml, bbCodeClean or editorHtml
+	 * @param string $context
+	 * @param mixed $content - the content being rendered, typically an entity
+	 *
+	 * @return string
+	 */
+	protected function renderBbCode($bbCode, $type = 'html', $context = 'unitTest', $content = null)
+	{
+		$templater = $this->app()->templater();
+		$this->installGlobalTemplateData($templater, null);
+		$errorsBefore = count($templater->getTemplateErrors());
+
+		$html = (string) $this->app()->bbCode()->render($bbCode, $type, $context, $content);
+
+		// only fires on an empty render that also logged an error, so BB code that legitimately
+		// renders to nothing is returned as it is
+		$this->requireRenderSucceeded($errorsBefore, $html, "BB code '$bbCode' as $type");
+
+		return $html;
+	}
+
+	/**
 	 * Render a reply through the raw renderer and return the response it produced.
 	 *
 	 * A file download or other raw view builds its body and its headers in renderRaw(), which the

@@ -59,6 +59,33 @@ trait InteractsWithEntityManager
 	}
 
 	/**
+	 * Mock what \XF::em()->find() will return for one id.
+	 *
+	 * find() resolves through a finder, so a mocked entity is never consulted - it stubs the calls
+	 * find() makes on the finder instead. It also clears the entity cache for that type, since
+	 * find() reads the cache before it builds a finder at all and would otherwise hand back an
+	 * entity an earlier part of the test loaded.
+	 *
+	 * @param string $shortName - the entity short name, eg 'XF:User'
+	 * @param mixed $id - the id find() will be called with
+	 * @param Entity|null $entity - what find() should return; null for "no such record"
+	 *
+	 * @return Mockery\MockInterface - the finder mock, for any further expectations
+	 * @throws \Exception
+	 */
+	protected function mockFind($shortName, $id, ?Entity $entity = null)
+	{
+		$this->app()->em()->clearEntityCache($shortName);
+
+		return $this->mockFinder($shortName, function ($finder) use ($id, $entity)
+		{
+			$finder->shouldReceive('whereId')->with($id)->andReturnSelf();
+			$finder->shouldReceive('with')->andReturnSelf();
+			$finder->shouldReceive('fetchOne')->andReturn($entity);
+		});
+	}
+
+	/**
 	 * @param $shortName string - shortname for finder class being mocked
 	 * @param bool $inherit - set to true (default) to inherit from the mocked entity, or false to mock a standalone class
 	 * @param \Closure|null $mock

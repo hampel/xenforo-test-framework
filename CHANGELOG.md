@@ -2,6 +2,10 @@
 
 ## 5.7.0 (unreleased)
 
+* new `renderBbCode()` renders BB code and returns the HTML, for asserting on part of the output
+  where `assertBbCode()`'s exact comparison cannot be used
+* new `mockFind()` decides what `\XF::em()->find()` returns for one id, stubbing the finder calls
+  it makes and clearing the entity cache it reads first
 * docs: `assertBbCode()`'s example expected unwrapped output - `html` and `emailHtml` wrap in
   `<div class="bbWrapper">`, `simpleHtml` does not - and it compares exactly, so a tag rendering
   through a template is better rendered and asserted on with `assertSee()`

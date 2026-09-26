@@ -7,7 +7,10 @@ Most releases need nothing beyond `composer update`. `CHANGELOG.md` lists everyt
 
 ## 5.7.0
 
-Nothing to do, unless a test of yours deliberately runs schema changes inside
+If one of your test classes already defines a `renderBbCode()` or `mockFind()` method, rename it:
+`TestCase` now has protected methods of those names.
+
+Otherwise nothing to do, unless a test of yours deliberately runs schema changes inside
 `UsesDatabaseTransactions`. That committed the transaction silently before; it now fails the test.
 Move the schema change out of the transactional class, or clean up after it and reopen a
 transaction for teardown to roll back.

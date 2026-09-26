@@ -91,14 +91,31 @@ class BbCodeTest extends TestCase
 ```
 
 **It compares exactly.** A tag whose output goes through a template - an image with a lightbox, say
-- is not worth matching character for character; render it yourself and assert on what matters:
+- is not worth matching character for character. Use `renderBbCode()` below and assert on what
+matters.
+
+### renderBbCode
+Render BB code and return the HTML, for asserting on part of it. The BB code twin of
+`renderTemplate()`.
+
+##### Parameters:
+
+* `bbCode`
+* `type` - optional - `html` (the default) and the others listed above
+* `context` - optional - `unitTest` by default
+* `content` - optional - the content being rendered, typically an entity
+
+##### Example:
 
 ```php
-$html = $this->app()->bbCode()->render($bbCode, 'html', 'unitTest', null);
+$html = $this->renderBbCode('[img]https://example.com/a.png[/img]');
 
 $this->assertSee($html, 'data-fancybox');
 $this->assertNoTemplateErrors();
 ```
+
+Like the template helpers, it throws when a render produces nothing because it raised an error. BB
+code that legitimately renders to nothing is returned as it is.
 
 ### actingAs / actingAsMember / actingAsGuest
 Run a test as a given user, so code that reads `\XF::visitor()` or checks permissions behaves as
@@ -1314,20 +1331,34 @@ class FinderTest extends TestCase
 }	
 ```
 
-**Code that looks an entity up with `\XF::em()->find()` needs this too, not `mockEntity()`.**
-`find()` goes through a finder, so a mocked entity is never consulted. Stub the chain the call makes,
-returning the entity or `null` for the missing case:
+**Code that looks an entity up with `\XF::em()->find()` needs a finder mock, not `mockEntity()`** -
+`find()` resolves through a finder, so a mocked entity is never consulted. `mockFind()` below is
+that mock for the common case.
+
+### mockFind
+Decide what `\XF::em()->find()` returns for one id.
+
+##### Parameters:
+
+* `shortName` - the entity short name, eg `'XF:User'`
+* `id` - the id `find()` will be called with
+* `entity` - optional - the entity to return, or `null` for "no such record"
+
+##### Example:
 
 ```php
-$this->mockFinder('MyVendor\MyAddon:MyEntity', function ($finder) use ($entity) {
-	$finder->shouldReceive('whereId')->with(1)->andReturnSelf();
-	$finder->shouldReceive('with')->andReturnSelf();
-	$finder->shouldReceive('fetchOne')->andReturn($entity);
-});
+$media = $this->makeEntity('XFMG:MediaItem', ['title' => 'A photo']);
+
+$this->mockFind('XFMG:MediaItem', 42, $media);
+$this->assertSame($media, $this->app()->em()->find('XFMG:MediaItem', 42));
+
+// and the missing case
+$this->mockFind('XFMG:MediaItem', 43, null);
 ```
 
-`find()` checks the entity manager's cache first, so a test that has already loaded that entity gets
-the cached one rather than the mock.
+It returns the finder mock, so further expectations can be set on it. `find()` reads the entity
+manager's cache before it builds a finder, so this clears the cache for that type - otherwise an
+entity the test loaded earlier would be returned instead of the mock.
 
 ### mockEntity
 Mock an Entity.
