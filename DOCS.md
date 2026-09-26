@@ -110,7 +110,7 @@ Render BB code and return the HTML, for asserting on part of it. The BB code twi
 ```php
 $html = $this->renderBbCode('[img]https://example.com/a.png[/img]');
 
-$this->assertSee($html, 'data-fancybox');
+$this->assertSee($html, 'js-lbImage');
 $this->assertNoTemplateErrors();
 ```
 
