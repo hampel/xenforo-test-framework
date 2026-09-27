@@ -1,6 +1,6 @@
 # Changelog
 
-## 5.9.0 (unreleased)
+## 5.9.0 (2026-09-27)
 
 * `dispatch()` takes a request method as its fifth argument, defaulting to `GET`. For a controller
   that deliberately opts out of the CSRF check - a server-to-server endpoint overriding
@@ -13,6 +13,7 @@
   and an expectation on the magic method never applies; array access needs its own expectation
 * docs: the isolated add-on's own code event listeners do run, including while the container builds
   something the test is not otherwise interested in
+* docs: the README's install example requires `^5.9`
 
 ## 5.8.0 (2026-09-26)
 
