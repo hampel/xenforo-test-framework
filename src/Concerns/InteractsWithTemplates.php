@@ -155,6 +155,62 @@ trait InteractsWithTemplates
 	 * @return void
 	 */
 	/**
+	 * Render a reply through the JSON renderer and return the decoded document.
+	 *
+	 * For an endpoint whose view shapes its own response in renderJson(). renderRawReply() cannot
+	 * stand in: the raw renderer asks the view for renderRaw(), which a JSON view does not have, so
+	 * the body comes back empty.
+	 *
+	 * @param AbstractReply $reply - a view reply from dispatch() or callAction()
+	 *
+	 * @return array - what the view returned from renderJson()
+	 */
+	protected function renderJsonReply(AbstractReply $reply)
+	{
+		PHPUnit::assertInstanceOf(View::class, $reply, 'only a view reply names a view class');
+
+		/** @var View $reply */
+		if ($this->app()->container('app.classType') === 'Cli')
+		{
+			throw new \LogicException(
+				'The application class type is still Cli, so a view class cannot be resolved and'
+				. " XenForo would answer with its own empty document instead of your view's."
+				. " Dispatch the route first, or call setAppClassType('public')."
+			);
+		}
+
+		$renderer = $this->app()->renderer('json');
+
+		// asked for before rendering, because XF falls back to a document of its own - status ok and
+		// the template's html - when the view cannot answer. That document is well formed and
+		// carries nothing of the view's, so a loose assertion passes against it
+		$view = $renderer->createViewObject(
+			$reply->getViewClass(),
+			$reply->getTemplateName(),
+			$reply->getParams()
+		);
+
+		if (!method_exists($view, 'renderJson'))
+		{
+			// a view class that does not exist for this application type resolves to XF\Mvc\View,
+			// which has no renderJson() either - so one check covers both, and naming what was
+			// resolved is what tells the two apart
+			throw new \LogicException(
+				"'" . $reply->getViewClass() . "' cannot answer JSON: it resolved to "
+				. get_class($view) . ', which has no renderJson(), so XenForo would answer with a'
+				. ' document of its own instead. A view class that does not exist for this'
+				. " application type resolves to XF\\Mvc\\View - check app.classType and the class name."
+			);
+		}
+
+		return $renderer->renderView(
+			$reply->getViewClass(),
+			$reply->getTemplateName(),
+			$reply->getParams()
+		);
+	}
+
+	/**
 	 * Render BB code and return the HTML, for asserting on part of it.
 	 *
 	 * assertBbCode() compares the whole output, which is no use for a tag that renders through a

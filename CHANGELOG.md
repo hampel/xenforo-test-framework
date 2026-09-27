@@ -1,7 +1,14 @@
 # Changelog
 
-## 5.8.1 (unreleased)
+## 5.9.0 (unreleased)
 
+* `dispatch()` takes a request method as its fifth argument, defaulting to `GET`. For a controller
+  that deliberately opts out of the CSRF check - a server-to-server endpoint overriding
+  `checkCsrfIfNeeded()` - this is the only way to reach its access checks, since `callAction()`
+  skips `preDispatch()` entirely
+* new `renderJsonReply()` renders a reply through the JSON renderer and returns the decoded
+  document, for a view that shapes its own response in `renderJson()`. It refuses a view that cannot
+  answer JSON rather than returning XenForo's own well-formed but empty document
 * docs: an entity double takes its expectations on `get()`, since `Entity::__get()` delegates to it
   and an expectation on the magic method never applies; array access needs its own expectation
 * docs: the isolated add-on's own code event listeners do run, including while the container builds

@@ -5,9 +5,11 @@ Most releases need nothing beyond `composer update`. `CHANGELOG.md` lists everyt
 
 `tests/TestCase.php` is copied into your add-on, so a change to it has to be merged by hand.
 
-## 5.8.1
+## 5.9.0
 
-Nothing to do.
+Nothing to do. If one of your test classes already defines a `renderJsonReply()` method, rename it,
+and if one overrides `dispatch()`, add the new trailing `$method = 'GET'` parameter to your
+signature.
 
 ## 5.8.0
 

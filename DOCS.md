@@ -119,6 +119,32 @@ The stand-in shares this application's container, so container keys, fakes and s
 objects, and the type's setup event - `app_pub_setup`, `app_admin_setup` or `app_api_setup` - fires
 once per test. `app()` still returns the application the framework booted.
 
+### renderJsonReply
+Render a reply through the JSON renderer and return the decoded document, for an endpoint whose view
+shapes its own response in `renderJson()`.
+
+##### Parameters:
+
+* `reply` - a view reply from `dispatch()` or `callAction()`
+
+##### Example:
+
+```php
+$reply = $this->dispatch('my-addon/callback', 'public', ['key' => '...'], [], 'POST');
+
+$document = $this->renderJsonReply($reply);
+
+$this->assertSame('ok', $document['result']);
+```
+
+`renderRawReply()` cannot stand in: the raw renderer asks the view for `renderRaw()`, which a JSON
+view does not have, so the body comes back empty.
+
+**Dispatch first, or call `setAppClassType()`.** View classes resolve through the application type,
+which is `Cli` by default, so a view that does not exist for that type resolves to `XF\Mvc\View` -
+and XenForo then answers with a document of its own that is well formed and carries nothing of
+yours. This refuses both cases rather than returning it.
+
 ### renderBbCode
 Render BB code and return the HTML, for asserting on part of it. The BB code twin of
 `renderTemplate()`.
@@ -326,6 +352,21 @@ $this->setVisitorPermissions($member, ['general' => ['view' => true]]);
 
 $reply = $this->dispatch('members');
 ```
+
+**`dispatch()` sends a `GET` unless you ask for something else**, because XenForo asserts a CSRF
+token in `preDispatch()` for anything that is not a `GET` - so a `POST` against an ordinary
+controller fails for a reason that has nothing to do with your test. Pass the method as the fifth
+argument when the controller deliberately opts out, as a server-to-server endpoint does by
+overriding `checkCsrfIfNeeded()`:
+
+```php
+$reply = $this->dispatch('my-addon/callback', 'public', ['key' => '...'], [], 'POST');
+```
+
+That is the one case where the opt-out is the thing worth testing: the same endpoint's
+`assertViewingPermissions()` and `assertBoardActive()` overrides also live in `preDispatch()`, and
+`callAction()` skips all three. Note the method cannot come through `$server` - `REQUEST_METHOD` is
+set from this argument.
 
 **A route that requires registration refuses a guest with a view, not an error.**
 `assertRegistrationRequired()` returns the `login` template with a 403, so `assertReplyIsError()`

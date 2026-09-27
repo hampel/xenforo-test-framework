@@ -112,10 +112,20 @@ trait InteractsWithRoutes
 	 * @param array $input - GET parameters the route reads, as $_GET would carry them
 	 * @param array $server - request server values, as $_SERVER would carry them - eg REMOTE_ADDR,
 	 *                        HTTP_USER_AGENT, HTTP_REFERER - merged over the defaults
+	 * @param string $method - the request method. GET unless you are testing a controller that
+	 *                         deliberately opts out of the CSRF check, as a server-to-server
+	 *                         endpoint does by overriding checkCsrfIfNeeded(); anything else
+	 *                         refuses a POST in preDispatch(), which is XenForo behaving correctly
 	 *
 	 * @return AbstractReply
 	 */
-	protected function dispatch($routePath, $type = 'public', array $input = [], array $server = [])
+	protected function dispatch(
+		$routePath,
+		$type = 'public',
+		array $input = [],
+		array $server = [],
+		$method = 'GET'
+	)
 	{
 		[$classType, $routerKey] = $this->routeTypeConfig($type);
 
@@ -136,7 +146,7 @@ trait InteractsWithRoutes
 		// This also puts an application of that type in \XF::app() and fires its setup event.
 		$this->setAppClassType($type);
 
-		$request = $this->buildDispatchRequest($routePath, $input, 'GET', $server);
+		$request = $this->buildDispatchRequest($routePath, $input, $method, $server);
 		$this->swap('request', function () use ($request)
 		{
 			return $request;
