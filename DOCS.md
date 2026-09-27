@@ -142,8 +142,10 @@ view does not have, so the body comes back empty.
 
 **Dispatch first, or call `setAppClassType()`.** View classes resolve through the application type,
 which is `Cli` by default, so a view that does not exist for that type resolves to `XF\Mvc\View` -
-and XenForo then answers with a document of its own that is well formed and carries nothing of
-yours. This refuses both cases rather than returning it.
+and XenForo then answers with a document of its own, well formed and carrying nothing of yours.
+This refuses both cases rather than returning it. The document is not recognisable by its shape: its
+content is empty when the reply names no template, which is the usual case for a view answering
+JSON, and the whole rendered template when it does.
 
 ### renderBbCode
 Render BB code and return the HTML, for asserting on part of it. The BB code twin of

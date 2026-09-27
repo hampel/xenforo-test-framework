@@ -181,9 +181,11 @@ trait InteractsWithTemplates
 
 		$renderer = $this->app()->renderer('json');
 
-		// asked for before rendering, because XF falls back to a document of its own - status ok and
-		// the template's html - when the view cannot answer. That document is well formed and
-		// carries nothing of the view's, so a loose assertion passes against it
+		// asked before rendering, because XF falls back to a document of its own when the view cannot
+		// answer: status ok, plus the template rendered as html. It is well formed and carries
+		// nothing of the view's, so a loose assertion passes against it. Do not detect it by shape -
+		// its content is empty for a view with no template name, which is exactly the shape a
+		// JSON-only endpoint has, and full for one with a template
 		$view = $renderer->createViewObject(
 			$reply->getViewClass(),
 			$reply->getTemplateName(),
