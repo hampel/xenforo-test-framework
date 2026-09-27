@@ -370,6 +370,11 @@ That is the one case where the opt-out is the thing worth testing: the same endp
 `callAction()` skips all three. Note the method cannot come through `$server` - `REQUEST_METHOD` is
 set from this argument.
 
+**The response code says which layer refused.** Dispatch such an endpoint with a `GET` and its own
+`assertPostOnly()` answers 405 - which is itself evidence that `preDispatch()` let the request
+through. Remove one of the overrides and the same dispatch returns 403 from that check instead, so
+one test per override isolates it.
+
 **A route that requires registration refuses a guest with a view, not an error.**
 `assertRegistrationRequired()` returns the `login` template with a 403, so `assertReplyIsError()`
 fails on it:

@@ -1,5 +1,11 @@
 # Changelog
 
+## 5.9.1 (unreleased)
+
+* docs: for an endpoint that opts out of `preDispatch()`'s checks, the response code says which layer
+  refused - 405 from the action's own `assertPostOnly()` means the checks let the request through,
+  where 403 is one of the checks refusing it
+
 ## 5.9.0 (2026-09-27)
 
 * `dispatch()` takes a request method as its fifth argument, defaulting to `GET`. For a controller
