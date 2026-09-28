@@ -64,6 +64,13 @@ class ExtensionCacheTest extends TestCase
 
 	public function test_e_extending_it_again_in_a_later_test_is_refused()
 	{
+		// the alias is what cannot be declared twice, so its presence is what decides whether this
+		// test has anything to assert
+		if (!class_exists(Fixtures\Ext\XFCP_ExtendableThingE::class, false))
+		{
+			$this->markTestSkipped('test_c_ has not run - this pair is order-dependent by design');
+		}
+
 		// the proxy XenForo aliased is still declared, so this cannot be done twice in one process
 		$this->expectException(\LogicException::class);
 		$this->expectExceptionMessage('already been extended in this run');

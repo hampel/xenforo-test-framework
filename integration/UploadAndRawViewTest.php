@@ -30,6 +30,11 @@ class UploadAndRawViewTest extends TestCase
 
 	public function test_b_the_temporary_file_is_removed_after_the_test()
 	{
+		if (self::$tempFile === null)
+		{
+			$this->markTestSkipped('test_a_ has not run - this pair is order-dependent by design');
+		}
+
 		$this->assertFileDoesNotExist(self::$tempFile);
 	}
 
