@@ -13,6 +13,22 @@ class Extension extends BaseExtension
 	protected static $globalClassAliasMap = [];
 
 	/**
+	 * Classes whose XFCP proxy has been aliased in this process. The alias cannot be undone, so a
+	 * second extension can never be applied to one of these - see addClassExtension().
+	 *
+	 * @var array
+	 */
+	protected static $globalProxiedClasses = [];
+
+	/**
+	 * Classes a test extended at runtime, forgotten at the end of that test so the next one resolves
+	 * the base class again.
+	 *
+	 * @var array
+	 */
+	protected static $classExtensionsAddedByTest = [];
+
+	/**
 	 * When faking, code events are recorded and listeners are not run - see
 	 * Concerns\InteractsWithEvents.
 	 *
@@ -163,6 +179,12 @@ class Extension extends BaseExtension
 
 		$extended = parent::extendClass($class, $fakeBaseClass);
 
+		if ($extended !== $key)
+		{
+			// XenForo aliased the proxy to reach this, and PHP cannot declare that name twice
+			self::$globalProxiedClasses[$key] = true;
+		}
+
 		self::$globalExtensionMap[$key] = $extended;
 		self::$globalInverseExtensionMap[$extended] = $key;
 
@@ -185,19 +207,21 @@ class Extension extends BaseExtension
 	public function addClassExtension($class, $extension)
 	{
 		$key = $this->extensionCacheKey($class);
-		$cached = self::$globalExtensionMap[$key] ?? null;
 
-		if ($cached !== null && $cached !== $key)
+		if (isset(self::$globalProxiedClasses[$key]))
 		{
 			// the proxy is a class_alias() made when the class was extended, and PHP cannot declare
 			// that name twice - so the extension has to be registered before anything resolves the
 			// class, in this process or another one
 			throw new \LogicException(
-				"'$key' has already been extended in this run, as '$cached', so another extension"
-				. ' cannot be added to it: the class alias XenForo builds for the extension is'
-				. ' already declared. Register the extension before anything resolves the class.'
+				"'$key' has already been extended in this run, so another extension cannot be added"
+				. ' to it: the class alias XenForo builds for the extension is already declared, and'
+				. ' PHP cannot declare it twice. Register the extension before anything resolves the'
+				. ' class, or extend a class no other test touches.'
 			);
 		}
+
+		self::$classExtensionsAddedByTest[$key] = true;
 
 		unset(self::$globalExtensionMap[$key], self::$globalInverseExtensionMap[$key]);
 
@@ -205,6 +229,35 @@ class Extension extends BaseExtension
 		unset($this->extensionMap[$key], $this->extensionMap[ltrim((string) $class, '\\')]);
 
 		parent::addClassExtension($class, $extension);
+	}
+
+	/**
+	 * Forget the class extensions a test added, so the next test resolves those classes unextended.
+	 *
+	 * The cache is static and outlives the application, so without this an extension one test added
+	 * applies for the rest of the run - every later test resolving that class gets the extended one,
+	 * and which tests fail depends on the order they ran in. Called from TestCase::tearDown().
+	 *
+	 * The proxy XenForo aliased stays declared, which is harmless: nothing resolves to it once the
+	 * cache entry is gone, and addClassExtension() refuses to extend that class a second time.
+	 *
+	 * @return void
+	 */
+	public static function forgetClassExtensionsAddedByTest()
+	{
+		foreach (array_keys(self::$classExtensionsAddedByTest) AS $key)
+		{
+			$extended = self::$globalExtensionMap[$key] ?? null;
+
+			unset(self::$globalExtensionMap[$key]);
+
+			if ($extended !== null)
+			{
+				unset(self::$globalInverseExtensionMap[$extended]);
+			}
+		}
+
+		self::$classExtensionsAddedByTest = [];
 	}
 
 	/**

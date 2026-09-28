@@ -284,6 +284,7 @@ abstract class TestCase extends BaseTestCase
 			$this->destroyProperty(\XF::class, 'app');
 		}
 
+		Extension::forgetClassExtensionsAddedByTest();
 		$this->restoreStaticProperties();
 		$this->restoreErrorHandlers();
 

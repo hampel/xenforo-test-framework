@@ -5,6 +5,12 @@ Most releases need nothing beyond `composer update`. `CHANGELOG.md` lists everyt
 
 `tests/TestCase.php` is copied into your add-on, so a change to it has to be merged by hand.
 
+## 5.11.0
+
+Nothing to do, unless a test of yours added a class extension and a later test relied on it still
+being applied. Each test that needs it now adds it - and if more than one does, extend a class no
+other test resolves, because the same class cannot be extended twice in one run.
+
 ## 5.10.0
 
 Nothing to do. A suite that was failing intermittently with

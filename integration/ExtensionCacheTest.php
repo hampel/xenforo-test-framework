@@ -45,6 +45,35 @@ class ExtensionCacheTest extends TestCase
 		$this->assertSame('extended base', (new $extended())->describe());
 	}
 
+	public function test_c_an_extension_added_by_a_test_applies_in_that_test()
+	{
+		$base = Fixtures\ExtendableThingE::class;
+		$this->app()->extension()->addClassExtension($base, Fixtures\Ext\ExtendableThingE::class);
+
+		$this->assertSame(Fixtures\Ext\ExtendableThingE::class, $this->app()->extendClass($base));
+	}
+
+	public function test_d_and_is_forgotten_before_the_next_test()
+	{
+		// the cache is static, so without teardown forgetting it every later test resolving this
+		// class would get the extended one - and which tests failed would depend on the order
+		$base = Fixtures\ExtendableThingE::class;
+
+		$this->assertSame($base, $this->app()->extendClass($base));
+	}
+
+	public function test_e_extending_it_again_in_a_later_test_is_refused()
+	{
+		// the proxy XenForo aliased is still declared, so this cannot be done twice in one process
+		$this->expectException(\LogicException::class);
+		$this->expectExceptionMessage('already been extended in this run');
+
+		$this->app()->extension()->addClassExtension(
+			Fixtures\ExtendableThingE::class,
+			Fixtures\Ext\ExtendableThingE::class
+		);
+	}
+
 	public function test_extending_a_class_twice_in_one_run_is_refused()
 	{
 		$base = ExtendableThingC::class;

@@ -1424,6 +1424,12 @@ class FinderTest extends TestCase
 }	
 ```
 
+**A class extension added during a test lasts only for that test.** `addClassExtension()` on the
+application's extension registers it and clears the cached resolution, so the class is extended from
+that point; teardown forgets it again, so a later test resolving the same class gets the base class.
+Extending the same class a second time anywhere in the run is refused: the proxy XenForo aliases for
+an extension cannot be declared twice in one process.
+
 **Code that looks an entity up with `\XF::em()->find()` needs a finder mock, not `mockEntity()`** -
 `find()` resolves through a finder, so a mocked entity is never consulted. `mockFind()` below is
 that mock for the common case.

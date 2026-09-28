@@ -1,5 +1,13 @@
 # Changelog
 
+## 5.11.0 (unreleased)
+
+* a class extension added during a test is forgotten when that test finishes, so a later test
+  resolving the same class gets the base class again. The cache outlives the application, so such an
+  extension previously applied for the rest of the run and which tests failed depended on their order
+* extending the same class a second time in a run is refused whether or not the cache still holds it,
+  since the proxy XenForo aliases cannot be declared twice in one process
+
 ## 5.10.0 (2026-09-29)
 
 * the extension cache is keyed by the class XenForo will actually extend, rather than by the spelling
