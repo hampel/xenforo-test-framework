@@ -7,7 +7,8 @@ Most releases need nothing beyond `composer update`. `CHANGELOG.md` lists everyt
 
 ## 5.9.1
 
-Nothing to do.
+Nothing to do. A suite that was failing intermittently with
+`Cannot declare class ... XFCP_... because the name is already in use` should stop.
 
 ## 5.9.0
 

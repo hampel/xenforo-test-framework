@@ -2209,7 +2209,7 @@ class RegistryTest extends TestCase
 {
 	public function test_registry()
 	{		
-		// initialise the Mail fake system
+		// initialise the registry fake system
 		$this->fakesRegistry();
 		
 		// execute some test code which interacts with the registry:

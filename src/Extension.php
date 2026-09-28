@@ -154,17 +154,78 @@ class Extension extends BaseExtension
 	 */
 	public function extendClass($class, $fakeBaseClass = null)
 	{
-		if (array_key_exists($class, self::$globalExtensionMap))
+		$key = $this->extensionCacheKey($class);
+
+		if (array_key_exists($key, self::$globalExtensionMap))
 		{
-			return self::$globalExtensionMap[$class];
+			return self::$globalExtensionMap[$key];
 		}
 
 		$extended = parent::extendClass($class, $fakeBaseClass);
 
-		self::$globalExtensionMap[$class] = $extended;
-		self::$globalInverseExtensionMap[$extended] = $class;
+		self::$globalExtensionMap[$key] = $extended;
+		self::$globalInverseExtensionMap[$extended] = $key;
 
 		return $extended;
+	}
+
+	/**
+	 * Register a class extension, and let the next extendClass() see it.
+	 *
+	 * XenForo's own note on this method says the cache is not overridden when the class has already
+	 * been loaded. That matters more here, because the cache above is static and outlives the test:
+	 * without this, an extension a test adds is ignored whenever any earlier test resolved the base
+	 * class, so the test passes alone and fails in the suite.
+	 *
+	 * @param string $class
+	 * @param string $extension
+	 *
+	 * @return void
+	 */
+	public function addClassExtension($class, $extension)
+	{
+		$key = $this->extensionCacheKey($class);
+		$cached = self::$globalExtensionMap[$key] ?? null;
+
+		if ($cached !== null && $cached !== $key)
+		{
+			// the proxy is a class_alias() made when the class was extended, and PHP cannot declare
+			// that name twice - so the extension has to be registered before anything resolves the
+			// class, in this process or another one
+			throw new \LogicException(
+				"'$key' has already been extended in this run, as '$cached', so another extension"
+				. ' cannot be added to it: the class alias XenForo builds for the extension is'
+				. ' already declared. Register the extension before anything resolves the class.'
+			);
+		}
+
+		unset(self::$globalExtensionMap[$key], self::$globalInverseExtensionMap[$key]);
+
+		// XF keeps its own map per instance, and it cached the unextended class just the same
+		unset($this->extensionMap[$key], $this->extensionMap[ltrim((string) $class, '\\')]);
+
+		parent::addClassExtension($class, $extension);
+	}
+
+	/**
+	 * The name XenForo will actually extend, which is what the cache has to be keyed by.
+	 *
+	 * XF\Extension::extendClass() trims a leading backslash and resolves the alias map before
+	 * consulting its own cache, so one class arrives here under several spellings: as written, as
+	 * \XF::stringToClass() returns it with the leading backslash, and as XenForo 2.3's own code
+	 * writes it after the class was renamed. Keyed by the spelling as passed, each of those missed
+	 * the cache and re-ran the extension, and the second one warned that the proxy class name was
+	 * already in use.
+	 *
+	 * @param string $class
+	 *
+	 * @return string
+	 */
+	private function extensionCacheKey($class)
+	{
+		$class = ltrim((string) $class, '\\');
+
+		return $class === '' ? $class : $this->getAliasedClass($class);
 	}
 
 	public function getAliasedClass(string $alias): string

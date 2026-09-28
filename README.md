@@ -1083,6 +1083,11 @@ If the class needs a name, put it in a file PHPUnit does not collect - anything 
 `tests/Support/` - and `require_once` it from inside the test method. PHP does not allow a named class to be declared
 inside a method.
 
+**The same applies to a data provider**, which PHPUnit also runs while building the suite. Anything from XenForo or its
+vendor tree is unavailable there - a class constant such as `OutputInterface::VERBOSITY_DEBUG` fails with
+`Class "Symfony\Component\Console\Output\OutputInterface" not found`. Return the literal value from the provider, or
+resolve it inside the test.
+
 ### Don't treat your test code as unimportant
 
 Your test code is as important as your production code. It will be a huge source of frustration to have test code which
