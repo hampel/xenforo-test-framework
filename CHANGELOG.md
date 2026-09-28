@@ -1,6 +1,6 @@
 # Changelog
 
-## 5.10.0 (unreleased)
+## 5.10.0 (2026-09-29)
 
 * the extension cache is keyed by the class XenForo will actually extend, rather than by the spelling
   it was asked for. A class reached by more than one name - with a leading backslash, or under the
@@ -17,6 +17,7 @@
 * `setStaticProperty()` restores the original value when the test finishes, as the other `set*`
   helpers do. A static outlives the application, so a value set in one test was read by every later
   one
+* docs: the README's install example requires `^5.10`
 
 * docs: for an endpoint that opts out of `preDispatch()`'s checks, the response code says which layer
   refused - 405 from the action's own `assertPostOnly()` means the checks let the request through,
