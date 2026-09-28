@@ -262,7 +262,7 @@ trait InteractsWithJobs
 		if (is_array($runOnce) && isset($runOnce['autoJobRun']))
 		{
 			unset($runOnce['autoJobRun']);
-			$this->setStaticProperty(\XF::class, 'runOnce', $runOnce);
+			$this->writeStaticProperty(\XF::class, 'runOnce', $runOnce);
 		}
 
 		\XF::triggerRunOnce(true);

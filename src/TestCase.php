@@ -10,6 +10,7 @@ use PHPUnit\Framework\TestCase as BaseTestCase;
 abstract class TestCase extends BaseTestCase
 {
 	use Concerns\InteractsWithBbCode;
+	use Concerns\InteractsWithCommands;
 	use Concerns\InteractsWithContainer;
 	use Concerns\InteractsWithDatabase;
 	use Concerns\InteractsWithEntityManager;
@@ -274,7 +275,7 @@ abstract class TestCase extends BaseTestCase
 			// \XF::$runOnce is a static nothing else clears, and a closure left in it is bound to
 			// the app this teardown is about to destroy. Discarded rather than triggered: running it
 			// here would execute deferred work after a transaction has already rolled back.
-			$this->setStaticProperty(\XF::class, 'runOnce', []);
+			$this->writeStaticProperty(\XF::class, 'runOnce', []);
 
 			// \XF::$visitor is a static too, and a visitor left in it belongs to the app being
 			// destroyed. The next test's \XF::visitor() builds a fresh guest when it is empty.
@@ -283,6 +284,7 @@ abstract class TestCase extends BaseTestCase
 			$this->destroyProperty(\XF::class, 'app');
 		}
 
+		$this->restoreStaticProperties();
 		$this->restoreErrorHandlers();
 
 		$this->setUpHasRun = false;

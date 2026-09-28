@@ -1,6 +1,6 @@
 # Changelog
 
-## 5.9.1 (unreleased)
+## 5.10.0 (unreleased)
 
 * the extension cache is keyed by the class XenForo will actually extend, rather than by the spelling
   it was asked for. A class reached by more than one name - with a leading backslash, or under the
@@ -12,6 +12,11 @@
   already extended in the same run throws, because the proxy PHP needs cannot be declared twice
 * docs: a data provider runs before XenForo boots, so a class constant from XenForo or its vendor tree
   is not available in one
+* new `runConsoleCommand()` runs a console command against the booted application and returns
+  Symfony's `CommandTester`, for asserting on its output and exit code
+* `setStaticProperty()` restores the original value when the test finishes, as the other `set*`
+  helpers do. A static outlives the application, so a value set in one test was read by every later
+  one
 
 * docs: for an endpoint that opts out of `preDispatch()`'s checks, the response code says which layer
   refused - 405 from the action's own `assertPostOnly()` means the checks let the request through,

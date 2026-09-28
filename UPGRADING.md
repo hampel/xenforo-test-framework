@@ -5,10 +5,15 @@ Most releases need nothing beyond `composer update`. `CHANGELOG.md` lists everyt
 
 `tests/TestCase.php` is copied into your add-on, so a change to it has to be merged by hand.
 
-## 5.9.1
+## 5.10.0
 
 Nothing to do. A suite that was failing intermittently with
 `Cannot declare class ... XFCP_... because the name is already in use` should stop.
+
+`setStaticProperty()` now restores the original value after each test. A test that relied on a static
+it set persisting into a later test will need to set it in both.
+
+If one of your test classes already defines a `runConsoleCommand()` method, rename it.
 
 ## 5.9.0
 

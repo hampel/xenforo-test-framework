@@ -473,7 +473,7 @@ trait InteractsWithRoutes
 			$container->setAccessible(true);
 			$container->setValue($standIn, $this->app()->container());
 
-			$this->setStaticProperty(\XF::class, 'app', $standIn);
+			$this->writeStaticProperty(\XF::class, 'app', $standIn);
 		}
 
 		if (!isset($this->appSetupFired[$classType]))

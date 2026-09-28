@@ -6,6 +6,9 @@ use Illuminate\Support\helpers;
 
 trait UsesReflection
 {
+	/** @var array - class::property => [class, property, original value] */
+	private $staticPropertiesToRestore = [];
+
 	/**
 	 * Returns all traits used by a class, its parent classes and trait of their traits.
 	 *
@@ -73,7 +76,11 @@ trait UsesReflection
 	}
 
 	/**
-	 * Set a static property to a given value, where null is not the right empty value.
+	 * Set a static property, restoring what was there when the test finishes.
+	 *
+	 * A static outlives the application the framework rebuilds for each test, so a value set here
+	 * would otherwise be read by every later test in the run - the leak \XF::$apiKey and
+	 * \XF::$visitor each needed their own fix for.
 	 *
 	 * @param string $class
 	 * @param string $property
@@ -83,7 +90,42 @@ trait UsesReflection
 	 */
 	protected function setStaticProperty($class, $property, $value)
 	{
+		$key = $class . '::' . $property;
+
+		if (!array_key_exists($key, $this->staticPropertiesToRestore))
+		{
+			$this->staticPropertiesToRestore[$key] = [$class, $property, $this->getStaticProperty($class, $property)];
+		}
+
+		$this->writeStaticProperty($class, $property, $value);
+	}
+
+	/**
+	 * Set a static property without recording it for restoration - for the framework's own use,
+	 * where the write IS the teardown, or is undone by it.
+	 *
+	 * @param string $class
+	 * @param string $property
+	 * @param mixed $value
+	 *
+	 * @return void
+	 */
+	private function writeStaticProperty($class, $property, $value)
+	{
 		$reflectionClass = new \ReflectionClass($class);
 		$reflectionClass->setStaticPropertyValue($property, $value);
+	}
+
+	/**
+	 * @return void
+	 */
+	private function restoreStaticProperties()
+	{
+		foreach ($this->staticPropertiesToRestore AS [$class, $property, $value])
+		{
+			$this->writeStaticProperty($class, $property, $value);
+		}
+
+		$this->staticPropertiesToRestore = [];
 	}
 }

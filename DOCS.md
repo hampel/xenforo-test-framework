@@ -2296,6 +2296,46 @@ class SimpleCacheTest extends TestCase
 }	
 ```
 
+### runConsoleCommand
+Run a console command and return Symfony's `CommandTester`, for asserting on its output and exit
+code. What `dispatch()` is for a route.
+
+##### Parameters:
+
+* `command` - the command class, or an instance where it needs constructing
+* `input` - optional - arguments and options, as `CommandTester` takes them
+* `options` - optional - passed to `CommandTester::execute()`, eg `['verbosity' => …]`
+
+##### Example:
+
+```php
+$tester = $this->runConsoleCommand(MyAddOnCommand::class, ['--force' => true]);
+
+$this->assertSame(Command::SUCCESS, $tester->getStatusCode());
+$this->assertStringContainsString('12 rows updated', $tester->getDisplay());
+```
+
+The command runs against the booted application, so the fakes and swaps a test installed apply to
+it. A command with no name is refused - XenForo's own commands set one in `configure()`.
+
+### setStaticProperty
+Set a static property, restoring what was there when the test finishes.
+
+##### Parameters:
+
+* `class`
+* `property`
+* `value`
+
+##### Example:
+
+```php
+$this->setStaticProperty(\XF::class, 'versionId', 2020070);
+```
+
+A static outlives the application the framework rebuilds for each test, so without the restoration a
+value set here would be read by every later test in the run.
+
 ### setTestTime
 Allow us to set an arbitrary execution time for `\XF::$time`, with no side effects - time is reset after each 
 individual test is run.
