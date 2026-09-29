@@ -1,6 +1,6 @@
 # Changelog
 
-## 5.12.0 (unreleased)
+## 5.12.0 (2026-09-30)
 
 * `UsesDatabaseTransactions` also fails the test when the code under test ended the transaction
   rather than committing it. `rollbackAll()` and `commit()` both do, and XenForo calls `rollbackAll()`
@@ -8,6 +8,7 @@
   including what XenForo writes itself, is permanent. The commit check could not see this, because
   nothing had been committed
 * docs: what that means for a test that runs a failing job through the job manager
+* docs: the README's install example requires `^5.12`
 
 ## 5.11.0 (2026-09-29)
 
