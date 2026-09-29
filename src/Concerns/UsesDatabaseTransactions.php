@@ -50,69 +50,84 @@ trait UsesDatabaseTransactions
 
 		$this->beforeApplicationDestroyed(function () use ($db)
 		{
-			$lost = $this->transactionWasCommitted($db);
+			$reason = $this->transactionDidNotSurvive($db);
 
 			if ($db->inTransaction())
 			{
 				$db->rollbackAll();
 			}
 
-			if ($lost)
+			if ($reason !== null)
 			{
 				PHPUnit::fail(
-					'Something committed this test\'s transaction, so everything it wrote before '
-					. 'that point is now permanent in the database. The usual cause is a statement '
-					. 'MySQL commits implicitly - any DDL, including the TRUNCATE that XenForo runs '
-					. 'when a template is compiled. On a development install that compile happens '
-					. 'whenever a rendered template\'s _output/ file does not match the hash in '
-					. '_metadata.json, which is the state an edit leaves it in. Load a page that '
-					. 'renders the template, outside any test: the watcher re-imports it from the '
-					. 'file and writes that hash, after which the compile stops happening. Neither '
-					. 'xf-dev:import nor xf-dev:export is the answer - import reads _metadata.json '
-					. 'without writing it, and export writes the database over your edited file.'
+					'This test\'s transaction did not survive, so everything written after that '
+					. "point is now permanent in the database: $reason"
 				);
 			}
 		});
 	}
 
 	/**
-	 * Ask the server whether the transaction is still open.
+	 * Say why the transaction this test opened is gone, or null if it is still there.
 	 *
-	 * The adapter cannot answer this: an implicit commit happens inside the server, so its own
-	 * flag still says a transaction is open and rollbackAll() then rolls back nothing.
+	 * Two ways to lose it, and neither is visible from the test:
+	 *
+	 *  - something ended it. rollbackAll() and commit() both do, and XenForo calls rollbackAll() on
+	 *    its own error paths - the job manager does it when a job throws, before deciding what to do
+	 *    with the job, so a test that runs a failing job through the manager loses the wrapper and
+	 *    everything written afterwards, including what XenForo itself then writes.
+	 *  - something committed it implicitly, which the adapter cannot see at all: its flag still says
+	 *    a transaction is open and rollbackAll() then rolls back nothing.
 	 *
 	 * @param AbstractAdapter $db
 	 *
-	 * @return bool - true when the transaction this test opened is gone
+	 * @return string|null
 	 */
-	private function transactionWasCommitted(AbstractAdapter $db)
+	private function transactionDidNotSurvive(AbstractAdapter $db)
 	{
 		if (!$db->inTransaction())
 		{
-			// the test rolled back or committed deliberately, and knows what it did
-			return false;
+			return 'the code under test ended it, with rollbackAll() or commit(). XenForo calls'
+				. ' rollbackAll() on its own error paths - the job manager does when a job throws -'
+				. ' so test the method directly rather than through something that handles errors,'
+				. ' or leave this trait off that class and undo the writes yourself.';
 		}
+
+		$committed = null;
 
 		try
 		{
 			// MariaDB
-			return !$db->fetchOne('SELECT @@in_transaction');
+			$committed = !$db->fetchOne('SELECT @@in_transaction');
 		}
 		catch (DbException $e)
 		{
+			try
+			{
+				// MySQL has no such variable
+				$committed = !$db->fetchOne(
+					'SELECT COUNT(*) FROM information_schema.innodb_trx'
+					. ' WHERE trx_mysql_thread_id = CONNECTION_ID()'
+				);
+			}
+			catch (DbException $e)
+			{
+				// no answer available, so do not invent one
+				return null;
+			}
 		}
 
-		try
+		if (!$committed)
 		{
-			// MySQL has no such variable
-			return !$db->fetchOne(
-				'SELECT COUNT(*) FROM information_schema.innodb_trx WHERE trx_mysql_thread_id = CONNECTION_ID()'
-			);
+			return null;
 		}
-		catch (DbException $e)
-		{
-			// no answer available, so do not invent one
-			return false;
-		}
+
+		return 'something committed it. Any DDL does, including the TRUNCATE XenForo runs when it'
+			. ' compiles a template - which on a development install happens whenever a rendered'
+			. " template's _output/ file does not match the hash in _metadata.json, the state an edit"
+			. ' leaves it in. Load a page that renders the template, outside any test, and the'
+			. ' watcher re-imports it and writes that hash. Neither xf-dev:import nor xf-dev:export'
+			. ' is the answer - import reads _metadata.json without writing it, and export writes the'
+			. ' database over your edited file.';
 	}
 }

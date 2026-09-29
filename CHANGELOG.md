@@ -1,5 +1,14 @@
 # Changelog
 
+## 5.12.0 (unreleased)
+
+* `UsesDatabaseTransactions` also fails the test when the code under test ended the transaction
+  rather than committing it. `rollbackAll()` and `commit()` both do, and XenForo calls `rollbackAll()`
+  on its own error paths - the job manager when a job throws - after which everything written,
+  including what XenForo writes itself, is permanent. The commit check could not see this, because
+  nothing had been committed
+* docs: what that means for a test that runs a failing job through the job manager
+
 ## 5.11.0 (2026-09-29)
 
 * a class extension added during a test is forgotten when that test finishes, so a later test

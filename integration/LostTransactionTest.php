@@ -15,9 +15,27 @@ class LostTransactionTest extends TestCase
 {
 	use UsesDatabaseTransactions;
 
-	public function test_an_open_transaction_is_reported_as_open()
+	public function test_an_open_transaction_is_reported_as_surviving()
 	{
-		$this->assertFalse($this->transactionWasCommitted($this->app()->db()));
+		$this->assertNull($this->transactionDidNotSurvive($this->app()->db()));
+	}
+
+	public function test_a_rollback_by_the_code_under_test_is_detected()
+	{
+		$db = $this->app()->db();
+
+		try
+		{
+			// what XenForo's job manager does when a job throws, before deciding what to do with it:
+			// the wrapper goes, and everything written afterwards is committed
+			$db->rollbackAll();
+
+			$this->assertStringContainsString('ended it', (string) $this->transactionDidNotSurvive($db));
+		}
+		finally
+		{
+			$db->beginTransaction();
+		}
 	}
 
 	public function test_an_implicit_commit_is_detected()
@@ -29,7 +47,7 @@ class LostTransactionTest extends TestCase
 			// DDL, so the server commits the wrapper out from under us
 			$db->query('CREATE TABLE xf_lost_transaction_probe (probe_id INT)');
 
-			$this->assertTrue($this->transactionWasCommitted($db));
+			$this->assertStringContainsString('committed it', (string) $this->transactionDidNotSurvive($db));
 		}
 		finally
 		{

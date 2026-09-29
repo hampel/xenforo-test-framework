@@ -1133,6 +1133,13 @@ protected function tearDown(): void
   cannot roll back a file. `XF:Widget` is one: saving it queues a compile that `dispatch()` and
   `callAction()` then run. Insert the rows directly where a test only needs the record to exist.
 
+**Code that calls `rollbackAll()` ends the wrapper**, and everything written after that goes straight
+to the database. XenForo does this on its own error paths - the job manager rolls back when a job
+throws, before deciding what to do with the job, and then writes the failure itself. So a test that
+runs a failing job through the manager loses the transaction and leaves rows behind. Test the method
+directly, or leave this trait off that class and undo the writes yourself. The wrapper notices and
+fails the test either way.
+
 **If something commits the transaction, the wrapper says so and fails the test.** MySQL commits
 implicitly on any DDL, and the adapter cannot see it happen - so without the check, teardown rolls
 back nothing and everything the test wrote stays.

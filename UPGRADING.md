@@ -5,6 +5,13 @@ Most releases need nothing beyond `composer update`. `CHANGELOG.md` lists everyt
 
 `tests/TestCase.php` is copied into your add-on, so a change to it has to be merged by hand.
 
+## 5.12.0
+
+Nothing to do, unless a transactional test of yours runs code that calls `rollbackAll()` - running a
+failing job through the job manager is the common case. That test was leaving rows in the database;
+it now fails. Test the method directly, or leave `UsesDatabaseTransactions` off that class and undo
+its writes yourself.
+
 ## 5.11.0
 
 Nothing to do, unless a test of yours added a class extension and a later test relied on it still
