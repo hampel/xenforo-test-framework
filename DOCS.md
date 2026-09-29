@@ -442,7 +442,11 @@ $this->assertDatabaseHas('xf_notice', ['title' => 'Maintenance']);
 
 ##### Parameters:
 
-* `controller` - `'XF:Notice'` or a full class name
+* `controller` - `'XF:Notice'` or a full class name. Name the class your add-on **extends**,
+  never your extension of it: XenForo resolves it to the most derived class, which is yours, and
+  an extension named directly is refused. The proxy an extension inherits from is declared while
+  XenForo resolves the class being extended, so the extension's own name loads only after
+  something else in the run has resolved it
 * `action` - the controller's own action, not a route: `'save'` calls `actionSave()`, and
   `'archive-users/run'` calls `actionArchiveUsersRun()`. Nothing about routing applies, so a route's
   `action_prefix` is not added for you - an action reached at `links/save` under the prefix `link`
@@ -1144,9 +1148,12 @@ fails the test either way.
 implicitly on any DDL, and the adapter cannot see it happen - so without the check, teardown rolls
 back nothing and everything the test wrote stays.
 
+`$db->emptyTable()` is one, and it does not look like DDL: it issues a `TRUNCATE`, which commits.
+Use `DELETE FROM` in a test that runs under this trait.
+
 The commonest source on a development install is rendering a template whose `_output/` file does not
 match the hash recorded in `_metadata.json` - the state an edit leaves it in. XenForo re-imports and
-compiles it, which truncates the CSS cache.
+compiles it, which truncates the CSS cache - `emptyTable()` again, inside XenForo's own code.
 
 **Load a page that renders the template, outside any test.** The watcher re-imports it from the file
 and writes the hash, and the compile stops happening. That is the only remedy without a failure
@@ -2315,7 +2322,9 @@ code. What `dispatch()` is for a route.
 
 ##### Parameters:
 
-* `command` - the command class, or an instance where it needs constructing
+* `command` - the command class, or an instance where it needs constructing. The class name, not
+  the name the command is invoked by on the command line - `MyAddOnCommand::class`, not
+  `'my-addon:do-thing'`
 * `input` - optional - arguments and options, as `CommandTester` takes them
 * `options` - optional - passed to `CommandTester::execute()`, eg `['verbosity' => …]`
 

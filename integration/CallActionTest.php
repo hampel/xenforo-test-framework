@@ -145,4 +145,29 @@ class CallActionTest extends TestCase
 		$this->assertInstanceOf(Error::class, $reply);
 		$this->assertSame('Save', $reply->getAction());
 	}
+
+	public function test_a_controller_named_by_its_extension_is_refused_with_the_base_class()
+	{
+		// invented names: the refusal reads the extension map, and nothing has to be loadable for it
+		$baseClass = 'Hampel\\Testing\\Integration\\Fixtures\\Admin\\Controller\\ExtendableThingF';
+		$extensionClass = 'Hampel\\Testing\\Integration\\Fixtures\\Ext\\Admin\\Controller\\ExtendableThingF';
+
+		$extension = $this->app()->container('extension');
+		$extension->addClassExtension($baseClass, $extensionClass);
+
+		$this->expectException(\LogicException::class);
+		$this->expectExceptionMessage("name '$baseClass' instead");
+
+		$this->callAction($extensionClass, 'index', 'admin');
+	}
+
+	public function test_an_extension_the_test_did_not_load_is_refused_when_its_proxy_is_missing()
+	{
+		// not in the extension map, so the refusal above cannot see it - PHP raises the Error first.
+		// Every other test here names a base controller and resolves normally
+		$this->expectException(\LogicException::class);
+		$this->expectExceptionMessage('name the class it extends instead');
+
+		$this->callAction(Fixtures\Admin\Controller\ExtendsMissingProxy::class, 'index', 'admin');
+	}
 }

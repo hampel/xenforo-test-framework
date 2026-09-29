@@ -23,6 +23,15 @@ trait InteractsWithCommands
 	 */
 	protected function runConsoleCommand($command, array $input = [], array $options = [])
 	{
+		if (is_string($command) && !class_exists($command))
+		{
+			throw new \LogicException(
+				"'$command' is not a class: runConsoleCommand() takes the command's class name, not"
+				. " the name it is invoked by on the command line - eg"
+				. " MyVendor\\MyAddOn\\Cli\\Command\\Thing::class."
+			);
+		}
+
 		$instance = is_object($command) ? $command : new $command();
 
 		if (!($instance instanceof Command))

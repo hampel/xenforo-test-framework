@@ -5,6 +5,12 @@ Most releases need nothing beyond `composer update`. `CHANGELOG.md` lists everyt
 
 `tests/TestCase.php` is copied into your add-on, so a change to it has to be merged by hand.
 
+## 5.13.0
+
+Nothing to do, unless a `callAction()` call of yours names your own extension of a controller - it is
+now refused, with the class to name instead. Passing the class your add-on extends is equivalent and
+order-independent, because XenForo resolves it to the most derived class.
+
 ## 5.12.0
 
 Nothing to do, unless a transactional test of yours runs code that calls `rollbackAll()` - running a

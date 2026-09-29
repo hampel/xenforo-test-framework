@@ -1,5 +1,17 @@
 # Changelog
 
+## 5.13.0 (unreleased)
+
+* `callAction()` refuses a controller named by an add-on's extension of it, and names the class to
+  pass instead. Naming the extension worked only when something earlier in the run had resolved the
+  class being extended, so the same call passed in a full suite and failed under `--filter` with
+  `Class "...\XFCP_..." not found`
+* `runConsoleCommand()` refuses a command name where a class name is wanted, rather than failing with
+  `Class "my-addon:do-thing" not found`
+* docs: name the controller your add-on extends, not your extension of it
+* docs: `$db->emptyTable()` issues a `TRUNCATE`, so it commits a test's transaction
+* docs: the README's install example requires `^5.13`
+
 ## 5.12.0 (2026-09-30)
 
 * `UsesDatabaseTransactions` also fails the test when the code under test ended the transaction

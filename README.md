@@ -23,7 +23,7 @@ Install the newest version your XenForo and PHP allow. Older lines stay on Packa
 v4 and v5 support the same XenForo and PHP versions; v5 is the current line, and
 [UPGRADING.md](UPGRADING.md) describes moving to it.
 
-Put the version you picked in your addon's `require-dev` as `^5.12`, `^3.0` and so on - the installation section below
+Put the version you picked in your addon's `require-dev` as `^5.13`, `^3.0` and so on - the installation section below
 shows the whole file.
 
 ## Upgrading
@@ -479,7 +479,7 @@ use Composer, you can simply create a `composer.json` file with the following in
 ```json
 {
     "require-dev": {
-        "hampel/xenforo-test-framework": "^5.12",
+        "hampel/xenforo-test-framework": "^5.13",
         "nesbot/carbon": "^3.0"
     },
     "autoload-dev": {
@@ -734,6 +734,11 @@ and `callAction()` to test what the action does.
 A public route also needs the visitor to hold `general.view`, which a built visitor does not, so a public dispatch
 returns a 403 until the test grants it. See `dispatch()` in DOCS.md.
 
+Name the controller your add-on **extends**, not your extension of it - `'XF:Tools'`, not
+`MyVendor\MyAddon\XF\Admin\Controller\Tools`. XenForo resolves the base to the most derived class, which is your
+extension, so resolving through the base is itself proof the extension applied. An extension named directly is refused,
+because the proxy it inherits from is declared while XenForo resolves the class being extended.
+
 ### Database queries
 
 Mocking the database adapter, entities and finders quickly becomes cumbersome for anything beyond simple queries. With
@@ -789,7 +794,8 @@ Code which relies on particular data being present in the database is problemati
 
 `UsesDatabaseTransactions` removes anything a test writes. XenForo's own transactions nest inside it, so code under test
 can open and commit its own. Two things it cannot roll back: DDL commits implicitly in MySQL, so a test that alters the
-schema must clean up after itself; and uncommitted rows are visible only to the connection that wrote them.
+schema must clean up after itself - `$db->emptyTable()` counts, since it issues a `TRUNCATE`; and uncommitted rows are
+visible only to the connection that wrote them.
 
 There is no way to seed a known set of data for a test to work against. Tests that rely on data already in your
 development forum are fragile.

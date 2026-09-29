@@ -408,6 +408,31 @@ class Extension extends BaseExtension
 		return $cache;
 	}
 
+	/**
+	 * The class the given one is registered as an extension of, or null if it is not an extension.
+	 *
+	 * Read from the extension map rather than the class itself, because loading an extension whose
+	 * XFCP proxy has not been declared is a fatal error.
+	 *
+	 * @param string $class
+	 *
+	 * @return string|null
+	 */
+	public function classExtendedBy($class)
+	{
+		$class = ltrim((string) $class, '\\');
+
+		foreach ($this->classExtensions AS $fromClass => $toClasses)
+		{
+			if (in_array($class, $toClasses, true))
+			{
+				return $fromClass;
+			}
+		}
+
+		return null;
+	}
+
 	public function resolveExtendedClassToRoot($class)
 	{
 		$originalClass = $class;

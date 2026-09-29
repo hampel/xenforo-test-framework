@@ -61,4 +61,12 @@ class ConsoleCommandTest extends TestCase
 	{
 		$this->assertNotSame(999999999, \XF::$versionId);
 	}
+
+	public function test_a_command_name_is_refused_with_the_class_it_should_have_been_given()
+	{
+		$this->expectException(\LogicException::class);
+		$this->expectExceptionMessage("takes the command's class name");
+
+		$this->runConsoleCommand('probe:thing');
+	}
 }

@@ -2,11 +2,13 @@
 
 namespace Hampel\Testing\Concerns;
 
+use Hampel\Testing\Extension;
 use PHPUnit\Framework\Assert as PHPUnit;
 use XF\Api\Mvc\Reply\ApiResult;
 use XF\App;
 use XF\Entity\ApiKey;
 use XF\Http\Request;
+use XF\Mvc\Controller;
 use XF\Mvc\Dispatcher;
 use XF\Mvc\ParameterBag;
 use XF\Mvc\Reply\AbstractReply;
@@ -217,7 +219,9 @@ trait InteractsWithRoutes
 			return $request;
 		});
 
-		$instance = $this->app()->controller($controller, $request);
+		$this->requireBaseControllerClass($controller);
+
+		$instance = $this->resolveController($controller, $request);
 		if (!$instance)
 		{
 			throw new \LogicException(
@@ -323,6 +327,82 @@ trait InteractsWithRoutes
 	 *
 	 * @return Request
 	 */
+	/**
+	 * Refuse a controller named by an add-on's extension of it.
+	 *
+	 * An extension inherits from the XFCP proxy XenForo declares while it resolves the class being
+	 * extended, so naming the extension loads a parent that does not exist yet - unless something
+	 * earlier in the run resolved that class, which makes it pass or fail on test order.
+	 *
+	 * @param mixed $controller
+	 *
+	 * @return void
+	 */
+	private function requireBaseControllerClass($controller)
+	{
+		if (!is_string($controller) || strpos($controller, '\\') === false)
+		{
+			return;
+		}
+
+		$extension = $this->app()->container('extension');
+
+		if (!($extension instanceof Extension))
+		{
+			return;
+		}
+
+		$baseClass = $extension->classExtendedBy($controller);
+
+		if ($baseClass !== null)
+		{
+			throw new \LogicException($this->extendedControllerMessage($controller, $baseClass));
+		}
+	}
+
+	/**
+	 * An extension registered by an add-on the test did not load is not in the extension map, so
+	 * the refusal above cannot see it - PHP raises an Error for the missing proxy instead.
+	 *
+	 * @param string $controller
+	 * @param Request $request
+	 *
+	 * @return Controller|null
+	 */
+	private function resolveController($controller, Request $request)
+	{
+		try
+		{
+			return $this->app()->controller($controller, $request);
+		}
+		catch (\Error $e)
+		{
+			if (strpos($e->getMessage(), 'XFCP_') === false)
+			{
+				throw $e;
+			}
+
+			throw new \LogicException($this->extendedControllerMessage($controller), 0, $e);
+		}
+	}
+
+	/**
+	 * @param string $controller
+	 * @param string|null $baseClass
+	 *
+	 * @return string
+	 */
+	private function extendedControllerMessage($controller, $baseClass = null)
+	{
+		$name = $baseClass !== null ? "'" . $baseClass . "'" : 'the class it extends';
+
+		return "'$controller' extends another controller: name $name instead."
+			. ' XenForo declares the XFCP proxy an extension inherits from while it resolves the'
+			. ' class being extended, so naming the extension works only once something else in the'
+			. ' run has resolved that class. Naming the base is also what proves the extension'
+			. ' applied, since XenForo resolves it to the most derived class - which is yours.';
+	}
+
 	/**
 	 * Build a `$_FILES` entry for callAction(), from the contents you want the file to have.
 	 *
