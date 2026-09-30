@@ -1,6 +1,6 @@
 # Changelog
 
-## 5.13.0 (unreleased)
+## 5.13.0 (2026-09-30)
 
 * `callAction()` refuses a controller named by an add-on's extension of it, and names the class to
   pass instead. Naming the extension worked only when something earlier in the run had resolved the
