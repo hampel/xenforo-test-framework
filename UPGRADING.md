@@ -7,7 +7,10 @@ Most releases need nothing beyond `composer update`. `CHANGELOG.md` lists everyt
 
 ## 5.13.0
 
-Nothing to do, unless a `callAction()` call of yours names your own extension of a controller - it is
+If your suite is locked to a PHPUnit between 10.0 and 10.4, `composer update` will move it within
+10.5 - the shipped `phpunit.xml` has always needed 10.5.
+
+Otherwise nothing to do, unless a `callAction()` call of yours names your own extension of a controller - it is
 now refused, with the class to name instead. Passing the class your add-on extends is equivalent and
 order-independent, because XenForo resolves it to the most derived class.
 
