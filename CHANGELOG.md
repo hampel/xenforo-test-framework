@@ -1,6 +1,6 @@
 # Changelog
 
-## 5.13.1 (unreleased)
+## 5.13.1 (2026-09-30)
 
 * `composer update` resolves again. Every `league/flysystem` release up to 3.35.2 carries a
   low-severity advisory and Composer blocks an affected package by default, so nothing that needs
