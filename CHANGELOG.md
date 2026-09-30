@@ -9,6 +9,7 @@
   `composer audit` prints it
 * the `league/flysystem` dev floor is `^1.1.4`, above the range of the critical advisory that *is*
   patched, so that one stays enforced rather than ignored
+* `runConsoleCommand()`'s type error names what the argument resolved to rather than the argument
 * docs: what to put in your own `composer.json` to install `league/flysystem-memory` for `swapFs()`
 
 ## 5.13.0 (2026-09-30)

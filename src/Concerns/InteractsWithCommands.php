@@ -37,8 +37,7 @@ trait InteractsWithCommands
 		if (!($instance instanceof Command))
 		{
 			throw new \LogicException(
-				'Expected a ' . Command::class . ', got '
-				. (is_object($command) ? get_class($command) : (string) $command)
+				'Expected a ' . Command::class . ', got ' . get_debug_type($instance)
 			);
 		}
 
