@@ -1,6 +1,6 @@
 # Changelog
 
-## 5.14.0 (unreleased)
+## 5.14.0 (2026-09-30)
 
 * a reply assertion refuses a value where its failure message goes. `assertReplyParam($reply, $key,
   $expected)` has no expected-value argument, so the value was taken as the message and the assertion
