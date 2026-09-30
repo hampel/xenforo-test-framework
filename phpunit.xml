@@ -12,7 +12,6 @@
          failOnRisky="true"
          failOnNotice="true"
          failOnWarning="true"
-         failOnPhpunitDeprecation="true"
          failOnEmptyTestSuite="true">
   <testsuites>
     <testsuite name="Unit">

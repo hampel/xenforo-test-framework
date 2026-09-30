@@ -7,6 +7,10 @@ Most releases need nothing beyond `composer update`. `CHANGELOG.md` lists everyt
 
 ## 5.13.0
 
+**Re-copy `phpunit.xml`.** It no longer sets `failOnPhpunitDeprecation`: PHPUnit 10.5 has no such
+attribute, so a suite running on it fails configuration validation, and `failOnWarning` turns that
+warning into a failed run with every test passing.
+
 If your suite is locked to a PHPUnit between 10.0 and 10.4, `composer update` will move it within
 10.5 - the shipped `phpunit.xml` has always needed 10.5.
 

@@ -553,7 +553,6 @@ options - they tell PHPUnit where to find our unit tests.
          failOnRisky="true"
          failOnNotice="true"
          failOnWarning="true"
-         failOnPhpunitDeprecation="true"
          failOnEmptyTestSuite="true">
   <testsuites>
     <testsuite name="Unit">
@@ -567,8 +566,11 @@ options - they tell PHPUnit where to find our unit tests.
 </phpunit>
 ```
 
-The `failOn*` flags fail the suite on deprecations, notices, warnings, risky tests, PHPUnit's own deprecations, and a
-run that executes no tests - such as a `--filter` that matches nothing.
+The `failOn*` flags fail the suite on deprecations, notices, warnings, risky tests, and a run that executes no tests -
+such as a `--filter` that matches nothing.
+
+`failOnPhpunitDeprecation` is deliberately absent: PHPUnit 10.5 does not have it, so on the oldest supported version the
+configuration fails validation and `failOnWarning` then fails every run.
 
 `failOnEmptyTestSuite` fires on an empty run, not an empty suite. A Feature suite that collects nothing - or misses a
 test file not named `*Test.php` - still exits 0 while the Unit suite passes. When you add your first feature test, run

@@ -8,9 +8,12 @@
   `Class "...\XFCP_..." not found`
 * `runConsoleCommand()` refuses a command name where a class name is wanted, rather than failing with
   `Class "my-addon:do-thing" not found`
+* the shipped `phpunit.xml` no longer sets `failOnPhpunitDeprecation`, which PHPUnit 10.5 does not
+  have - with it, the configuration fails validation and `failOnWarning` then fails every run on the
+  oldest supported version. **Re-copy `phpunit.xml`**
 * the `phpunit/phpunit` floor is `^10.5`, and the `nesbot/carbon` dev floor `^2.50`. The shipped
-  `phpunit.xml` uses attributes PHPUnit 10.0 to 10.4 do not have, and Carbon 2.0 cannot load on
-  PHP 8.3, so neither old floor was usable
+  `phpunit.xml` sets `failOnDeprecation` and `failOnNotice`, which PHPUnit 10.0 to 10.4 do not have,
+  and Carbon 2.0 cannot load on PHP 8.3, so neither old floor was usable
 * docs: name the controller your add-on extends, not your extension of it
 * docs: `$db->emptyTable()` issues a `TRUNCATE`, so it commits a test's transaction
 * docs: the README's install example requires `^5.13`
