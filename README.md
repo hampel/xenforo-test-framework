@@ -426,7 +426,8 @@ options repository. It restores options after each test is executed - keeping to
 * `setTestTime` lets us set the application execution time (`\XF::$time`) to a known specific time (optionally using the
 Carbon library), so that we can test functions that rely on time intervals or comparisons.
 * `swapFs` lets us swap the filesystem from _local_ to _memory_ so that we can make non-persistent changes to the 
-filesystem and avoid side effects. This one needs `league/flysystem-memory: ^1.0` in your own `require-dev`
+filesystem and avoid side effects. This one needs `league/flysystem-memory: ^1.0` in your own `require-dev`, which
+Composer will not install without the advisory note in the installation section below
 * `setConfig` sets a value in `config.php`
 * `actingAs`, `actingAsMember` and `actingAsGuest` run the code under test as a given visitor, with
 `setVisitorPermissions` and `setVisitorContentPermissions` granting permissions in memory rather than reading them
@@ -491,6 +492,35 @@ use Composer, you can simply create a `composer.json` file with the following in
 ```
 
 Note that `nesbot/carbon` is optional, but really useful.
+
+**If you add `league/flysystem-memory` for `swapFs()`, Composer will refuse to resolve it.** Every
+flysystem release up to 3.35.2 carries a low-severity advisory, and Composer blocks an affected
+package by default, so `composer update` stops with *"not loaded, because they are affected by
+security advisories"*. XenForo supplies flysystem 1.x, which has no patched release, so the version
+you need is the version that is flagged. To install it anyway, tell Composer you accept that one
+advisory, and keep the floor above the range of the critical one that *is* patched:
+
+```json
+{
+    "require-dev": {
+        "league/flysystem": "^1.1.4",
+        "league/flysystem-memory": "^1.0"
+    },
+    "config": {
+        "policy": {
+            "advisories": {
+                "ignore-id": {
+                    "PKSA-w9tt-7782-78jx": "no patched flysystem 1.x exists; dev-only, for the test suite"
+                }
+            }
+        }
+    }
+}
+```
+
+`composer audit` then lists it as ignored with that reason rather than hiding it. Do not ignore
+`PKSA-pwh8-d4fr-nywn` - that one is a remote-code-execution advisory fixed in flysystem 1.1.4, which
+the floor above already excludes.
 
 **If your addon pins `config.platform.php` below 8.3, raising it to install this has a
 consequence.** Composer uses that pin to guard every dependency's PHP requirement, so once it says

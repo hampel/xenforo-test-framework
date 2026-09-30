@@ -34,6 +34,7 @@
 		"league/flysystem-memory": "^1.0 - required when swapping out filesystems"
 	},
 	"require-dev": {
+		"league/flysystem": "^1.1.4",
 		"league/flysystem-memory": "^1.0",
 		"nesbot/carbon": "^2.50|^3.0",
 		"phpstan/phpstan": "^2.1.22",
@@ -46,7 +47,14 @@
 		}
 	},
 	"config": {
-		"sort-packages": true
+		"sort-packages": true,
+		"policy": {
+			"advisories": {
+				"ignore-id": {
+					"PKSA-w9tt-7782-78jx": "CVE-2026-102601 affects every flysystem release up to 3.35.2. XenForo supplies flysystem 1.x, which has no patched release and will not get one, and this is a dev-only dependency used by the test suite's in-memory filesystem"
+				}
+			}
+		}
 	},
 	"scripts": {
 		"check": [

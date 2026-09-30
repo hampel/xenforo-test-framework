@@ -1,5 +1,16 @@
 # Changelog
 
+## 5.13.1 (unreleased)
+
+* `composer update` resolves again. Every `league/flysystem` release up to 3.35.2 carries a
+  low-severity advisory and Composer blocks an affected package by default, so nothing that needs
+  flysystem 1.x - which is what XenForo supplies, and what `swapFs()` needs - could be installed.
+  `composer.json` now accepts that one advisory by id, with the reason recorded where
+  `composer audit` prints it
+* the `league/flysystem` dev floor is `^1.1.4`, above the range of the critical advisory that *is*
+  patched, so that one stays enforced rather than ignored
+* docs: what to put in your own `composer.json` to install `league/flysystem-memory` for `swapFs()`
+
 ## 5.13.0 (2026-09-30)
 
 * `callAction()` refuses a controller named by an add-on's extension of it, and names the class to

@@ -5,6 +5,12 @@ Most releases need nothing beyond `composer update`. `CHANGELOG.md` lists everyt
 
 `tests/TestCase.php` is copied into your add-on, so a change to it has to be merged by hand.
 
+## 5.13.1
+
+Nothing to do, unless your add-on declares `league/flysystem-memory` for `swapFs()` and
+`composer update` has started refusing to resolve it. The README's installation section has the two
+lines your own `composer.json` needs.
+
 ## 5.13.0
 
 **Re-copy `phpunit.xml`.** It no longer sets `failOnPhpunitDeprecation`: PHPUnit 10.5 has no such
