@@ -1,5 +1,22 @@
 # Changelog
 
+## 5.14.0 (unreleased)
+
+* a reply assertion refuses a value where its failure message goes. `assertReplyParam($reply, $key,
+  $expected)` has no expected-value argument, so the value was taken as the message and the assertion
+  passed whatever the reply held. Read the value with `replyParam()` and assert on it instead
+* `fakesMail()` can make sending fail: `$transport->failWith($exception)`, and
+  `$transport->sendsSuccessfully()` to lift it. XenForo's mailer catches it, logs it and answers
+  `false`, so pair it with `fakesErrors()`
+* `mockFinder()` refuses a name XenForo cannot turn into a finder class, naming the name and the
+  `Vendor:Name` form it wants, rather than failing from inside XenForo
+* docs: `assertExceptionLogged()`'s callback is handed the logged entry array, not the throwable
+* docs: build a mail *after* installing `fakesMail()` - one built before it sends through the forum's
+  real transport while the fake captures nothing
+* docs: a suite with no `$addonsToLoad` can die at boot where another add-on vendors a different
+  PHPUnit, and the fatal is written to the forum's error log
+* docs: the README's install example requires `^5.14`
+
 ## 5.13.1 (2026-09-30)
 
 * `composer update` resolves again. Every `league/flysystem` release up to 3.35.2 carries a

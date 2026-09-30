@@ -529,6 +529,12 @@ Assert that a view reply passed a given parameter to its template, and read it.
 
 * `reply` - as returned by `dispatch()`
 * `key` - the parameter name
+* `message` - optional - a failure message, as every reply assertion takes
+
+**There is no expected-value argument.** `assertReplyParam($reply, $key)` asserts the parameter is
+*there*; to assert what it holds, read it with `replyParam()` and use an ordinary assertion. A value
+passed where the message goes is refused, because nothing would compare it and the assertion would
+pass whatever the reply held.
 
 ##### Example:
 
@@ -536,8 +542,11 @@ Assert that a view reply passed a given parameter to its template, and read it.
 $reply = $this->dispatch('options', 'admin');
 
 $this->assertReplyParam($reply, 'groups');
-$this->assertCount(5, $this->replyParam($reply, 'groups'));
+$this->assertNotEmpty($this->replyParam($reply, 'groups'));
+$this->assertTrue($this->replyParam($reply, 'canAdd'));
 ```
+
+The page title is not a reply parameter - it is set by the template, so `pageParam()` reads it.
 
 ### assertReplyIsApiResult / replyApiResult
 Assert that a reply is an api result - what an api route returns instead of a view - and read the
@@ -1404,7 +1413,9 @@ Mock a Finder.
 
 ##### Parameters
 
-* `identifier` - the short class name for the finder 
+* `identifier` - the entity short name, `Vendor:Name`, or a finder class name. Anything else is
+  refused: XenForo cannot turn it into a finder class, and a placeholder string is a mistake in the
+  test rather than something to guess at
 * `mock` - optional - the mock closure to define expectations on
 
 ##### Example:
@@ -1535,10 +1546,21 @@ none
 
 ##### Assertions available:
 
-* `assertExceptionLogged`
+* `assertExceptionLogged` - takes the exception class, and optionally either a count or a callback
 * `assertExceptionLoggedTimes`
 * `assertExceptionNotLogged`
 * `assertNoExceptionsLogged`
+
+**A callback is handed the logged entry, not the throwable.** It is an array, whose useful keys are
+`message` (including any prefix the caller added), `exception_type`, `filename`, `line` and
+`raw_exception` - the throwable itself:
+
+```php
+$this->assertExceptionLogged(TransportException::class, function (array $entry)
+{
+    return strpos($entry['message'], 'smtp is down') !== false;
+});
+```
 * `assertErrorLogged` - takes an optional message; omit it to assert that any error was logged
 * `assertErrorNotLogged` - takes an optional message; omit it to assert that no error was logged
 * `assertNoErrorsLogged`
@@ -2083,6 +2105,41 @@ $to[0]->getName()    == 'Foo';               // not $to['foo@example.com'] == 'F
 
 An assertion comparing against an `email => name` array never matches, and fails with "The expected
 mail was not sent."
+
+##### Testing what happens when a send fails
+
+`fakesMail()` returns the transport, and `failWith()` makes every send from then on throw. XenForo's
+mailer catches whatever the transport throws, logs it, and answers `false` - so that is what the code
+under test sees. A failed send records no mail, so the assertions above see none.
+
+```php
+$transport = $this->fakesMail();
+$this->fakesErrors();
+
+$transport->failWith(new TransportException('smtp is down'));
+
+$mail = $this->app()->mailer()->newMail()
+    ->setTo('member@example.com', 'Member')
+    ->setContent('Subject', '<p>Body</p>');
+
+$this->assertFalse($mail->send());
+$this->assertMailNotSent();
+$this->assertExceptionLogged(TransportException::class);
+
+$transport->sendsSuccessfully();       // sends work again
+```
+
+`failWith()` with no argument installs a `TransportException` of its own. **Install `fakesErrors()`
+alongside it**, or the mailer's log entry is written to the forum's real error log.
+
+A successful send answers Symfony's `SentMessage`, not `true`, so assert `assertNotFalse()` rather
+than `assertTrue()` when checking the other direction.
+
+**Build the mail after installing the fake.** `newMail()` hands the mail the mailer it was built
+from, and that reference is not affected by the swap - so a mail built beforehand sends through the
+forum's real transport, the fake captures nothing, and `assertMailNotSent()` passes while the message
+has actually gone out. Code under test that builds and sends inside the method being tested is
+unaffected.
 
 ##### Parameters:
 

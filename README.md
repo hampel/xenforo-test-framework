@@ -23,7 +23,7 @@ Install the newest version your XenForo and PHP allow. Older lines stay on Packa
 v4 and v5 support the same XenForo and PHP versions; v5 is the current line, and
 [UPGRADING.md](UPGRADING.md) describes moving to it.
 
-Put the version you picked in your addon's `require-dev` as `^5.13`, `^3.0` and so on - the installation section below
+Put the version you picked in your addon's `require-dev` as `^5.14`, `^3.0` and so on - the installation section below
 shows the whole file.
 
 ## Upgrading
@@ -480,7 +480,7 @@ use Composer, you can simply create a `composer.json` file with the following in
 ```json
 {
     "require-dev": {
-        "hampel/xenforo-test-framework": "^5.13",
+        "hampel/xenforo-test-framework": "^5.14",
         "nesbot/carbon": "^3.0"
     },
     "autoload-dev": {
@@ -532,6 +532,15 @@ addon declares `composer_autoload`, XenForo registers its whole `vendor/` - dev 
 the class loader, so your copy of PHPUnit is present in another addon's test run unless that suite
 sets `$addonsToLoad`. Setting it in your own `tests/TestCase.php` protects your suite from theirs;
 it does not protect theirs from yours.
+
+**A suite with no `$addonsToLoad` can die before the first test on an install where another addon
+vendors a different PHPUnit.** Two copies of PHPUnit on one class loader mean a class from one and
+its parent from the other - PHP then refuses with something like *"Readonly class
+PHPUnit\Framework\TestStatus\Known cannot extend non-readonly class"*, and the run exits 255. The
+versions do not have to differ by a major for this: two patch releases of the same minor are enough.
+Worse, XenForo's error handler logs that fatal as a real row in `xf_error_log` - a row that an addon
+which reports on the error log will then send onward. Set `$addonsToLoad` and the whole class of
+problem goes away, because no other addon's autoloader is registered.
 
 Change directory to your addon root, then run `composer update` to install the framework. We install PHPUnit and 
 Mockery automatically for you.

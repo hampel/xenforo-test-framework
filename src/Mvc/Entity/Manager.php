@@ -78,7 +78,22 @@ class Manager extends BaseManager
 			return $this->mockedFinders[$shortName];
 		}
 
-		$finderClass = \XF::stringToClass($shortName, '%s\Finder\%s');
+		try
+		{
+			$finderClass = \XF::stringToClass($shortName, '%s\Finder\%s');
+		}
+		catch (\InvalidArgumentException $e)
+		{
+			// XenForo 2.3 refuses a name it cannot turn into a finder class, from a depth that names
+			// neither the test nor the argument. The fallback below is for a name that resolves to no
+			// class; a name of the wrong shape is a mistake in the test, so it is refused
+			throw new \LogicException(
+				"mockFinder() needs an entity short name of the form 'Vendor:Name', or a finder class"
+				. " name - '" . (string) $shortName . "' is neither.",
+				0,
+				$e
+			);
+		}
 		$finderClass = $this->extension->extendClass($finderClass, '\XF\Mvc\Entity\Finder');
 		if (!$finderClass || !class_exists($finderClass))
 		{

@@ -818,12 +818,25 @@ trait InteractsWithRoutes
 	 * A failure message carrying both what the caller said and what the reply actually was.
 	 *
 	 * @param AbstractReply $reply
-	 * @param string|null $message
+	 * @param mixed $message - a string or null by contract, anything at all in practice: the guard
+	 *                         below is what turns a caller's mistake into an explanation
 	 *
 	 * @return string
 	 */
 	private function replyFailure(AbstractReply $reply, $message)
 	{
+		if ($message !== null && !is_string($message))
+		{
+			// the trailing argument of every reply assertion is a failure message. Passed a value -
+			// reaching for Laravel's assertViewHas($key, $value) shape - the assertion still passes,
+			// whatever the reply holds, because nothing compares it
+			throw new \LogicException(
+				'The last argument of a reply assertion is a failure message, not an expected value.'
+				. ' To compare a value, read it and assert on it:'
+				. ' $this->assertSame($expected, $this->replyParam($reply, $key)).'
+			);
+		}
+
 		$description = $this->describeReply($reply);
 
 		return $message === null || $message === '' ? $description : "$message - $description";

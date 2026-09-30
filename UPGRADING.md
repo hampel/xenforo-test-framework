@@ -5,6 +5,16 @@ Most releases need nothing beyond `composer update`. `CHANGELOG.md` lists everyt
 
 `tests/TestCase.php` is copied into your add-on, so a change to it has to be merged by hand.
 
+## 5.14.0
+
+Two changes can turn a passing test red, and in both cases the test was not asserting what it looked
+like it was:
+
+* a reply assertion given a value as its last argument now throws. `assertReplyParam($reply, $key,
+  $value)` never compared that value - use `assertSame($expected, $this->replyParam($reply, $key))`.
+* `mockFinder()` given a name that is not `Vendor:Name` shaped, or a finder class, now throws with
+  that name in the message. Placeholder strings left in older suites are the usual cause.
+
 ## 5.13.1
 
 Nothing to do, unless your add-on declares `league/flysystem-memory` for `swapFs()` and
