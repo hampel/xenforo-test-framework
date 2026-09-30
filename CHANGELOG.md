@@ -1,5 +1,10 @@
 # Changelog
 
+## 5.14.1 (unreleased)
+
+* docs: a render resolves phrases from the database, so editing `_output/phrases/` proves nothing -
+  change the phrase through its entity, before the render under test
+
 ## 5.14.0 (2026-09-30)
 
 * a reply assertion refuses a value where its failure message goes. `assertReplyParam($reply, $key,

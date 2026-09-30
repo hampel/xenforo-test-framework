@@ -653,6 +653,13 @@ than the database copy, and restore it and `_metadata.json` afterwards.
 **Template modifications are not re-imported this way.** An edit to
 `_output/template_modifications/` is not seen until `xf-dev:import`.
 
+**Neither are phrases.** A render resolves a phrase from the database, so editing
+`_output/phrases/` changes nothing and a test asserting the new wording passes against the old. To
+check that a phrase assertion fails when the phrase is wrong, change it through its `XF:Phrase`
+entity - `language_id` 0 for the master language - and do it **before** the render under test: the
+language keeps each phrase it has resolved, so changing one after a render in the same test does not
+change what a second render produces.
+
 ##### Parameters:
 
 * `template` - `type:title`, eg `public:thread_view`. The types are `public`, `admin` and `email`
