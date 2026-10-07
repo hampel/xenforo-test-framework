@@ -20,6 +20,10 @@ git grep -nE "dispatch\(.*'POST'" -- tests/
 
 Read each: if the assertion is a refusal, decide which layer you meant to be refusing.
 
+**Then check your own testing notes.** A `TESTING.md`, a `CLAUDE.md` or a comment explaining why a
+write path had to be tested through `callAction()` is now wrong, and prose does not fail a test the
+way a stale assertion does.
+
 And worth a grep even though nothing breaks: `assertReplyParam($reply, $key, 'some value')` has
 always taken that third argument as a failure message, so it asserts only that the parameter exists.
 If you have one of those, `assertReplyParamSame($reply, $key, $expected)` is what it meant.

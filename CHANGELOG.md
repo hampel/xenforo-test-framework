@@ -1,5 +1,11 @@
 # Changelog
 
+## 5.15.1 (unreleased)
+
+* docs: upgrading from before 5.15.0 means checking an add-on's own testing notes as well as its
+  tests - prose explaining why a write path needed `callAction()` does not fail the way an assertion
+  does
+
 ## 5.15.0 (2026-10-08)
 
 * a non-GET `dispatch()` carries a CSRF token the request has a matching cookie for, so an action
