@@ -12,6 +12,8 @@
   there is taken as one, so the assertion passes whatever the parameter holds
 * docs: a render resolves phrases from the database, so editing `_output/phrases/` proves nothing -
   change the phrase through its entity, before the render under test
+* docs: `UPGRADING.md` names the command that lists every `POST` dispatch in a suite, since such a
+  test changes meaning rather than failing
 * docs: the README's install example requires `^5.15`
 
 ## 5.14.0 (2026-09-30)

@@ -11,6 +11,15 @@ Most releases need nothing beyond `composer update`. `CHANGELOG.md` lists everyt
 reply instead.** `dispatch()` sends a valid CSRF token for any non-GET, so the check passes. Use
 `dispatchWithoutCsrfToken()` where the refusal is the point.
 
+Such a test does not fail - it changes meaning, because a refusal it was getting from the CSRF check
+now has to come from your own code. Every one is in this list:
+
+```bash
+git grep -nE "dispatch\(.*'POST'" -- tests/
+```
+
+Read each: if the assertion is a refusal, decide which layer you meant to be refusing.
+
 And worth a grep even though nothing breaks: `assertReplyParam($reply, $key, 'some value')` has
 always taken that third argument as a failure message, so it asserts only that the parameter exists.
 If you have one of those, `assertReplyParamSame($reply, $key, $expected)` is what it meant.
