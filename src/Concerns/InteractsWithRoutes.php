@@ -114,10 +114,10 @@ trait InteractsWithRoutes
 	 * @param array $input - GET parameters the route reads, as $_GET would carry them
 	 * @param array $server - request server values, as $_SERVER would carry them - eg REMOTE_ADDR,
 	 *                        HTTP_USER_AGENT, HTTP_REFERER - merged over the defaults
-	 * @param string $method - the request method. GET unless you are testing a controller that
-	 *                         deliberately opts out of the CSRF check, as a server-to-server
-	 *                         endpoint does by overriding checkCsrfIfNeeded(); anything else
-	 *                         refuses a POST in preDispatch(), which is XenForo behaving correctly
+	 * @param string $method - the request method. A non-GET is sent with a CSRF token the request
+	 *                         carries a matching cookie for, so the action behind the check is
+	 *                         reachable. Pass your own `_xfToken` in $input to send something else,
+	 *                         or use dispatchWithoutCsrfToken() to send none
 	 *
 	 * @return AbstractReply
 	 */
@@ -128,6 +128,47 @@ trait InteractsWithRoutes
 		array $server = [],
 		$method = 'GET'
 	)
+	{
+		return $this->dispatchRequest($routePath, $type, $input, $server, $method, true);
+	}
+
+	/**
+	 * Dispatch a route sending no CSRF token at all, for asserting that the check refuses.
+	 *
+	 * XenForo answers a missing token with a 400 error reply. Without this, a suite could not tell
+	 * the difference between a guard that fires and one that has been deleted, since dispatch()
+	 * sends a valid token for every non-GET.
+	 *
+	 * @param string $routePath
+	 * @param string $type
+	 * @param array $input
+	 * @param array $server
+	 * @param string $method - pointless as a GET, which XenForo does not check
+	 *
+	 * @return AbstractReply
+	 */
+	protected function dispatchWithoutCsrfToken(
+		$routePath,
+		$type = 'public',
+		array $input = [],
+		array $server = [],
+		$method = 'POST'
+	)
+	{
+		return $this->dispatchRequest($routePath, $type, $input, $server, $method, false);
+	}
+
+	/**
+	 * @param string $routePath
+	 * @param string $type
+	 * @param array $input
+	 * @param array $server
+	 * @param string $method
+	 * @param bool $withCsrfToken
+	 *
+	 * @return AbstractReply
+	 */
+	private function dispatchRequest($routePath, $type, array $input, array $server, $method, $withCsrfToken)
 	{
 		[$classType, $routerKey] = $this->routeTypeConfig($type);
 
@@ -148,7 +189,7 @@ trait InteractsWithRoutes
 		// This also puts an application of that type in \XF::app() and fires its setup event.
 		$this->setAppClassType($type);
 
-		$request = $this->buildDispatchRequest($routePath, $input, $method, $server);
+		$request = $this->buildDispatchRequest($routePath, $input, $method, $server, [], $withCsrfToken);
 		$this->swap('request', function () use ($request)
 		{
 			return $request;
@@ -169,12 +210,11 @@ trait InteractsWithRoutes
 	}
 
 	/**
-	 * Call one controller action directly, with a POST request by default, for the actions
-	 * dispatch() cannot reach - dispatch() sends GET only, since XenForo requires a CSRF token for
-	 * anything else.
+	 * Call one controller action directly, with a POST request by default.
 	 *
 	 * The action runs **without preDispatch()**, so neither the CSRF check nor the controller's
-	 * access checks run. Use dispatch() to test those.
+	 * access checks run - which is the difference from dispatch(), rather than the method. Use
+	 * dispatch() when the guards are part of what the test is proving.
 	 *
 	 * Otherwise it matches the dispatcher:
 	 *
@@ -464,7 +504,7 @@ trait InteractsWithRoutes
 		return $this->uploadedFile(file_get_contents($path), $name ?: basename($path), $type);
 	}
 
-	private function buildDispatchRequest($routePath, array $input = [], $method = 'GET', array $server = [], array $files = [])
+	private function buildDispatchRequest($routePath, array $input = [], $method = 'GET', array $server = [], array $files = [], $withCsrfToken = true)
 	{
 		$method = strtoupper($method);
 
@@ -498,11 +538,27 @@ trait InteractsWithRoutes
 			'REMOTE_ADDR' => '127.0.0.1',
 		];
 
+		$cookies = [];
+
+		if ($method !== 'GET' && $withCsrfToken && !isset($input['_xfToken']))
+		{
+			// XenForo asserts a CSRF token in preDispatch() for anything that is not a GET, and
+			// checks it against the `csrf` cookie - so without a matching pair every write returns
+			// a 400 and the action is unreachable. The container's own validator derives the token
+			// from the cookie, so a pair minted here is the one core will accept. A token the test
+			// supplied itself is left alone, which is how an invalid one can still be tested
+			$cookieValue = \XF::generateRandomString(16);
+			$validator = $container['csrf.validator'];
+
+			$cookies[$container['config']['cookie']['prefix'] . 'csrf'] = $cookieValue;
+			$input['_xfToken'] = \XF::$time . ',' . $validator($cookieValue, \XF::$time);
+		}
+
 		$request = new Request(
 			$container['inputFilterer'],
 			$input,
 			$files,
-			[],
+			$cookies,
 			['REQUEST_METHOD' => $method] + array_replace($defaults, $server)
 		);
 		$request->setCookiePrefix($container['config']['cookie']['prefix']);
@@ -652,6 +708,32 @@ trait InteractsWithRoutes
 		PHPUnit::assertArrayHasKey(
 			$key,
 			$reply->getParams(),
+			$this->replyFailure($reply, $message)
+		);
+	}
+
+	/**
+	 * Assert that a view reply passed a given parameter, and that its value is the one expected.
+	 *
+	 * This is the four-argument shape, so that a comparison cannot be mistaken for a failure
+	 * message: assertReplyParam() asserts a parameter is there, this asserts what it holds.
+	 * Comparison is strict, as assertSame() is.
+	 *
+	 * @param AbstractReply $reply
+	 * @param string $key
+	 * @param mixed $expected
+	 * @param string|null $message
+	 *
+	 * @return void
+	 */
+	protected function assertReplyParamSame(AbstractReply $reply, $key, $expected, $message = null)
+	{
+		$this->assertReplyParam($reply, $key, $message);
+
+		/** @var View $reply */
+		PHPUnit::assertSame(
+			$expected,
+			$reply->getParam($key),
 			$this->replyFailure($reply, $message)
 		);
 	}
@@ -832,8 +914,8 @@ trait InteractsWithRoutes
 			// whatever the reply holds, because nothing compares it
 			throw new \LogicException(
 				'The last argument of a reply assertion is a failure message, not an expected value.'
-				. ' To compare a value, read it and assert on it:'
-				. ' $this->assertSame($expected, $this->replyParam($reply, $key)).'
+				. ' To compare a value, use assertReplyParamSame($reply, $key, $expected), or read it'
+				. ' with replyParam() and assert on it yourself.'
 			);
 		}
 

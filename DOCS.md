@@ -355,11 +355,10 @@ $this->setVisitorPermissions($member, ['general' => ['view' => true]]);
 $reply = $this->dispatch('members');
 ```
 
-**`dispatch()` sends a `GET` unless you ask for something else**, because XenForo asserts a CSRF
-token in `preDispatch()` for anything that is not a `GET` - so a `POST` against an ordinary
-controller fails for a reason that has nothing to do with your test. Pass the method as the fifth
-argument when the controller deliberately opts out, as a server-to-server endpoint does by
-overriding `checkCsrfIfNeeded()`:
+**`dispatch()` sends a `GET` unless you ask for something else.** Pass the method as the fifth
+argument. XenForo asserts a CSRF token in `preDispatch()` for anything that is not a `GET`, so a
+non-GET dispatch carries a token the request has a matching cookie for - which means the action
+behind the check is reachable, including on a controller that does not opt out:
 
 ```php
 $reply = $this->dispatch('my-addon/callback', 'public', ['key' => '...'], [], 'POST');
@@ -393,8 +392,13 @@ $this->assertSame(403, $reply->getResponseCode());
 $reply = $this->dispatch('my-addon/user', 'api', ['user_id' => 1]);
 ```
 
-**`dispatch()` sends a `GET` only.** XenForo requires a CSRF token for anything else, so an action
-opening with `assertPostOnly()` returns a 405. Use `callAction()` to test the action itself.
+**To assert that the CSRF check refuses, use `dispatchWithoutCsrfToken()`.** It sends no token at
+all, which XenForo answers with a 400 - so a test can still tell a guard that fires from one that
+has been deleted. To send an invalid token instead of none, pass your own `_xfToken` in the input.
+
+An action opening with `assertPostOnly()` needs the method, so `dispatch($path, $type, $input, [],
+'POST')` reaches it. `callAction()` remains the way to call an action without `preDispatch()` at
+all.
 
 **Pass the server values the code under test reads** - IP address, user agent, referrer:
 
@@ -417,12 +421,35 @@ Without them, `REMOTE_ADDR` is `127.0.0.1` and the user agent and referrer are e
 * On XenForo 2.3 `getFromSearch()` always returns an empty string: search referrals are not
   detected, whatever the referrer.
 
-### callAction
-Call a controller action directly with a `POST` request, and return the reply it produced. Use it
-to test saving, toggling and deleting.
+### dispatchWithoutCsrfToken
+Dispatch a route sending no CSRF token, for asserting that XenForo's check refuses. Takes the same
+arguments as `dispatch()`, with the method defaulting to `POST`, since a `GET` is not checked.
 
-It skips `preDispatch()` - so the CSRF check and the controller's permission check do not run. Use
-`dispatch()` to test those:
+Without it there would be no way to tell a CSRF guard that fires from one that has been deleted:
+every non-GET `dispatch()` carries a valid token.
+
+##### Example:
+
+```php
+$member = $this->actingAsMember();
+$this->setVisitorPermissions($member, ['general' => ['view' => true]]);
+
+// with a token, the controller runs
+$this->assertReplyIsView($this->dispatch('help/terms', 'public', [], [], 'POST'));
+
+// without one, XenForo answers 400
+$this->assertReplyIsError($this->dispatchWithoutCsrfToken('help/terms', 'public'), 400);
+```
+
+To send an *invalid* token rather than none, pass your own `_xfToken` in the input - a token the test
+supplies is never replaced.
+
+### callAction
+Call a controller action directly with a `POST` request, and return the reply it produced.
+
+It skips `preDispatch()` - so neither the CSRF check nor the controller's permission check runs.
+That, rather than the request method, is the difference from `dispatch()`, which can send a `POST`
+of its own. Reach for this where running the action without its guards is the point:
 
 ```php
 // the guard - dispatch() runs preDispatch()
@@ -522,28 +549,36 @@ $this->assertReplyViewClass($reply, 'XF:Option\GroupList');
 When the reply is not the view expected, the failure message describes what it was, including an
 error reply's text.
 
-### assertReplyParam / replyParam
-Assert that a view reply passed a given parameter to its template, and read it.
+### assertReplyParam / assertReplyParamSame / replyParam
+Assert that a view reply passed a given parameter to its template, assert what that parameter holds,
+and read it.
 
 ##### Parameters:
 
 * `reply` - as returned by `dispatch()`
 * `key` - the parameter name
+* `expected` - **`assertReplyParamSame` only** - the value the parameter must hold, compared
+  strictly, as `assertSame()` does
 * `message` - optional - a failure message, as every reply assertion takes
 
-**There is no expected-value argument.** `assertReplyParam($reply, $key)` asserts the parameter is
-*there*; to assert what it holds, read it with `replyParam()` and use an ordinary assertion. A value
-passed where the message goes is refused, because nothing would compare it and the assertion would
-pass whatever the reply held.
+**`assertReplyParam()` has no expected-value argument, and `assertReplyParamSame()` is the one that
+compares.** Three arguments to `assertReplyParam()` is a failure message, and a value passed there is
+refused: nothing would compare it, so the assertion would pass whatever the reply held. The four
+argument positions of `assertReplyParamSame()` are what make the two roles unmistakable.
 
 ##### Example:
 
 ```php
 $reply = $this->dispatch('options', 'admin');
 
+// the parameter is there
 $this->assertReplyParam($reply, 'groups');
+
+// and it holds what it should
+$this->assertReplyParamSame($reply, 'canAdd', true);
+
+// or read it and assert however you like
 $this->assertNotEmpty($this->replyParam($reply, 'groups'));
-$this->assertTrue($this->replyParam($reply, 'canAdd'));
 ```
 
 The page title is not a reply parameter - it is set by the template, so `pageParam()` reads it.

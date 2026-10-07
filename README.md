@@ -23,7 +23,7 @@ Install the newest version your XenForo and PHP allow. Older lines stay on Packa
 v4 and v5 support the same XenForo and PHP versions; v5 is the current line, and
 [UPGRADING.md](UPGRADING.md) describes moving to it.
 
-Put the version you picked in your addon's `require-dev` as `^5.14`, `^3.0` and so on - the installation section below
+Put the version you picked in your addon's `require-dev` as `^5.15`, `^3.0` and so on - the installation section below
 shows the whole file.
 
 ## Upgrading
@@ -480,7 +480,7 @@ use Composer, you can simply create a `composer.json` file with the following in
 ```json
 {
     "require-dev": {
-        "hampel/xenforo-test-framework": "^5.14",
+        "hampel/xenforo-test-framework": "^5.15",
         "nesbot/carbon": "^3.0"
     },
     "autoload-dev": {
@@ -767,10 +767,11 @@ the template, though `pageParam()` reads the values the template set for that wr
 anything needing the real front controller - `index.php`'s bootstrap order, session cookies, web server rewrites - and
 JavaScript and visual appearance.
 
-`dispatch()` sends a `GET` only: XenForo asserts a CSRF token in `preDispatch()` for anything else, so an action opening
-with `assertPostOnly()` returns a 405. `callAction()` calls an action directly with a `POST` instead, skipping
-`preDispatch()` - and with it the CSRF check and the controller's permission check. Use `dispatch()` to test the guard
-and `callAction()` to test what the action does.
+`dispatch()` sends a `GET` by default and any method you ask for. XenForo asserts a CSRF token in `preDispatch()` for
+anything that is not a `GET`, so a non-GET dispatch carries one, with a matching cookie - which puts a write path behind
+its own authorisation checks within reach. `dispatchWithoutCsrfToken()` sends none, for asserting that the check
+refuses. `callAction()` calls an action directly, skipping `preDispatch()` and so the permission checks too, for the
+cases where that is what you want to test.
 
 A public route also needs the visitor to hold `general.view`, which a built visitor does not, so a public dispatch
 returns a 403 until the test grants it. See `dispatch()` in DOCS.md.

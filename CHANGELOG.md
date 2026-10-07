@@ -1,9 +1,18 @@
 # Changelog
 
-## 5.14.1 (unreleased)
+## 5.15.0 (unreleased)
 
+* a non-GET `dispatch()` carries a CSRF token the request has a matching cookie for, so an action
+  behind XenForo's check is reachable with its `preDispatch()` guards intact. A write path no longer
+  has to be tested through `callAction()`, which skips those guards
+* `dispatchWithoutCsrfToken()` sends no token, for asserting that the check refuses. A token passed
+  as `_xfToken` in the input is never replaced, so an invalid one can be tested too
+* `assertReplyParamSame($reply, $key, $expected)` compares a reply parameter. `assertReplyParam()`
+  has no expected-value argument - its third argument is a failure message, and a **string** passed
+  there is taken as one, so the assertion passes whatever the parameter holds
 * docs: a render resolves phrases from the database, so editing `_output/phrases/` proves nothing -
   change the phrase through its entity, before the render under test
+* docs: the README's install example requires `^5.15`
 
 ## 5.14.0 (2026-09-30)
 

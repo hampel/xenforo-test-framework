@@ -40,16 +40,27 @@ class JsonAndPostTest extends TestCase
 		$this->renderJsonReply(new View('XF:NoSuchViewAnywhere', 'public:login', []));
 	}
 
-	public function test_a_post_dispatch_reaches_the_csrf_check()
+	public function test_a_post_dispatch_passes_the_csrf_check()
 	{
 		$member = $this->actingAsMember();
 		$this->setVisitorPermissions($member, ['general' => ['view' => true]]);
 
-		// core's own controllers do not opt out, so XenForo refuses the POST - which is the
-		// behaviour a test of an endpoint that DOES opt out asserts the absence of
+		// the request carries a token with a matching cookie, so the check passes and the
+		// controller runs - core's own controllers do not opt out of it
 		$reply = $this->dispatch('help/terms', 'public', [], [], 'POST');
 
-		$this->assertReplyIsError($reply);
+		$this->assertReplyIsView($reply);
+	}
+
+	public function test_the_same_post_without_a_token_is_refused()
+	{
+		$member = $this->actingAsMember();
+		$this->setVisitorPermissions($member, ['general' => ['view' => true]]);
+
+		// which is the behaviour a test of an endpoint that DOES opt out asserts the absence of
+		$reply = $this->dispatchWithoutCsrfToken('help/terms', 'public');
+
+		$this->assertReplyIsError($reply, 400);
 	}
 
 	public function test_a_get_dispatch_is_unchanged()

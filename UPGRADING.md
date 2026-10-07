@@ -5,6 +5,16 @@ Most releases need nothing beyond `composer update`. `CHANGELOG.md` lists everyt
 
 `tests/TestCase.php` is copied into your add-on, so a change to it has to be merged by hand.
 
+## 5.15.0
+
+**If a test of yours asserts that a `POST` dispatch is refused, it will now see the controller's own
+reply instead.** `dispatch()` sends a valid CSRF token for any non-GET, so the check passes. Use
+`dispatchWithoutCsrfToken()` where the refusal is the point.
+
+And worth a grep even though nothing breaks: `assertReplyParam($reply, $key, 'some value')` has
+always taken that third argument as a failure message, so it asserts only that the parameter exists.
+If you have one of those, `assertReplyParamSame($reply, $key, $expected)` is what it meant.
+
 ## 5.14.0
 
 Two changes can turn a passing test red, and in both cases the test was not asserting what it looked
