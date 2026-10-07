@@ -1,6 +1,6 @@
 # Changelog
 
-## 5.15.0 (unreleased)
+## 5.15.0 (2026-10-08)
 
 * a non-GET `dispatch()` carries a CSRF token the request has a matching cookie for, so an action
   behind XenForo's check is reachable with its `preDispatch()` guards intact. A write path no longer
