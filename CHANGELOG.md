@@ -1,6 +1,6 @@
 # Changelog
 
-## 5.18.0 (unreleased)
+## 5.18.0 (2026-10-08)
 
 * `runConsoleCommand()` takes `['inputs' => [...]]`, the answers to a command that asks questions, so
   the confirmed path of a command that confirms before acting is testable. Supplying answers with
