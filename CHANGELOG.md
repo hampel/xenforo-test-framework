@@ -1,5 +1,11 @@
 # Changelog
 
+## 5.18.1 (unreleased)
+
+* docs: confirming a console command with `['inputs' => ...]` does the work against the forum the
+  suite points at - a command built on XenForo's rebuild base class runs its job in its own process
+  rather than queueing it, and a transaction is not a reliable guard
+
 ## 5.18.0 (2026-10-08)
 
 * `runConsoleCommand()` takes `['inputs' => [...]]`, the answers to a command that asks questions, so

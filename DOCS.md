@@ -2507,6 +2507,17 @@ $tester = $this->runConsoleCommand(ArchiveAll::class, [], ['inputs' => ['yes']])
 `['interactive' => false]` is refused**, because Symfony would answer every question with its default
 and ignore them - a test of the confirmed path would pass having answered nothing.
 
+**Confirming a command does the work, against the forum `XF_ROOT` names.** A command built on
+XenForo's `Rebuild\AbstractRebuildCommand`, or on anything using its `JobRunnerTrait`, runs its job
+in its own process rather than queueing it: `runJob()` loops until the job reports it is done. So
+answering yes to a bulk command rebuilds, or deletes, everything it was going to - now, on a
+development forum shared with everything else. `UsesDatabaseTransactions` is not a reliable guard
+either, since the job manager ends the transaction on its own error paths.
+
+Test the confirmed path of a bulk command on a sandbox forum. On a shared install, the
+`['interactive' => false]` run above is the one that belongs in the suite, and a single-record
+command confirmed inside a transaction is usually as far as it is worth going.
+
 ##### Example:
 
 ```php
