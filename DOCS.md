@@ -1627,7 +1627,8 @@ none
 
 ##### Assertions available:
 
-* `assertExceptionLogged` - takes the exception class, and optionally either a count or a callback
+* `assertExceptionLogged` - takes the exception class, and optionally a count, a string the logged
+  message must contain, or a callback
 * `assertExceptionLoggedTimes`
 * `assertExceptionNotLogged`
 * `assertNoExceptionsLogged`
@@ -2477,6 +2478,41 @@ $this->assertStringContainsString('12 rows updated', $tester->getDisplay());
 
 The command runs against the booted application, so the fakes and swaps a test installed apply to
 it. A command with no name is refused - XenForo's own commands set one in `configure()`.
+
+### assertConsoleCommandsLoad / assertConsoleCommandLoads
+Assert that the console command classes an add-on ships are ones XenForo can load.
+
+**A command class that cannot load takes `cmd.php` down for the whole forum, not just for the add-on
+that owns it.** XenForo loads every add-on's command classes simply to list them, with
+`class_exists()`, which autoloads - so a missing parent class is a fatal there. Nothing else in a
+suite loads these classes, so nothing else notices.
+
+`assertConsoleCommandsLoad()` walks the add-on's `Cli/Command` the way XenForo does, recursively,
+turning each `.php` file into a class name by its path, and checks every one. It refuses when the
+walk finds nothing, because a walk over an empty directory otherwise reports every class as
+loadable. It returns the class names it checked.
+
+##### Parameters:
+
+* `addOnId` - optional - defaults to the add-on `$addonsToLoad` names, when it names exactly one
+
+##### Example:
+
+```php
+public function test_every_console_command_loads()
+{
+    $classes = $this->assertConsoleCommandsLoad();
+
+    $this->assertContains(MyAddOnCommand::class, $classes, 'the walk should have found this one');
+}
+```
+
+The `assertContains()` line is worth keeping: it proves the walk reached the directory you meant,
+which the refusal above cannot do on its own.
+
+`assertConsoleCommandLoads($class)` checks one class - it exists, is instantiable, extends Symfony's
+`Command`, and has a name. That mirrors `XF\Cli\Runner::isValidCommandClass()`, which is protected,
+plus the name a listed command needs to be usable.
 
 ### setStaticProperty
 Set a static property, restoring what was there when the test finishes.

@@ -1,5 +1,15 @@
 # Changelog
 
+## 5.17.0 (unreleased)
+
+* `assertConsoleCommandsLoad()` and `assertConsoleCommandLoads()` assert that the console command
+  classes an add-on ships are ones XenForo can load. A class that cannot load takes `cmd.php` down
+  for every add-on on the forum, since XenForo loads them all simply to list them, and nothing else
+  in a suite loads them at all. The walk refuses when it finds nothing to check
+* `assertExceptionLogged()` accepts a string the logged message must contain, as well as a count or
+  a callback
+* docs: the README's install example requires `^5.17`
+
 ## 5.16.0 (2026-10-08)
 
 * `requireClassNotExtended($identifier)` skips a test unless the given class resolves unextended,

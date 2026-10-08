@@ -3,6 +3,7 @@
 namespace Hampel\Testing\Integration;
 
 use Hampel\Testing\Integration\Fixtures\ProbeCommand;
+use PHPUnit\Framework\ExpectationFailedException;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Output\OutputInterface;
 
@@ -68,5 +69,43 @@ class ConsoleCommandTest extends TestCase
 		$this->expectExceptionMessage("takes the command's class name");
 
 		$this->runConsoleCommand('probe:thing');
+	}
+
+	public function test_a_command_class_that_loads_and_names_itself_is_accepted()
+	{
+		$this->assertConsoleCommandLoads(ProbeCommand::class);
+	}
+
+	public function test_a_class_that_cannot_load_is_refused_by_naming_the_consequence()
+	{
+		$this->expectException(\LogicException::class);
+		$this->expectExceptionMessage('stop cmd.php for every add-on on the forum');
+
+		// its parent does not exist, which is what XenForo's own listing would die on
+		$this->assertConsoleCommandLoads(Fixtures\Admin\Controller\ExtendsMissingProxy::class);
+	}
+
+	public function test_a_class_that_is_not_a_command_fails()
+	{
+		$this->expectException(ExpectationFailedException::class);
+
+		$this->assertConsoleCommandLoads(\stdClass::class);
+	}
+
+	public function test_an_addon_with_no_command_directory_is_refused()
+	{
+		$this->expectException(\LogicException::class);
+		$this->expectExceptionMessage('has no Cli/Command directory');
+
+		$this->assertConsoleCommandsLoad('Nope/NotThere');
+	}
+
+	public function test_it_refuses_to_guess_the_addon_when_the_suite_isolates_none()
+	{
+		// integration/TestCase.php isolates ['None/None'], so there is no add-on to assume
+		$this->expectException(\LogicException::class);
+		$this->expectExceptionMessage('Name the add-on whose commands to check');
+
+		$this->assertConsoleCommandsLoad();
 	}
 }

@@ -69,6 +69,13 @@ trait InteractsWithErrors
 	 *
 	 * @throws \Exception
 	 */
+	/**
+	 * @param string $class - the exception class
+	 * @param int|string|callable|null $callback - a count, a string the logged message must contain,
+	 *                                            or a callback given the logged entry
+	 *
+	 * @return void
+	 */
 	protected function assertExceptionLogged($class, $callback = null)
 	{
 		if (is_numeric($callback))
@@ -204,6 +211,17 @@ trait InteractsWithErrors
 		if (! $this->hasLoggedException($class))
 		{
 			return [];
+		}
+
+		if (is_string($callback))
+		{
+			// the common case is the house rule that every logged message starts with the add-on's
+			// prefix, which reads badly as a closure
+			$needle = $callback;
+			$callback = function (array $logged) use ($needle)
+			{
+				return strpos($logged['message'], $needle) !== false;
+			};
 		}
 
 		$callback = $callback ?: function ()
