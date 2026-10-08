@@ -51,7 +51,7 @@
 		"policy": {
 			"advisories": {
 				"ignore-id": {
-					"PKSA-w9tt-7782-78jx": "CVE-2026-102601 affects every flysystem release up to 3.35.2. XenForo supplies flysystem 1.x, which has no patched release and will not get one, and this is a dev-only dependency used by the test suite's in-memory filesystem"
+					"PKSA-w9tt-7782-78jx": "CVE-2026-102601 affects every flysystem release up to 3.35.2 and is fixed in 3.36.0. XenForo supplies flysystem 1.x, so this package cannot take that fix, and the dependency is dev-only - the in-memory filesystem the test suite swaps in"
 				}
 			}
 		}

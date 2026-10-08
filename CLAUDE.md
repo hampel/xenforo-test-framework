@@ -124,6 +124,22 @@ A whitelist would have to grow with every XenForo class the code starts using. T
 checker would catch are already guaranteed by XenForo's own requirements. PHPStan, reading
 XenForo's source, covers the same ground.
 
+### `league/flysystem` is pinned to 1.x on purpose
+
+`swapFs()` swaps an in-memory adapter into the filesystem the forum supplies, so the version here
+has to be the version XenForo bundles - 2.3 ships flysystem 1.x, and a 2.x or 3.x adapter cannot be
+mounted alongside it. Hence `league/flysystem-memory: ^1.0` in `require-dev`, the `conflict` on
+`>=2.0`, and `league/flysystem: ^1.1.4`, whose floor is above a remote-code-execution advisory
+affecting `<1.1.4`.
+
+`composer outdated` therefore shows both as majors behind, permanently. **The pin comes off when
+XenForo bundles a newer flysystem**, which 2.3 does not; a new XenForo line is where to look.
+
+`config.policy.advisories.ignore-id` carries one advisory for the same reason - CVE-2026-102601
+affects every flysystem up to 3.35.2 and is fixed in 3.36.0, which this package cannot take while
+the forum supplies 1.x. Composer blocks an affected package at resolve time, so without the entry
+nothing here installs at all.
+
 ## Version compatibility is the release axis
 
 Each major line targets one XenForo version, and `master` is always the current line — 5.x today.

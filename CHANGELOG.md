@@ -10,6 +10,8 @@
 * docs: upgrading from before 5.15.0 means checking an add-on's own testing notes as well as its
   tests - prose explaining why a write path needed `callAction()` does not fail the way an assertion
   does
+* docs: the `league/flysystem` pin and the advisory it carries are explained where a contributor
+  will meet them, including what would have to change for the pin to come off
 * docs: the README's install example requires `^5.16`
 
 ## 5.15.0 (2026-10-08)
