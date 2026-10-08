@@ -1,6 +1,6 @@
 # Changelog
 
-## 5.16.0 (unreleased)
+## 5.16.0 (2026-10-08)
 
 * `requireClassNotExtended($identifier)` skips a test unless the given class resolves unextended,
   for a test whose point is that an add-on's extension is absent
