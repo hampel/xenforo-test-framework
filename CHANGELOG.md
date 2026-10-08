@@ -1,10 +1,16 @@
 # Changelog
 
-## 5.15.1 (unreleased)
+## 5.16.0 (unreleased)
 
+* `requireClassNotExtended($identifier)` skips a test unless the given class resolves unextended,
+  for a test whose point is that an add-on's extension is absent
+* docs: `$addonsToLoad` cannot remove a class extension already resolved in the process, because the
+  XFCP proxy XenForo aliases cannot be undeclared - so such a test passes on its own and exercises
+  the extension in a full run
 * docs: upgrading from before 5.15.0 means checking an add-on's own testing notes as well as its
   tests - prose explaining why a write path needed `callAction()` does not fail the way an assertion
   does
+* docs: the README's install example requires `^5.16`
 
 ## 5.15.0 (2026-10-08)
 

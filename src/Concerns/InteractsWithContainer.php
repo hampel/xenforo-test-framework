@@ -139,4 +139,43 @@ trait InteractsWithContainer
 
 		return $this->swap($key, \Mockery::spy(...array_filter($args)));
 	}
+
+	/**
+	 * Skip the test unless the given class resolves unextended, for a test whose point is that an
+	 * add-on's extension is NOT present.
+	 *
+	 * $addonsToLoad filters which extensions are registered; it cannot remove one that has already
+	 * been resolved in this process. XenForo caches the resolution and aliases an XFCP proxy, and a
+	 * proxy cannot be undeclared - so an application built later with a narrower list still gets the
+	 * extended class, and with it any column the extension added to an entity structure. Such a test
+	 * passes alone and tests the opposite of what it says in a full run, which is why this refuses to
+	 * run it rather than letting it pass.
+	 *
+	 * @param string $identifier - an entity short name, `XF:UserProfile`, or any class name
+	 *
+	 * @return void
+	 */
+	protected function requireClassNotExtended($identifier)
+	{
+		// stringToClass() is string manipulation, so it gives the class as written. The entity
+		// manager's getEntityClassName() resolves extensions itself and would hand back the
+		// extended class, leaving this comparing a class with itself and never refusing anything
+		$class = strpos($identifier, ':') !== false
+			? \XF::stringToClass($identifier, '%s\Entity\%s')
+			: ltrim((string) $identifier, '\\');
+
+		$resolved = $this->app()->extendClass($class);
+
+		if ($resolved !== $class)
+		{
+			$shortName = (new \ReflectionClass($this))->getShortName();
+
+			$this->markTestSkipped(
+				"'$class' is already extended in this process, as '$resolved', so"
+				. ' $addonsToLoad cannot isolate it here: XenForo caches the resolution and the XFCP'
+				. ' proxy it aliases cannot be undeclared. Run this class on its own to execute the'
+				. " test - vendor/bin/phpunit --filter $shortName"
+			);
+		}
+	}
 }

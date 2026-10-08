@@ -29,6 +29,13 @@ Naming ids in `$addonsToLoad` filters three things:
 * **code event listeners** - other add-ons' listeners do not run, including `app_setup`
 
 Nothing else is filtered: the forum's database, options, phrases and templates are the real ones.
+
+**It cannot remove a class extension that has already been resolved in this process.** XenForo caches
+each resolution and aliases an XFCP proxy for it, and a proxy cannot be undeclared - so once any test
+has resolved an extended class, an application booted later with a narrower `$addonsToLoad` still
+gets the extended one, and with it any column the extension added to an entity structure. A test
+asserting that an extension is *absent* therefore passes on its own and exercises the extension in a
+full run. `requireClassNotExtended()` is the guard for such a test.
 **Your own add-on's listeners do run**, including while the container builds something your test is
 not otherwise interested in - so a mock standing in for one subsystem may still need expectations
 for whatever your listeners ask of it.
@@ -1072,6 +1079,38 @@ $request = $this->spy('request', \XF\Http\Request::class, function ($mock)
 or reach for `mock()` instead.
 
 Like `swap()`, a spy does not reach anything already built from the key it replaces.
+
+### requireClassNotExtended
+Skip the test unless the given class resolves unextended, for a test whose point is that an add-on's
+extension is absent.
+
+`$addonsToLoad` filters which extensions are *registered*; it cannot remove one already resolved in
+this process, because the XFCP proxy XenForo aliases cannot be undeclared. Such a test passes alone
+and tests the opposite of what it says in a full run, so this refuses to run it rather than letting
+it pass. The skip message names the class, what it resolved to, and the command to run that test
+class on its own.
+
+##### Parameters:
+
+* `identifier` - an entity short name, `XF:UserProfile`, or any class name
+
+##### Example:
+
+```php
+public function test_the_column_is_nullable_for_a_forum_without_the_addon()
+{
+    $this->requireClassNotExtended('XF:UserProfile');
+
+    // with the extension absent, XenForo's INSERT never names the column
+    $user = $this->createEntity('XF:User', ['username' => 'probe', 'email' => 'probe@example.com']);
+    $this->createEntity('XF:UserProfile', ['user_id' => $user->user_id]);
+
+    $this->assertDatabaseHas('xf_user_profile', ['user_id' => $user->user_id]);
+}
+```
+
+Running each test class in its own process, which the README recommends anyway, is what makes such a
+test execute rather than skip.
 
 ### mockFactory
 Mock a factory builder in the container.

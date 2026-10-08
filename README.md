@@ -23,7 +23,7 @@ Install the newest version your XenForo and PHP allow. Older lines stay on Packa
 v4 and v5 support the same XenForo and PHP versions; v5 is the current line, and
 [UPGRADING.md](UPGRADING.md) describes moving to it.
 
-Put the version you picked in your addon's `require-dev` as `^5.15`, `^3.0` and so on - the installation section below
+Put the version you picked in your addon's `require-dev` as `^5.16`, `^3.0` and so on - the installation section below
 shows the whole file.
 
 ## Upgrading
@@ -296,6 +296,12 @@ done
 
 `--order-by=random` does not reliably find them, because the autoloader stays registered once any test has booted.
 
+**The same loop answers the opposite case, which fails the other way round.** `$addonsToLoad` cannot remove a class
+extension that something earlier in the process has already resolved - XenForo caches the resolution and aliases an XFCP
+proxy, and a proxy cannot be undeclared. So a test asserting that an addon's extension is *absent*, perhaps to prove a
+column stays nullable for a forum without it, passes on its own and exercises the extension in a full run. Guard such a
+test with `requireClassNotExtended()`, which skips rather than passing, and run it in the per-class loop above.
+
 Two fixes:
 
 * extend `Tests\TestCase` instead;
@@ -480,7 +486,7 @@ use Composer, you can simply create a `composer.json` file with the following in
 ```json
 {
     "require-dev": {
-        "hampel/xenforo-test-framework": "^5.15",
+        "hampel/xenforo-test-framework": "^5.16",
         "nesbot/carbon": "^3.0"
     },
     "autoload-dev": {
