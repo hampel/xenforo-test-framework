@@ -18,7 +18,10 @@ trait InteractsWithCommands
 	 *
 	 * @param string|Command $command - the command class, or an instance if it needs constructing
 	 * @param array $input - arguments and options, as CommandTester takes them
-	 * @param array $options - passed to CommandTester::execute(), eg ['verbosity' => …]
+	 * @param array $options - passed to CommandTester::execute(), eg ['verbosity' => …], plus
+	 *                         ['inputs' => [...]] for a command that asks questions. Without them,
+	 *                         `['interactive' => false]` answers every question with its default,
+	 *                         which stops a command at its confirmation and writes nothing
 	 *
 	 * @return CommandTester
 	 */
@@ -50,11 +53,31 @@ trait InteractsWithCommands
 			);
 		}
 
+		// setInputs() has to happen before execute(), so the answers cannot be passed through as a
+		// tester option - they are pulled out here and the rest goes to Symfony untouched
+		$inputs = $options['inputs'] ?? null;
+		unset($options['inputs']);
+
+		if ($inputs !== null && ($options['interactive'] ?? true) === false)
+		{
+			throw new \LogicException(
+				'Answers were supplied with interactive => false, which makes Symfony answer every'
+				. ' question with its default and ignore them - so a test of the confirmed path would'
+				. ' pass having answered nothing. Drop one or the other.'
+			);
+		}
+
 		$application = new Application('XenForo', \XF::$version);
 		$application->setAutoExit(false);
 		$application->add($instance);
 
 		$tester = new CommandTester($instance);
+
+		if ($inputs !== null)
+		{
+			$tester->setInputs((array) $inputs);
+		}
+
 		$tester->execute(['command' => $instance->getName()] + $input, $options);
 
 		return $tester;

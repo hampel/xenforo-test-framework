@@ -1,5 +1,20 @@
 # Changelog
 
+## 5.18.0 (unreleased)
+
+* `runConsoleCommand()` takes `['inputs' => [...]]`, the answers to a command that asks questions, so
+  the confirmed path of a command that confirms before acting is testable. Supplying answers with
+  `['interactive' => false]` is refused, since Symfony would answer every question with its default
+  and ignore them
+* docs: `['interactive' => false]` answers every question with its default, which stops a command at
+  its confirmation and writes nothing - the safe test for a destructive command
+* docs: `assertNoTemplateErrors()` describes the forum rather than the add-on on an install shared
+  with other add-ons, because template modifications are compiled into the shared template cache
+  whatever `$addonsToLoad` says. Assert on the errors naming templates you own
+* docs: a grep for a value passed where a reply assertion's failure message goes finds only the ones
+  written as a literal; the refusal finds the rest
+* docs: the README's install example requires `^5.18`
+
 ## 5.17.0 (2026-10-08)
 
 * `assertConsoleCommandsLoad()` and `assertConsoleCommandLoads()` assert that the console command

@@ -817,6 +817,27 @@ It covers every render in the test, not only the last.
   `assertNoTemplateErrors()`, and `assertExceptionLogged()` can assert on them; or
 * use `UsesDatabaseTransactions` on the test class, which rolls the rows back.
 
+**On a development forum shared with other add-ons, this assertion is about the forum rather than
+about your add-on.** `$addonsToLoad` loads no sibling's class extensions, but template modifications
+belong to the install: they are compiled into the shared template cache and apply to every render.
+So a sibling's modification reading a column its own entity extension declares raises a warning on
+every render in your suite, for a page that is faultless in a browser.
+
+The blanket assertion therefore means what it says only on a forum with one add-on installed - a
+sandbox. On a shared install, assert on the errors your own templates raised:
+
+```php
+$errors = array_filter($this->app()->templater()->getTemplateErrors(), function ($error)
+{
+    return strpos($error, 'myaddon_') !== false;
+});
+
+$this->assertEmpty($errors, implode("\n", $errors));
+```
+
+Filter by the names your add-on owns rather than by the siblings to exclude: you know the first list
+and it does not change when somebody installs something else.
+
 ### assertSee / assertDontSee / assertSeeInOrder
 Assert on rendered output.
 
@@ -2465,7 +2486,26 @@ code. What `dispatch()` is for a route.
   the name the command is invoked by on the command line - `MyAddOnCommand::class`, not
   `'my-addon:do-thing'`
 * `input` - optional - arguments and options, as `CommandTester` takes them
-* `options` - optional - passed to `CommandTester::execute()`, eg `['verbosity' => …]`
+* `options` - optional - passed to `CommandTester::execute()`, eg `['verbosity' => …]`, plus
+  `['inputs' => [...]]` for a command that asks questions
+
+##### A command that asks before it acts
+
+A destructive command confirms first, and both sides of that are testable.
+
+```php
+// stops at the confirmation, and writes nothing: every question answers with its default,
+// which is null for a bare question and false for a confirmation
+$tester = $this->runConsoleCommand(ArchiveAll::class, [], ['interactive' => false]);
+$this->assertStringContainsString('Nothing was archived', $tester->getDisplay());
+
+// the confirmed path - for a forum you can throw away
+$tester = $this->runConsoleCommand(ArchiveAll::class, [], ['inputs' => ['yes']]);
+```
+
+`inputs` are the answers in order, one per question. **Supplying them with
+`['interactive' => false]` is refused**, because Symfony would answer every question with its default
+and ignore them - a test of the confirmed path would pass having answered nothing.
 
 ##### Example:
 

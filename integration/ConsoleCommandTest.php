@@ -108,4 +108,43 @@ class ConsoleCommandTest extends TestCase
 
 		$this->assertConsoleCommandsLoad();
 	}
+
+	public function test_answers_reach_a_command_that_asks()
+	{
+		$tester = $this->runConsoleCommand(Fixtures\ConfirmingCommand::class, [], [
+			'inputs' => ['something', 'yes'],
+		]);
+
+		$this->assertStringContainsString('DID THE THING', $tester->getDisplay());
+	}
+
+	public function test_a_non_interactive_run_stops_at_the_confirmation()
+	{
+		// the safe default for a destructive command: every question answers with its default, so
+		// a bare question is null and a confirmation is false
+		$tester = $this->runConsoleCommand(Fixtures\ConfirmingCommand::class, [], ['interactive' => false]);
+
+		$this->assertStringContainsString('stopped at the confirmation', $tester->getDisplay());
+		$this->assertStringNotContainsString('DID THE THING', $tester->getDisplay());
+	}
+
+	public function test_answering_no_stops_it_too()
+	{
+		$tester = $this->runConsoleCommand(Fixtures\ConfirmingCommand::class, [], [
+			'inputs' => ['something', 'no'],
+		]);
+
+		$this->assertStringContainsString('stopped at the confirmation', $tester->getDisplay());
+	}
+
+	public function test_answers_with_interactive_false_are_refused()
+	{
+		$this->expectException(\LogicException::class);
+		$this->expectExceptionMessage('ignore them');
+
+		$this->runConsoleCommand(Fixtures\ConfirmingCommand::class, [], [
+			'inputs' => ['yes'],
+			'interactive' => false,
+		]);
+	}
 }

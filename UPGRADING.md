@@ -28,6 +28,10 @@ And worth a grep even though nothing breaks: `assertReplyParam($reply, $key, 'so
 always taken that third argument as a failure message, so it asserts only that the parameter exists.
 If you have one of those, `assertReplyParamSame($reply, $key, $expected)` is what it meant.
 
+A grep only finds the ones written as a literal. Where the value is a variable or a method call there
+is nothing to match on, and the refusal added in 5.14.0 is what finds those - on the next run of the
+test, with the helper named in the message.
+
 ## 5.14.0
 
 Two changes can turn a passing test red, and in both cases the test was not asserting what it looked
