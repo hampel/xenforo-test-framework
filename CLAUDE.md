@@ -228,6 +228,10 @@ Rules that follow:
 - **Every negative assertion needs a positive beside it**, in tests here and in DOCS examples.
 - **When adding a fake, write `test_a_second_fake_replaces_the_first` and a test that fails
   without the fake.** PHPStan cannot catch this class of defect.
+- **A control needs a subject that can exhibit the defect.** Reverting the code and watching the
+  suite stay green proves nothing if the thing under test could not have shown the difference either
+  way - `requireClassNotExtended()` was first controlled against a class nothing extends, where its
+  correct and its broken resolution agree.
 
 **`renderTemplate()` writing template errors to the real `xf_error_log` is intended** — the test
 writer opts out with `fakesErrors()`, which keeps the errors available to the test. Do not suppress
