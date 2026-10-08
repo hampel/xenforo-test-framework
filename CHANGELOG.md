@@ -1,6 +1,6 @@
 # Changelog
 
-## 5.17.0 (unreleased)
+## 5.17.0 (2026-10-08)
 
 * `assertConsoleCommandsLoad()` and `assertConsoleCommandLoads()` assert that the console command
   classes an add-on ships are ones XenForo can load. A class that cannot load takes `cmd.php` down
