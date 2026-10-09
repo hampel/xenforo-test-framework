@@ -1,6 +1,6 @@
 # Changelog
 
-## 5.18.1 (unreleased)
+## 5.18.1 (2026-10-09)
 
 * `assertConsoleCommandsLoad()` no longer fails on a file XenForo's own runner skips - an abstract
   base beside the commands, as core's own `Cli/Command` has, a trait or interface file, or a class
