@@ -189,7 +189,7 @@ trait InteractsWithRoutes
 		// This also puts an application of that type in \XF::app() and fires its setup event.
 		$this->setAppClassType($type);
 
-		$request = $this->buildDispatchRequest($routePath, $input, $method, $server, [], $withCsrfToken);
+		$request = $this->buildDispatchRequest($routePath, $input, $method, $server, [], $withCsrfToken, $type);
 		$this->swap('request', function () use ($request)
 		{
 			return $request;
@@ -253,7 +253,7 @@ trait InteractsWithRoutes
 		// an add-on may rely on the setup event for this type having fired
 		$this->setAppClassType($type);
 
-		$request = $this->buildDispatchRequest('', $input, $method, $server, $files);
+		$request = $this->buildDispatchRequest('', $input, $method, $server, $files, true, $type);
 		$this->swap('request', function () use ($request)
 		{
 			return $request;
@@ -504,7 +504,7 @@ trait InteractsWithRoutes
 		return $this->uploadedFile(file_get_contents($path), $name ?: basename($path), $type);
 	}
 
-	private function buildDispatchRequest($routePath, array $input = [], $method = 'GET', array $server = [], array $files = [], $withCsrfToken = true)
+	private function buildDispatchRequest($routePath, array $input = [], $method = 'GET', array $server = [], array $files = [], $withCsrfToken = true, $type = 'public')
 	{
 		$method = strtoupper($method);
 
@@ -528,15 +528,33 @@ trait InteractsWithRoutes
 		});
 		$query = implode('&', $queryParts);
 
+		// the script the forum serves this type from: the admin control panel has its own, while the
+		// api is routed through the public one behind an `api/` prefix
+		$script = $type === 'admin' ? '/admin.php' : '/index.php';
+		$routed = ($type === 'api' ? 'api/' : '') . $routePath;
+
 		// a public controller's assertCanonicalUrl() compares the url it builds against the url
 		// this request carries, and link building honours the useFriendlyUrls option - so a request
 		// that does not would be redirected to its own canonical form on a forum with the option
-		// on, and the reply a test asserts on would be that redirect rather than the page
+		// on, and the reply a test asserts on would be that redirect rather than the page. The
+		// admin formatter does not read that option, so an admin url keeps its query form
+		if ($this->app()->options()['useFriendlyUrls'] && $type !== 'admin')
+		{
+			$uri = '/' . $routed . ($queryString !== '' ? '?' . $queryString : '');
+		}
+		else
+		{
+			$routedQuery = implode('&', array_filter([$routed, $queryString], function ($part)
+			{
+				return $part !== '';
+			}));
+
+			$uri = $script . ($routedQuery !== '' ? '?' . $routedQuery : '');
+		}
+
 		$defaults = [
-			'REQUEST_URI' => $this->app()->options()['useFriendlyUrls']
-				? '/' . $routePath . ($queryString !== '' ? '?' . $queryString : '')
-				: '/index.php' . ($query !== '' ? '?' . $query : ''),
-			'SCRIPT_NAME' => '/index.php',
+			'REQUEST_URI' => $uri,
+			'SCRIPT_NAME' => $script,
 			'QUERY_STRING' => $queryString,
 			'HTTP_HOST' => $host,
 			// a public controller's assertIpNotBanned() throws 'Invalid string IP' on an

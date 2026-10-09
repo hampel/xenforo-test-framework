@@ -62,6 +62,32 @@ class RequestServerTest extends TestCase
 		$this->assertSame('127.0.0.1', $request->getIp());
 	}
 
+	public function test_each_route_type_carries_the_script_the_forum_serves_it_from()
+	{
+		$this->actingAsAdministrator(['notice' => true]);
+		$this->dispatch('notices', 'admin');
+
+		$request = $this->app()->request();
+
+		// the control panel has its own script; a request claiming index.php is not what an admin
+		// controller would see on the forum
+		$this->assertSame('/admin.php', $request->getServer('SCRIPT_NAME'));
+		$this->assertStringStartsWith('/admin.php?notices', $request->getServer('REQUEST_URI'));
+	}
+
+	public function test_an_api_request_carries_the_api_route_prefix()
+	{
+		$this->actingAsApiKey();
+		$this->dispatch('users', 'api');
+
+		$request = $this->app()->request();
+
+		// the api is routed through the public script behind an api/ prefix, which is what the
+		// forum's own api links carry
+		$this->assertSame('/index.php', $request->getServer('SCRIPT_NAME'));
+		$this->assertStringContainsString('api/users', $request->getServer('REQUEST_URI'));
+	}
+
 	public function test_the_request_method_is_not_overridden_by_a_server_value()
 	{
 		$this->dispatch('help/terms', 'public', [], ['REQUEST_METHOD' => 'POST']);
