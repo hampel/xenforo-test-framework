@@ -593,9 +593,19 @@ trait InteractsWithRoutes
 	 */
 	protected function setAppClassType($type)
 	{
-		[$classType] = $this->routeTypeConfig($type);
+		[$classType, $routerKey] = $this->routeTypeConfig($type);
 
 		$this->swap('app.classType', $classType);
+
+		// XF\App hard-wires `router` to router.public, and XF\Admin\App and XF\Api\App each
+		// override it. Without this a link a controller builds with no type - which is what
+		// XF\Mvc\Controller::buildLink() does - comes from the public router during an admin or api
+		// dispatch, so a redirect carries index.php and a route the public router does not know,
+		// and the url cannot be asserted
+		$this->swap('router', function () use ($routerKey)
+		{
+			return $this->app()->container($routerKey);
+		});
 
 		$appClass = "XF\\$classType\\App";
 

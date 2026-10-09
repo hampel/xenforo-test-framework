@@ -1,5 +1,19 @@
 # Changelog
 
+## 5.19.0 (unreleased)
+
+* a link a controller builds during an `admin` or `api` `dispatch()` comes from that type's router,
+  so the url of a redirect is an `admin.php` one and can be asserted. `XF\Mvc\Controller::buildLink()`
+  asks for no type and XenForo hard-wires the untyped router to the public one, which a real
+  `XF\Admin\App` overrides - so a redirect carried `index.php` and a route the public router does not
+  know, and `assertReplyIsRedirect($reply, $url)` could not be given a true url
+* `createUserAccount()` creates a member with the profile, option, privacy and authentication records
+  a user has in practice. `createEntity('XF:User')` writes the `xf_user` row alone, which a XenForo
+  page reading one of those relations cannot display
+* `actingAsAdministrator()` is the three lines an admin test opens with: a member with `is_admin`, an
+  administrator record with the given permissions, and ordinary permissions where they matter
+* docs: `createEntity('XF:User')` builds a bare row, and what to use instead
+
 ## 5.18.1 (2026-10-09)
 
 * `assertConsoleCommandsLoad()` no longer fails on a file XenForo's own runner skips - an abstract

@@ -196,6 +196,37 @@ trait InteractsWithVisitor
 		return $admin;
 	}
 
+	/**
+	 * Run the code under test as an administrator with the given admin permissions.
+	 *
+	 * The three lines every admin test opens with: a member with is_admin set, an administrator
+	 * record carrying the permissions, and the ordinary user permissions where the code under test
+	 * reads those too.
+	 *
+	 * Named in full because `actingAsAdmin` is a method add-on suites have already written for
+	 * themselves, and a trait method cannot be shadowed by an incompatible one without a fatal.
+	 *
+	 * @param array $adminPermissions - permission id => bool, as hasAdminPermission() reads them
+	 * @param array $adminValues - extra columns for the administrator record, eg
+	 *                             ['is_super_admin' => true]
+	 * @param array $userPermissions - ordinary permissions, as setVisitorPermissions() takes them
+	 *
+	 * @return User
+	 */
+	protected function actingAsAdministrator(array $adminPermissions = [], array $adminValues = [], array $userPermissions = [])
+	{
+		$admin = $this->actingAsMember(['is_admin' => true]);
+
+		$this->setVisitorAdminPermissions($admin, $adminPermissions, $adminValues);
+
+		if ($userPermissions)
+		{
+			$this->setVisitorPermissions($admin, $userPermissions);
+		}
+
+		return $admin;
+	}
+
 	protected function buildVisitor(array $values = [], $username = null)
 	{
 		$values += [

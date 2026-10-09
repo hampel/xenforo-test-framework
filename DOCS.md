@@ -308,6 +308,52 @@ $this->setVisitorAdminPermissions($admin, ['option' => true]);
 Pass `['is_super_admin' => true]` in `values` for a super administrator, who has every permission
 regardless of what is granted here.
 
+### actingAsAdministrator
+Run the code under test as an administrator - the three lines an admin test opens with, in one.
+
+##### Parameters:
+
+* `adminPermissions` - optional - permission id => bool, as `hasAdminPermission()` reads them
+* `adminValues` - optional - extra columns for the administrator record, eg
+  `['is_super_admin' => true]`
+* `userPermissions` - optional - ordinary permissions, as `setVisitorPermissions()` takes them, for
+  code that reads those too
+
+##### Example:
+
+```php
+$admin = $this->actingAsAdministrator(['notice' => true]);
+
+$this->assertReplyIsView($this->dispatch('notices', 'admin'));
+```
+
+It is the long name because `actingAsAdmin` is one add-on suites have already written for
+themselves, and a method on this class cannot be shadowed by an incompatible one without a fatal.
+
+### createUserAccount
+Create a member in the database that XenForo's own pages can display.
+
+`createEntity('XF:User')` writes the `xf_user` row alone, so a page reading the profile, option,
+privacy or authentication records fails on a null relation. This hydrates them through XenForo's own
+user repository, as registration does.
+
+The rows are real, so call it from a class using `UsesDatabaseTransactions`.
+
+##### Parameters:
+
+* `username` - optional - a unique one is generated when not given
+* `values` - optional - columns for the user, eg `['user_state' => 'moderated']`
+
+##### Example:
+
+```php
+$user = $this->createUserAccount('probebob');
+
+$html = $this->renderReply($this->dispatch("users/{$user->user_id}/edit", 'admin'));
+
+$this->assertSee($html, 'probebob');
+```
+
 ### dispatch
 Dispatch a route the way XenForo does, and return the reply its controller produced.
 
@@ -645,6 +691,11 @@ only a 403 passes whichever guard refused. `replyErrors($reply)` returns the mes
 
 **Assert a redirect's `type`, not its code.** `getResponseCode()` is `200` for every redirect reply;
 the renderer later sends a 301 for permanent and a 303 for temporary.
+
+**A link a controller builds comes from the dispatched type's router**, so the url of an admin
+redirect is an `admin.php` one and can be asserted as it stands. `XF\Mvc\Controller::buildLink()`
+asks for no type, and `XF\App` hard-wires the untyped router to the public one - a real
+`XF\Admin\App` overrides that, and so does `dispatch()`.
 
 Pass a `message` to identify the route in a test that dispatches several:
 
@@ -1509,6 +1560,11 @@ class ThingTest extends TestCase
 	}
 }
 ```
+
+**`createEntity('XF:User')` writes the `xf_user` row and nothing else.** A user in practice also has
+profile, option, privacy and authentication records, and a XenForo page that reads one of them - the
+admin user editor does - fails on a null relation rather than on anything the test is about. Use
+`createUserAccount()` where the test needs a member XenForo's own pages can display.
 
 ### mockFinder
 Mock a Finder.

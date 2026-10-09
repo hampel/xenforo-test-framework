@@ -5,6 +5,13 @@ Most releases need nothing beyond `composer update`. `CHANGELOG.md` lists everyt
 
 `tests/TestCase.php` is copied into your add-on, so a change to it has to be merged by hand.
 
+## 5.19.0
+
+Nothing to do, unless a test of yours asserts the url of a redirect from an `admin` or `api`
+dispatch. Those urls were built by the public router, so they carried `index.php` and a route that
+router does not know; they are now `admin.php` or `api.php` urls, as the forum itself produces. A
+test asserting the old value was asserting the defect.
+
 ## 5.15.0
 
 **If a test of yours asserts that a `POST` dispatch is refused, it will now see the controller's own

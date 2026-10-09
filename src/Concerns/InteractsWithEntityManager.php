@@ -6,7 +6,9 @@ use Closure;
 use Hampel\Testing\Mvc\Entity\Manager;
 use Mockery;
 use XF\Container;
+use XF\Entity\User;
 use XF\Mvc\Entity\Entity;
+use XF\Repository\UserRepository;
 
 trait InteractsWithEntityManager
 {
@@ -188,5 +190,52 @@ trait InteractsWithEntityManager
 		$entity->save();
 
 		return $entity;
+	}
+
+	/**
+	 * Create a member in the database that XenForo's own pages can display.
+	 *
+	 * `createEntity('XF:User', ...)` writes the `xf_user` row and nothing else, so the profile,
+	 * option, privacy and auth records a user has in practice are absent - and a page that reads
+	 * one of them, as the admin user editor does, fails on a null relation rather than on anything
+	 * the test is about. XenForo's own user repository hydrates those relations, which is what this
+	 * uses.
+	 *
+	 * The rows are real, so call it from a test class using UsesDatabaseTransactions.
+	 *
+	 * Not called `createMember`: three add-on suites define a method of that name already, and a
+	 * trait method cannot be shadowed by an incompatible one without a fatal at class load.
+	 *
+	 * @param string|null $username - a unique one is generated when not given
+	 * @param array $values - columns for the user, eg ['is_admin' => true, 'user_state' => 'valid']
+	 *
+	 * @return User
+	 */
+	protected function createUserAccount($username = null, array $values = [])
+	{
+		$repository = $this->app()->repository('XF:User');
+
+		if (!($repository instanceof UserRepository))
+		{
+			throw new \LogicException(
+				'Expected XF:User to resolve to a ' . UserRepository::class
+				. ', got ' . get_class($repository)
+			);
+		}
+
+		$user = $repository->setupBaseUser();
+		$unique = $username ?: 'member' . substr(md5(uniqid('', true)), 0, 8);
+
+		$user->bulkSet($values + [
+			'username' => $unique,
+			'email' => $unique . '@example.com',
+			'user_state' => 'valid',
+		]);
+
+		// without this the user has no auth handler at all, and anything reading it fails
+		$user->Auth->setNoPassword();
+		$user->save();
+
+		return $user;
 	}
 }
