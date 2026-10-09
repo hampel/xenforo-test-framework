@@ -1,6 +1,6 @@
 # Changelog
 
-## 5.19.0 (unreleased)
+## 5.19.0 (2026-10-09)
 
 * a link a controller builds during an `admin` or `api` `dispatch()` comes from that type's router,
   so the url of a redirect is an `admin.php` one and can be asserted. `XF\Mvc\Controller::buildLink()`
