@@ -2539,9 +2539,19 @@ that owns it.** XenForo loads every add-on's command classes simply to list them
 suite loads these classes, so nothing else notices.
 
 `assertConsoleCommandsLoad()` walks the add-on's `Cli/Command` the way XenForo does, recursively,
-turning each `.php` file into a class name by its path, and checks every one. It refuses when the
-walk finds nothing, because a walk over an empty directory otherwise reports every class as
-loadable. It returns the class names it checked.
+turning each `.php` file into a class name by its path. It returns the command classes it checked.
+
+**It skips what XenForo's runner skips**, so the layout core itself uses is not a failure: an
+abstract base beside the commands - core has `XF\Cli\Command\AbstractCommand` - a trait or
+interface file, and any class that is not a Symfony `Command`. None of those is listed by XenForo and
+none affects `cmd.php`, so none belongs in the returned list either.
+
+**What it never skips is a class that cannot be loaded.** That is the case that stops `cmd.php` for
+every add-on on the forum, and it is reported as such.
+
+It refuses, rather than passing, when the walk finds no PHP files at all, and when the files it finds
+declare nothing XenForo would list - otherwise the skips above could add up to an assertion over
+nothing.
 
 ##### Parameters:
 
@@ -2560,6 +2570,18 @@ public function test_every_console_command_loads()
 
 The `assertContains()` line is worth keeping: it proves the walk reached the directory you meant,
 which the refusal above cannot do on its own.
+
+**The stricter form is to assert the whole list**, which also fails when a command file is added with
+no test of its own:
+
+```php
+$this->assertSame([
+    MyAddOn\Cli\Command\Export::class,
+    MyAddOn\Cli\Command\Import::class,
+], $this->assertConsoleCommandsLoad());
+```
+
+The walk's order follows the filesystem, so sort both sides if that matters to you.
 
 `assertConsoleCommandLoads($class)` checks one class - it exists, is instantiable, extends Symfony's
 `Command`, and has a name. That mirrors `XF\Cli\Runner::isValidCommandClass()`, which is protected,

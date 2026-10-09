@@ -2,6 +2,15 @@
 
 ## 5.18.1 (unreleased)
 
+* `assertConsoleCommandsLoad()` no longer fails on a file XenForo's own runner skips - an abstract
+  base beside the commands, as core's own `Cli/Command` has, a trait or interface file, or a class
+  that is not a `Command`. None of them is listed by XenForo or affects `cmd.php`, and none appears
+  in the returned list. A class that cannot be **loaded** still fails, since that is the case that
+  stops `cmd.php` for every add-on on the forum
+* `assertConsoleCommandsLoad()` refuses when the files it finds declare nothing XenForo would list,
+  so the skips cannot add up to an assertion over nothing
+* docs: asserting the whole list of command classes, which also fails when one is added with no test
+
 * docs: confirming a console command with `['inputs' => ...]` does the work against the forum the
   suite points at - a command built on XenForo's rebuild base class runs its job in its own process
   rather than queueing it, and a transaction is not a reliable guard

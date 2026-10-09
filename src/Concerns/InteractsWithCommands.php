@@ -102,15 +102,13 @@ trait InteractsWithCommands
 	protected function assertConsoleCommandsLoad($addOnId = null)
 	{
 		$addOnId = $addOnId ?: $this->soleIsolatedAddOnId();
-		$path = \XF::getAddOnDirectory() . \XF::$DS . str_replace('/', \XF::$DS, $addOnId) . \XF::$DS
-			. 'Cli' . \XF::$DS . 'Command';
+		[$path, $classBase] = $this->addOnCommandLocation($addOnId);
 
 		if (!is_dir($path))
 		{
 			throw new \LogicException("'$addOnId' has no Cli/Command directory, at '$path'");
 		}
 
-		$classBase = str_replace('/', '\\', $addOnId) . '\Cli\Command';
 		$classes = [];
 
 		$files = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($path, \FilesystemIterator::SKIP_DOTS));
@@ -129,17 +127,45 @@ trait InteractsWithCommands
 		if (!$classes)
 		{
 			throw new \LogicException(
-				"No command classes found under '$path', so there is nothing to assert. Remove this"
+				"No PHP files found under '$path', so there is nothing to assert. Remove this"
 				. ' assertion, or give it the add-on that owns the commands.'
 			);
 		}
 
+		$commands = [];
+
 		foreach ($classes AS $class)
 		{
+			// what the runner skips, this skips: a file that declares no class of that name - a
+			// trait, an interface, a helper - and a class it would not list, which includes an
+			// abstract base beside the commands, as XenForo's own Cli/Command has. Loading is the
+			// part that matters, and requireCommandClassLoads() has already done it by here
+			if (!$this->requireCommandClassLoads($class))
+			{
+				continue;
+			}
+
+			$reflection = new \ReflectionClass($class);
+
+			if (!$reflection->isInstantiable() || !$reflection->isSubclassOf(Command::class))
+			{
+				continue;
+			}
+
 			$this->assertConsoleCommandLoads($class);
+			$commands[] = $class;
 		}
 
-		return $classes;
+		if (!$commands)
+		{
+			throw new \LogicException(
+				"No command classes found under '$path' - " . count($classes) . ' PHP file(s) are'
+				. ' there, but none declares a class XenForo would list, so there is nothing to'
+				. ' assert.'
+			);
+		}
+
+		return $commands;
 	}
 
 	/**
@@ -154,28 +180,18 @@ trait InteractsWithCommands
 	 */
 	protected function assertConsoleCommandLoads($class)
 	{
-		try
-		{
-			$exists = class_exists($class);
-		}
-		catch (\Throwable $e)
-		{
-			// a missing parent class arrives here; XenForo's own listing would die on it
-			throw new \LogicException(
-				"'$class' cannot be loaded, so it would stop cmd.php for every add-on on the forum: "
-				. $e->getMessage(),
-				0,
-				$e
-			);
-		}
-
-		PHPUnit::assertTrue($exists, "'$class' does not exist, though its file is where XenForo looks");
+		PHPUnit::assertTrue(
+			$this->requireCommandClassLoads($class),
+			"'$class' does not exist, though its file is where XenForo looks"
+		);
 
 		$reflection = new \ReflectionClass($class);
 
+		// named directly rather than found by the walk, so these are failures rather than skips:
+		// XenForo would not list this class, and the caller said it was a command
 		PHPUnit::assertTrue(
 			$reflection->isInstantiable(),
-			"'$class' is not instantiable, so XenForo will not list it"
+			"'$class' is not instantiable, so XenForo will not list it as a command"
 		);
 		PHPUnit::assertTrue(
 			$reflection->isSubclassOf(Command::class),
@@ -187,6 +203,54 @@ trait InteractsWithCommands
 			$instance->getName(),
 			"'$class' has no name, so it cannot be run - a XenForo command sets one in configure()"
 		);
+	}
+
+	/**
+	 * Where an add-on's command classes live, and the namespace they are in.
+	 *
+	 * Its own method so that this package can point the walk at a directory of fixtures; an add-on
+	 * has no reason to override it.
+	 *
+	 * @param string $addOnId
+	 *
+	 * @return array{0: string, 1: string} the directory, and the class name prefix
+	 */
+	protected function addOnCommandLocation($addOnId)
+	{
+		return [
+			\XF::getAddOnDirectory() . \XF::$DS . str_replace('/', \XF::$DS, $addOnId) . \XF::$DS
+				. 'Cli' . \XF::$DS . 'Command',
+			str_replace('/', '\\', $addOnId) . '\Cli\Command',
+		];
+	}
+
+	/**
+	 * Whether the class exists, refusing when the attempt to load it fails.
+	 *
+	 * XenForo lists commands with class_exists(), which autoloads - so a class whose parent is
+	 * missing is a fatal there, and that takes cmd.php down for every add-on on the forum. A file
+	 * that simply declares no class of that name is a different thing, and the caller decides what
+	 * to do about it.
+	 *
+	 * @param string $class
+	 *
+	 * @return bool
+	 */
+	private function requireCommandClassLoads($class)
+	{
+		try
+		{
+			return class_exists($class);
+		}
+		catch (\Throwable $e)
+		{
+			throw new \LogicException(
+				"'$class' cannot be loaded, so it would stop cmd.php for every add-on on the forum: "
+				. $e->getMessage(),
+				0,
+				$e
+			);
+		}
 	}
 
 	/**
