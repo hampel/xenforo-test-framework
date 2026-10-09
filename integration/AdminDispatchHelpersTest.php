@@ -39,6 +39,28 @@ class AdminDispatchHelpersTest extends TestCase
 		$this->assertStringStartsWith('/index.php?help', $this->app()->router()->buildLink('help/terms'));
 	}
 
+	public function test_an_admin_link_does_not_depend_on_the_friendly_url_option()
+	{
+		$before = $this->app()->router('admin')->buildLink('notices');
+
+		$this->setOption('useFriendlyUrls', true);
+
+		// the formatters are cached container entries and each router holds one by value
+		foreach (['router.public.formatter', 'router.api.formatter', 'router.public', 'router.api', 'router.admin', 'router'] AS $key)
+		{
+			$this->app()->container()->decache($key);
+		}
+
+		$this->assertSame(
+			$before,
+			$this->app()->router('admin')->buildLink('notices'),
+			'the admin formatter does not read useFriendlyUrls'
+		);
+
+		// while a public one does change shape, which is why a test should not assert a literal
+		$this->assertSame('/help/terms', $this->app()->router('public')->buildLink('help/terms'));
+	}
+
 	public function test_acting_as_administrator_grants_both_kinds_of_permission()
 	{
 		$admin = $this->actingAsAdministrator(['notice' => true], [], ['general' => ['view' => true]]);

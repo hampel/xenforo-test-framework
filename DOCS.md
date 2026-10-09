@@ -697,6 +697,24 @@ redirect is an `admin.php` one and can be asserted as it stands. `XF\Mvc\Control
 asks for no type, and `XF\App` hard-wires the untyped router to the public one - a real
 `XF\Admin\App` overrides that, and so does `dispatch()`.
 
+**Build the expected url rather than writing it out, and match it as a substring.** The `url`
+argument compares exactly, and a redirect's url is often more than the route: XenForo canonicalises
+some of them to an absolute url, a route may carry a trailing slash, and a controller may append a
+fragment such as `#__42` to scroll to what it just saved.
+
+```php
+$this->assertReplyIsRedirect($reply);
+$this->assertStringContainsString(
+    $this->app()->router('admin')->buildLink('notices'),
+    $reply->getUrl()
+);
+```
+
+Writing the url out is worse than verbose - it depends on the forum. With the *Use full friendly
+URLs* option off a public link is `/index.php?help/terms` and an api one `/index.php?api/users/`;
+with it on they are `/help/terms` and `/api/users/`, so a literal passes on one forum and fails on
+another. Admin links are unaffected, since that formatter does not read the option.
+
 Pass a `message` to identify the route in a test that dispatches several:
 
 ```php

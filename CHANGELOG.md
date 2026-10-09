@@ -13,6 +13,9 @@
 * `actingAsAdministrator()` is the three lines an admin test opens with: a member with `is_admin`, an
   administrator record with the given permissions, and ordinary permissions where they matter
 * docs: `createEntity('XF:User')` builds a bare row, and what to use instead
+* docs: build the url a redirect assertion expects with the router and match it as a substring - a
+  redirect's url may be absolute or carry a fragment, and a public or api one changes shape with the
+  *Use full friendly URLs* option, where an admin one does not
 
 ## 5.18.1 (2026-10-09)
 
