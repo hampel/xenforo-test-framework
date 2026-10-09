@@ -715,6 +715,12 @@ URLs* option off a public link is `/index.php?help/terms` and an api one `/index
 with it on they are `/help/terms` and `/api/users/`, so a literal passes on one forum and fails on
 another. Admin links are unaffected, since that formatter does not read the option.
 
+**The option needs no particular setting for a suite to work.** `dispatch()` builds its request in
+whichever form the forum is configured for, because a public controller compares the url it builds
+against the url the request carries - so a request in the other form would be answered with a
+redirect to its own canonical url instead of with the page. What a test must not do is write a url
+out, which is what the paragraph above is for.
+
 Pass a `message` to identify the route in a test that dispatches several:
 
 ```php

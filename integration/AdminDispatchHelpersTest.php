@@ -36,7 +36,12 @@ class AdminDispatchHelpersTest extends TestCase
 
 		$this->dispatch('help/terms');
 
-		$this->assertStringStartsWith('/index.php?help', $this->app()->router()->buildLink('help/terms'));
+		// the untyped router is the public one again, whatever the forum's useFriendlyUrls setting
+		// makes that link look like
+		$this->assertSame(
+			$this->app()->router('public')->buildLink('help/terms'),
+			$this->app()->router()->buildLink('help/terms')
+		);
 	}
 
 	public function test_an_admin_link_does_not_depend_on_the_friendly_url_option()

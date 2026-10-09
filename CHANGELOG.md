@@ -7,6 +7,9 @@
   asks for no type and XenForo hard-wires the untyped router to the public one, which a real
   `XF\Admin\App` overrides - so a redirect carried `index.php` and a route the public router does not
   know, and `assertReplyIsRedirect($reply, $url)` could not be given a true url
+* `dispatch()` builds its request in the url form the forum is configured for, so a dispatch on a
+  forum with the *Use full friendly URLs* option on is no longer answered with a redirect to its own
+  canonical url. The board index was the demonstrable case
 * `createUserAccount()` creates a member with the profile, option, privacy and authentication records
   a user has in practice. `createEntity('XF:User')` writes the `xf_user` row alone, which a XenForo
   page reading one of those relations cannot display

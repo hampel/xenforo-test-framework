@@ -149,6 +149,25 @@ class RouteDispatchTest extends TestCase
 		$this->assertReplyIsView($reply);
 	}
 
+	public function test_a_dispatch_is_not_redirected_to_its_canonical_url_with_friendly_urls_on()
+	{
+		$member = $this->actingAsMember();
+		$this->setVisitorPermissions($member, ['general' => ['view' => true]]);
+
+		$this->setOption('useFriendlyUrls', true);
+
+		// the formatters are cached container entries and each router holds one by value
+		foreach (['router.public.formatter', 'router.public', 'router'] AS $key)
+		{
+			$this->app()->container()->decache($key);
+		}
+
+		// the board index, whose canonical url with the option on is '/' - a request built as
+		// '/index.php' does not match it, and assertCanonicalUrl() answers with a redirect to the
+		// page rather than the page
+		$this->assertReplyIsView($this->dispatch(''));
+	}
+
 	public function test_input_reaches_an_empty_route_without_a_stray_separator()
 	{
 		$member = $this->actingAsMember();
@@ -156,10 +175,13 @@ class RouteDispatchTest extends TestCase
 
 		$this->dispatch('', 'public', ['probe' => 'value']);
 
-		$this->assertSame(
-			'/index.php?probe=value',
-			$this->app()->request()->getServer('REQUEST_URI')
-		);
+		$uri = $this->app()->request()->getServer('REQUEST_URI');
+
+		// the form depends on the forum's useFriendlyUrls option - what must hold either way is
+		// that the input is there and no separator was left behind by the empty route
+		$this->assertStringEndsWith('?probe=value', $uri);
+		$this->assertStringNotContainsString('&', $uri);
+		$this->assertSame('value', $this->app()->request()->filter('probe', 'str'));
 	}
 
 	public function test_an_unknown_route_type_is_rejected()

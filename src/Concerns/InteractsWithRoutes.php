@@ -519,17 +519,23 @@ trait InteractsWithRoutes
 		// carries them in the body, so its query string stays empty
 		$queryString = $method === 'GET' ? http_build_query($input) : '';
 
-		// the board index is routed by an empty path, and its canonical url is 'index.php' with no
-		// query at all - so a trailing '?' here makes assertCanonicalUrl() redirect the request to
-		// itself rather than dispatching it
+		// the board index is routed by an empty path, and its canonical url has no query at all - so
+		// a trailing '?' here makes assertCanonicalUrl() redirect the request to itself rather than
+		// dispatching it
 		$queryParts = array_filter([$routePath, $queryString], function ($part)
 		{
 			return $part !== '';
 		});
 		$query = implode('&', $queryParts);
 
+		// a public controller's assertCanonicalUrl() compares the url it builds against the url
+		// this request carries, and link building honours the useFriendlyUrls option - so a request
+		// that does not would be redirected to its own canonical form on a forum with the option
+		// on, and the reply a test asserts on would be that redirect rather than the page
 		$defaults = [
-			'REQUEST_URI' => '/index.php' . ($query !== '' ? '?' . $query : ''),
+			'REQUEST_URI' => $this->app()->options()['useFriendlyUrls']
+				? '/' . $routePath . ($queryString !== '' ? '?' . $queryString : '')
+				: '/index.php' . ($query !== '' ? '?' . $query : ''),
 			'SCRIPT_NAME' => '/index.php',
 			'QUERY_STRING' => $queryString,
 			'HTTP_HOST' => $host,
