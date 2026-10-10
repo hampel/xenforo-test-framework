@@ -1373,10 +1373,23 @@ Neither development command helps here, and one of them is dangerous:
 
 A transaction also puts the test in a race with the rest of the forum for any row both write. On
 MariaDB 11.8 and later, where snapshot isolation is on by default, the loser gets
-`Record has changed since last read`, on some runs and not others. `dispatch()`, `callAction()` and
-`runJobToCompletion()` leave XenForo's own `autoJobRun` registry row alone for that reason. If your
-own code writes a row the live forum also writes, `fakesRegistry()` and the other fakes keep it out
-of the database.
+`Record has changed since last read`, on some runs and not others; holding the row long enough
+instead gets a deadlock, which the server resolves by rolling your transaction back. `dispatch()`,
+`callAction()` and `runJobToCompletion()` leave XenForo's own `autoJobRun` registry row alone for
+that reason.
+
+**The data registry is the surface to watch, more than any content table.** `DataRegistry::set()`
+is a read-modify-write of a single row keyed by name, so any two writers of that key contend - and
+the registry is where XenForo caches counters that core rebuilds as a side effect of something
+else. A user deletion rebuilds the approval queue's unapproved counts; a thread move rebuilds forum
+totals. Whatever your test is about, read what the service or job you invoke does *after* the part
+you care about.
+
+`fakesRegistry()` keeps those writes out of the database entirely, which is the cheapest answer.
+Where you need the real path, invoke the one step your add-on's behaviour hangs on rather than the
+whole job: `MultiPartRunnerTrait` offers no way to select a step, so that means calling the
+protected step method by reflection, which is three lines and keeps the test honest - the event
+still fires from the real constructor.
 
 It cannot be combined with `mockDatabase()`, and throws if you try.
 

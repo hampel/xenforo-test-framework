@@ -57,7 +57,11 @@ trait UsesDatabaseTransactions
 				$db->rollbackAll();
 			}
 
-			if ($reason !== null)
+			// this check exists to catch a leak in a test that otherwise passes silently. A test
+			// that has already failed is red either way, and a deadlock is the case that makes the
+			// difference: the server rolls the transaction back, the test errors on the query that
+			// hit it, and failing again here buries that error under a wrong explanation
+			if ($reason !== null && $this->status()->isSuccess())
 			{
 				PHPUnit::fail(
 					'This test\'s transaction did not survive, so everything written after that '
@@ -122,12 +126,14 @@ trait UsesDatabaseTransactions
 			return null;
 		}
 
-		return 'something committed it. Any DDL does, including the TRUNCATE XenForo runs when it'
-			. ' compiles a template - which on a development install happens whenever a rendered'
-			. " template's _output/ file does not match the hash in _metadata.json, the state an edit"
-			. ' leaves it in. Load a page that renders the template, outside any test, and the'
-			. ' watcher re-imports it and writes that hash. Neither xf-dev:import nor xf-dev:export'
-			. ' is the answer - import reads _metadata.json without writing it, and export writes the'
-			. ' database over your edited file.';
+		return 'the server no longer has it. Either something committed it, or the server rolled it'
+			. ' back - a deadlock does that, and leaves nothing behind to say so. Any DDL commits,'
+			. ' including the TRUNCATE XenForo runs when it compiles a template - which on a'
+			. " development install happens whenever a rendered template's _output/ file does not"
+			. ' match the hash in _metadata.json, the state an edit leaves it in. Load a page that'
+			. ' renders the template, outside any test, and the watcher re-imports it and writes'
+			. ' that hash. Neither xf-dev:import nor xf-dev:export is the answer - import reads'
+			. ' _metadata.json without writing it, and export writes the database over your edited'
+			. ' file.';
 	}
 }

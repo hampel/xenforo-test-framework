@@ -1,5 +1,15 @@
 # Changelog
 
+## 5.20.1 (unreleased)
+
+* the `UsesDatabaseTransactions` check for a transaction that did not survive stays quiet when the
+  test has already failed, so a query that failed because the server rolled the transaction back is
+  not reported as something having committed it
+* the same check's message names both causes: something committed the transaction, or the server
+  rolled it back
+* docs: the data registry is the row a test is most likely to contend with the live forum for, and
+  what to do about it
+
 ## 5.20.0 (2026-10-10)
 
 * `assertNoTemplateErrors()` takes the prefix of the templates you own, or a list of them, so it can
