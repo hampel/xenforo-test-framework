@@ -1,6 +1,6 @@
 # Changelog
 
-## 5.22.0 (unreleased)
+## 5.22.0 (2026-10-11)
 
 * a second `fakesHttp()` or `fakesHttpByUrl()` in the same test reaches the clients the first one
   covered. Each fake built its own handler stack, and a Guzzle client holds the stack it was built
