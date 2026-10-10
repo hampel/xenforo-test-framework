@@ -282,7 +282,8 @@ trait InteractsWithTemplates
 	 * carries no unresolved key either.
 	 *
 	 * @param string $html
-	 * @param string $prefix - your add-on's phrase prefix, eg `myaddon_`
+	 * @param string|string[] $prefix - your add-on's phrase prefix, eg `myaddon_`, or several of
+	 *                                 them where an older one survives a renaming
 	 * @param string $message
 	 *
 	 * @return void
@@ -290,10 +291,18 @@ trait InteractsWithTemplates
 	protected function assertNoUnresolvedPhrases($html, $prefix, $message = '')
 	{
 		$stripped = preg_replace('/\sdata-(template|inner-template)-name="[^"]*"/i', '', $html);
+		$keys = [];
 
-		preg_match_all('/\b' . preg_quote($prefix, '/') . '[a-z0-9_]+/i', $stripped, $matches);
+		// an add-on with a phrase predating its naming convention has more than one prefix, and
+		// renaming a phrase loses any customisation of it - so the old ones are permanent
+		foreach ((array) $prefix AS $onePrefix)
+		{
+			preg_match_all('/\b' . preg_quote($onePrefix, '/') . '[a-z0-9_]+/i', $stripped, $matches);
 
-		$keys = array_values(array_unique($matches[0]));
+			$keys = array_merge($keys, $matches[0]);
+		}
+
+		$keys = array_values(array_unique($keys));
 
 		PHPUnit::assertSame(
 			[],
@@ -379,15 +388,44 @@ trait InteractsWithTemplates
 	 * The strict form of the guard above. It is opt-in because a template missing a parameter
 	 * usually still renders most of its markup.
 	 *
+	 * On a development forum shared with other add-ons the blanket form describes the forum rather
+	 * than the add-on: template modifications compile into the install's shared template cache
+	 * whatever $addonsToLoad says, so a sibling's modification reading a column its own entity
+	 * extension declares raises an error on every render here. Pass the prefix of the templates you
+	 * own to assert on yours alone.
+	 *
+	 * @param string|string[]|null $templateFilter - matched against the template name; null asserts
+	 *                                               on every error the render raised
+	 *
 	 * @return void
 	 */
-	protected function assertNoTemplateErrors()
+	protected function assertNoTemplateErrors($templateFilter = null)
 	{
 		$errors = $this->app()->templater()->getTemplateErrors();
 
+		if ($templateFilter !== null)
+		{
+			$needles = (array) $templateFilter;
+
+			// matched against the template name rather than the whole row: the row also holds the
+			// error message, and an add-on's name can appear in somebody else's error text
+			$errors = array_filter($errors, function (array $error) use ($needles)
+			{
+				foreach ($needles AS $needle)
+				{
+					if (strpos($error['template'], $needle) !== false)
+					{
+						return true;
+					}
+				}
+
+				return false;
+			});
+		}
+
 		PHPUnit::assertSame(
 			[],
-			array_map([$this, 'describeTemplateError'], $errors),
+			array_values(array_map([$this, 'describeTemplateError'], $errors)),
 			'XenForo logs a template error and carries on rendering, so these did not fail the render'
 		);
 	}

@@ -1,5 +1,18 @@
 # Changelog
 
+## 5.20.0 (unreleased)
+
+* `assertNoTemplateErrors()` takes the prefix of the templates you own, or a list of them, so it can
+  assert on your own templates on a development forum where a sibling add-on's template modification
+  raises errors on every render. The filter matches the template name
+* `assertNoUnresolvedPhrases()` accepts several prefixes, for an add-on whose older phrases predate
+  its naming convention, and reports every unresolved key rather than failing on the first prefix
+* docs: the filtering example under `assertNoTemplateErrors()` was a `TypeError` - each error XenForo
+  records is an array, not a string
+* docs: how to prove `assertNoUnresolvedPhrases()` can fail, and why a phrase-level mutation appears
+  to do nothing
+* docs: the README's install example requires `^5.20`
+
 ## 5.19.0 (2026-10-09)
 
 * a link a controller builds during an `admin` or `api` `dispatch()` comes from that type's router,

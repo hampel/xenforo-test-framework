@@ -892,26 +892,27 @@ It covers every render in the test, not only the last.
   `assertNoTemplateErrors()`, and `assertExceptionLogged()` can assert on them; or
 * use `UsesDatabaseTransactions` on the test class, which rolls the rows back.
 
-**On a development forum shared with other add-ons, this assertion is about the forum rather than
+**On a development forum shared with other add-ons, the blanket form is about the forum rather than
 about your add-on.** `$addonsToLoad` loads no sibling's class extensions, but template modifications
 belong to the install: they are compiled into the shared template cache and apply to every render.
 So a sibling's modification reading a column its own entity extension declares raises a warning on
 every render in your suite, for a page that is faultless in a browser.
 
-The blanket assertion therefore means what it says only on a forum with one add-on installed - a
-sandbox. On a shared install, assert on the errors your own templates raised:
+**Pass the prefix of the templates you own** to assert on yours alone:
 
 ```php
-$errors = array_filter($this->app()->templater()->getTemplateErrors(), function ($error)
-{
-    return strpos($error, 'myaddon_') !== false;
-});
+$this->assertNoTemplateErrors('myaddon_');
 
-$this->assertEmpty($errors, implode("\n", $errors));
+// or several, where your templates do not share one prefix
+$this->assertNoTemplateErrors(['myaddon_', 'legacy_name_']);
 ```
 
-Filter by the names your add-on owns rather than by the siblings to exclude: you know the first list
+Filter by the names your add-on owns rather than by the siblings to exclude: you know the first list,
 and it does not change when somebody installs something else.
+
+The filter matches the template *name*. Each error XenForo records is an array - `template`,
+`error`, `file`, `line` - so a filter of your own has to pick a field, and matching the message as
+well as the name would also match an add-on's name appearing in somebody else's error text.
 
 ### assertSee / assertDontSee / assertSeeInOrder
 Assert on rendered output.
@@ -953,7 +954,7 @@ for a phrase it cannot find.
 ##### Parameters:
 
 * `html`
-* `prefix` - your add-on's phrase prefix, eg `myaddon_`
+* `prefix` - your add-on's phrase prefix, eg `myaddon_`, or a list of them
 * `message` - optional
 
 ##### Example:
@@ -971,6 +972,25 @@ your prefix. Those attributes are stripped before the search.
 
 **Pair it with an assertion that the text you expect is present.** Output that never rendered
 carries no unresolved key either.
+
+**More than one prefix is allowed**, for an add-on whose older phrases predate its naming
+convention - renaming a phrase loses any customisation of it, so the old names are permanent:
+
+```php
+$this->assertNoUnresolvedPhrases($html, ['myaddon_', 'my_add_on_']);
+```
+
+Every unresolved key found is reported, rather than the first prefix that matches failing alone.
+
+**To prove the assertion can fail, reference a phrase that does not exist from the template**, not
+from the phrase table. A phrase the language has already resolved in this test is cached, so changing
+it afterwards does not change a later render - a phrase row changed under
+`UsesDatabaseTransactions` is rolled back like any other row, but the cache is why such a mutation
+appears to do nothing.
+
+Put the reference *inside* the block being rendered. Appending it after a macro's `</xf:macro>`
+passes, because `renderMacro()` never reaches it - which reads exactly like the assertion not
+working.
 
 ### renderRawReply
 Render a reply through the raw renderer and return the `XF\Http\Response` it produced, with the

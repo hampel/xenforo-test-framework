@@ -4,6 +4,7 @@ namespace Hampel\Testing\Integration;
 
 use Hampel\Testing\Concerns\UsesDatabaseTransactions;
 use PHPUnit\Framework\AssertionFailedError;
+use PHPUnit\Framework\ExpectationFailedException;
 use XF\Template\Templater;
 
 /**
@@ -342,6 +343,28 @@ class TemplateRenderTest extends TestCase
 		$this->expectExceptionMessage('probeph_missing_label');
 
 		$this->assertNoUnresolvedPhrases('<p>probeph_missing_label</p>', 'probeph_');
+	}
+
+	public function test_phrases_resolved_takes_several_prefixes_and_reports_every_key()
+	{
+		// an add-on whose older phrases predate its naming convention has more than one prefix,
+		// and renaming a phrase loses any customisation of it, so the old ones are permanent
+		$html = '<p>probeph_missing_label and legacyph_other_label</p>';
+
+		try
+		{
+			$this->assertNoUnresolvedPhrases($html, ['probeph_', 'legacyph_']);
+			$this->fail('two unresolved keys should have failed the assertion');
+		}
+		catch (ExpectationFailedException $e)
+		{
+			// both are reported, rather than failing on whichever prefix was checked first
+			$this->assertStringContainsString('probeph_missing_label', $e->getMessage());
+			$this->assertStringContainsString('legacyph_other_label', $e->getMessage());
+		}
+
+		// and a list that matches nothing in the markup still passes
+		$this->assertNoUnresolvedPhrases('<p>A real label</p>', ['probeph_', 'legacyph_']);
 	}
 
 	public function test_phrases_resolved_passes_when_the_phrase_rendered()
