@@ -1,6 +1,6 @@
 # Changelog
 
-## 5.20.0 (unreleased)
+## 5.20.0 (2026-10-10)
 
 * `assertNoTemplateErrors()` takes the prefix of the templates you own, or a list of them, so it can
   assert on your own templates on a development forum where a sibling add-on's template modification
