@@ -1,6 +1,6 @@
 # Changelog
 
-## 5.21.1 (unreleased)
+## 5.21.1 (2026-10-11)
 
 * a failed `assertSee()`, `assertDontSee()`, `assertSeeText()` or `assertDontSeeText()` no longer
   prints the rendered markup. PHPUnit's own string assertions print the whole subject, so a miss
