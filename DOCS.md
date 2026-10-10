@@ -1386,10 +1386,8 @@ totals. Whatever your test is about, read what the service or job you invoke doe
 you care about.
 
 `fakesRegistry()` keeps those writes out of the database entirely, which is the cheapest answer.
-Where you need the real path, invoke the one step your add-on's behaviour hangs on rather than the
-whole job: `MultiPartRunnerTrait` offers no way to select a step, so that means calling the
-protected step method by reflection, which is three lines and keeps the test honest - the event
-still fires from the real constructor.
+Where you need the real path, run the one step your add-on's behaviour hangs on rather than the
+whole service - `runRunnerStep()` does that, and the event still fires from the real constructor.
 
 It cannot be combined with `mockDatabase()`, and throws if you try.
 
@@ -2203,6 +2201,50 @@ when it runs several jobs in one request. So if one job creates a related row wi
 relation on an entity it loaded, a second job run in the same test - or the same request in
 production - finds that entity with the relation still empty. Clear it yourself with
 `$this->app()->em()->clearEntityCache()` if you want each job to start fresh.
+
+### runRunnerStep
+Run one step of a XenForo multi-part runner to completion, and return how many times the step ran.
+
+XenForo's clean-up, merge and content-change services are multi-part runners: a list of steps run
+by `XF\MultiPartRunnerTrait::runLoop()`. An add-on answering `user_delete_clean_init`,
+`user_delete_clean_steps` or their siblings contributes work to one of those steps, so that is the
+step a test about the add-on needs - and running the whole service to reach it runs every other step
+too, which is how a test ends up contending with the live forum over rows it does not care about.
+
+##### Parameters:
+
+* `runner` - the service, as `app()->service()` built it
+* `stepName` - a method name as the runner's own `getSteps()` lists it
+* `maxCalls` - optional, how many calls before the step is judged not to finish
+
+##### Example:
+
+```php
+$user = $this->createUserAccount();
+
+$service = $this->app()->service('XF:User\DeleteCleanUp', $user->user_id, $user->username);
+
+$this->runRunnerStep($service, 'stepDeleteContent');
+
+$this->assertDatabaseMissing('xf_my_addon_record', ['user_id' => $user->user_id]);
+```
+
+**A step is not a method you call once.** Its return value is a resume offset, not a result: `null`
+or `false` means finished, and anything else means *call me again from there*. A step asks for that
+when it has processed its batch as well as when it has run out of time - `stepDeleteProfilePosts`,
+`stepDeleteContentVotes` and `stepDeleteBookmarks` all fetch 1,000 rows per call and ask to resume
+whenever that fetch was full, whatever time limit they were given. So calling the step directly
+runs one batch, and the fixture a test builds is usually small enough that it looks complete. This
+loops until the step reports it has finished.
+
+The step is named rather than passed because the name is checked against the runner's own
+`getSteps()`, which fires that runner's event - so a step a listener added is selectable, and a
+typo or a step XenForo has renamed is refused with the list of steps the runner does run. It also
+refuses a runner that does not use `XF\MultiPartRunnerTrait`, a step that asks to resume from the
+position it was just given, and a step still going after `maxCalls`.
+
+Steps are `protected`, so this reaches them by reflection. Nothing is rolled back, exactly as with
+`runJobToCompletion()`, so use `UsesDatabaseTransactions` for a step that writes.
 
 ### expectPhrase
 Allow us to easily mock the phrase/language system to avoid database lookups and rendering phrases. This is especially

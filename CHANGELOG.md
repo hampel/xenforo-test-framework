@@ -1,7 +1,11 @@
 # Changelog
 
-## 5.20.1 (unreleased)
+## 5.21.0 (unreleased)
 
+* `runRunnerStep()` runs one step of a XenForo multi-part runner - a clean-up, merge or
+  content-change service - to completion, for testing an add-on that contributes work to a step
+  without running every other step as well. A step's return value is a resume offset rather than a
+  result, so it loops until the step reports it has finished
 * the `UsesDatabaseTransactions` check for a transaction that did not survive stays quiet when the
   test has already failed, so a query that failed because the server rolled the transaction back is
   not reported as something having committed it
