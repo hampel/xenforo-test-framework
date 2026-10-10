@@ -184,6 +184,22 @@ test set itself with `\XF::setVisitor()`.
 
 Users are built in memory and are never written to the database.
 
+**So an id the code under test stores against the visitor resolves to whatever real account holds
+that id when a relation loads it back.** `actingAsMember()` defaults to `user_id` 1, which on most
+forums is the owner: a service recording `created_by_user_id = \XF::visitor()->user_id` and a
+template printing `$record.CreatedBy.username` renders the owner's name, not the built visitor's.
+Asserting on the column passes; asserting on the rendered name fails - or, on a forum whose user 1
+happens to match, passes for the wrong reason.
+
+Where the page has to read the account back, create one with `createUserAccount()` and act as that:
+
+```php
+$user = $this->createUserAccount('alice');
+$this->actingAs($user, ['forum' => ['view' => true]]);
+```
+
+That writes rows, so the test class needs `UsesDatabaseTransactions`.
+
 ##### Parameters:
 
 * `actingAs($user, $permissions = [])` - act as an existing `XF\Entity\User`
@@ -822,6 +838,26 @@ renders the exception as markup, which is recognised, and without it the render 
 **This renders the template, not the page** - no navigation, header or footer. `pageParam()` reads
 the values the template set for the page, such as its title.
 
+**Markup a template sets through `<xf:title>`, `<xf:h1>`, `<xf:description>` or `<xf:pageaction>` is
+not in the returned HTML**, and a template modification whose find sits inside one of those tags
+goes with it - core's `<!--[XF:actions_menu:bottom]-->` in `admin:user_edit` is inside
+`<xf:pageaction>`, so a link added there is absent from the string while the page shows it. Those
+tags compile to a write into the templater's page params rather than to output. Read them with
+`pageParam()` before the next render.
+
+The direction that fails loudly is the safe one: `assertSee()` reports a miss. The two to watch are
+`assertDontSee()`, which passes against a page that does show the value, and
+`assertNoUnresolvedPhrases($html, ...)`, which is handed the HTML and so cannot see a phrase that
+failed to resolve inside one of those tags. Both work on the page param itself:
+
+```php
+$html = $this->renderReply($reply);
+$action = $this->pageParam('pageAction');
+
+$this->assertSee($action, 'Convert to API user');
+$this->assertNoUnresolvedPhrases($action, 'myaddon_');
+```
+
 ### renderMacro
 Render one macro from a template, with the arguments a caller would pass it - for a macro your
 add-on adds, or where rendering the whole template would need parameters the test does not have.
@@ -947,6 +983,10 @@ $this->assertDontSee($html, 'myaddon_preference_label');
 **Pair every `assertDontSee()` with an `assertSee()`.** An absence assertion alone still passes if
 nothing rendered.
 
+A failure names the value searched for, the escaped form where escaping changed it, and the length
+rendered, without printing the markup. `assertDontSee()` also gives the offset of the first match
+and the text either side of it.
+
 ### assertNoUnresolvedPhrases
 Assert that no phrase in the rendered output came out as its own key - which is what XenForo renders
 for a phrase it cannot find.
@@ -1036,6 +1076,10 @@ The apply count is the one recorded when the template was last compiled.
 
 A modification inserting an `<xf:include>` does not put the included template's name in the output,
 so assert on the markup it produces instead.
+
+This assertion is also the one to reach for where the insertion lands somewhere the rendered HTML
+does not carry at all - inside `<xf:pageaction>`, `<xf:title>`, `<xf:h1>` or `<xf:description>`. See
+`renderTemplate()`, which has what those tags do and how to read them.
 
 ### assertSeeText / assertDontSeeText / textOf
 Assert on the text of rendered output, ignoring the markup. Tags are stripped and entities decoded

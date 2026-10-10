@@ -560,10 +560,13 @@ trait InteractsWithTemplates
 	 */
 	protected function assertSee($html, $value, $escape = true)
 	{
-		PHPUnit::assertStringContainsString(
-			$this->escapeExpected($value, $escape),
-			$html,
-			$this->describeHtml($html)
+		$expected = $this->escapeExpected($value, $escape);
+
+		// not assertStringContainsString(), which prints the whole haystack on failure - a page is
+		// tens of thousands of characters and the needle it did not find is the only useful part
+		PHPUnit::assertNotFalse(
+			strpos((string) $html, $expected),
+			$this->describeMissing($html, $expected, $value)
 		);
 	}
 
@@ -578,10 +581,12 @@ trait InteractsWithTemplates
 	 */
 	protected function assertDontSee($html, $value, $escape = true)
 	{
-		PHPUnit::assertStringNotContainsString(
-			$this->escapeExpected($value, $escape),
-			$html,
-			$this->describeHtml($html)
+		$expected = $this->escapeExpected($value, $escape);
+		$position = strpos((string) $html, $expected);
+
+		PHPUnit::assertFalse(
+			$position,
+			$this->describePresent($html, $expected, $value, $position)
 		);
 	}
 
@@ -599,10 +604,11 @@ trait InteractsWithTemplates
 	 */
 	protected function assertSeeText($html, $value)
 	{
-		PHPUnit::assertStringContainsString(
-			$value,
-			$this->textOf($html),
-			$this->describeHtml($html)
+		$text = $this->textOf($html);
+
+		PHPUnit::assertNotFalse(
+			strpos($text, (string) $value),
+			$this->describeMissing($text, (string) $value, null, 'text of the rendered output')
 		);
 	}
 
@@ -616,10 +622,12 @@ trait InteractsWithTemplates
 	 */
 	protected function assertDontSeeText($html, $value)
 	{
-		PHPUnit::assertStringNotContainsString(
-			$value,
-			$this->textOf($html),
-			$this->describeHtml($html)
+		$text = $this->textOf($html);
+		$position = strpos($text, (string) $value);
+
+		PHPUnit::assertFalse(
+			$position,
+			$this->describePresent($text, (string) $value, null, $position, 'text of the rendered output')
 		);
 	}
 
@@ -677,6 +685,94 @@ trait InteractsWithTemplates
 	private function escapeExpected($value, $escape)
 	{
 		return $escape ? htmlspecialchars((string) $value, ENT_QUOTES, 'utf-8') : (string) $value;
+	}
+
+	/**
+	 * Why a value was not found, without printing the haystack.
+	 *
+	 * PHPUnit's own string assertions print the whole subject on failure, which for a rendered page
+	 * is thousands of lines of escaped markup with the one useful fact - the needle it looked for -
+	 * at the end of it. So these helpers compose the failure instead, and the assertions use
+	 * assertTrue()/assertFalse().
+	 *
+	 * @param string $haystack
+	 * @param string $expected the value actually searched for, escaped where the caller asked
+	 * @param string|null $raw what the caller passed, where escaping may have changed it
+	 * @param string $subject what the haystack is, for the message
+	 *
+	 * @return string
+	 */
+	private function describeMissing($haystack, $expected, $raw = null, $subject = 'rendered output')
+	{
+		$message = "Failed asserting that the $subject contains '$expected'";
+
+		if ($raw !== null && (string) $raw !== $expected)
+		{
+			// the escaping default is itself a stumble, so say what was searched for and why
+			$message .= " - escaped from '$raw', which is what a template emits";
+		}
+
+		return $message . '. ' . $this->describeHtml($haystack);
+	}
+
+	/**
+	 * Why a value was found where it should not have been, with a window around the first match.
+	 *
+	 * Here the match itself is the useful part, so the message carries its surroundings rather than
+	 * the length alone.
+	 *
+	 * @param string $haystack
+	 * @param string $expected
+	 * @param string|null $raw
+	 * @param int|false $position
+	 * @param string $subject
+	 *
+	 * @return string
+	 */
+	private function describePresent(
+		$haystack,
+		$expected,
+		$raw = null,
+		$position = false,
+		$subject = 'rendered output'
+	)
+	{
+		$message = "Failed asserting that the $subject does not contain '$expected'";
+
+		if ($raw !== null && (string) $raw !== $expected)
+		{
+			$message .= " - escaped from '$raw'";
+		}
+
+		if ($position === false)
+		{
+			// the assertion passed, so this is never read; built anyway rather than returning null
+			return $message . '. ' . $this->describeHtml($haystack);
+		}
+
+		return $message . ", at offset $position, in: " . $this->windowAround($haystack, $position, strlen($expected))
+			. ' ' . $this->describeHtml($haystack);
+	}
+
+	/**
+	 * The text either side of a match, whitespace collapsed so it stays readable in a terminal.
+	 *
+	 * @param string $haystack
+	 * @param int $position
+	 * @param int $length
+	 *
+	 * @return string
+	 */
+	private function windowAround($haystack, $position, $length)
+	{
+		$context = 60;
+
+		$start = max(0, $position - $context);
+		$end = min(strlen($haystack), $position + $length + $context);
+
+		$window = preg_replace('/\s+/', ' ', substr($haystack, $start, $end - $start));
+
+		return ($start > 0 ? '...' : '') . trim((string) $window) . ($end < strlen($haystack) ? '...' : '');
 	}
 
 	/**

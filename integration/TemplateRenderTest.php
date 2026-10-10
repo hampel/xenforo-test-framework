@@ -372,6 +372,35 @@ class TemplateRenderTest extends TestCase
 		$this->assertNoUnresolvedPhrases('<p>A real label</p>', 'probeph_');
 	}
 
+	/**
+	 * The pair that matters about page params, in one test so neither half can drift from the other.
+	 *
+	 * <xf:pageaction> and friends compile to a write into the templater's page params rather than to
+	 * output, so a phrase that failed to resolve in one of them is not in the html - and an
+	 * assertion handed that html passes having checked nothing. That is the absent-thing shape, so
+	 * the positive half is asserted beside it.
+	 */
+	public function test_a_phrase_in_a_page_param_is_invisible_to_the_html_and_caught_in_the_param()
+	{
+		$this->makeTemplate(
+			'probe_pageaction',
+			'<xf:pageaction>probeph_never_defined</xf:pageaction><p>body markup</p>'
+		);
+
+		$html = $this->renderTemplate('public:probe_pageaction');
+		$action = (string) $this->pageParam('pageAction');
+
+		$this->assertSame('<p>body markup</p>', trim($html), 'the page action is not in the output');
+		$this->assertStringContainsString('probeph_never_defined', $action);
+
+		// passes against the html, because the key was never in the string it was given
+		$this->assertNoUnresolvedPhrases($html, 'probeph_');
+
+		// and catches it in the page param, which is where it went
+		$this->expectException(AssertionFailedError::class);
+		$this->assertNoUnresolvedPhrases($action, 'probeph_');
+	}
+
 	private function makeTemplate($title, $content)
 	{
 		$this->createEntity('XF:Template', [

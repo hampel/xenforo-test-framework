@@ -1,5 +1,20 @@
 # Changelog
 
+## 5.21.1 (unreleased)
+
+* a failed `assertSee()`, `assertDontSee()`, `assertSeeText()` or `assertDontSeeText()` no longer
+  prints the rendered markup. PHPUnit's own string assertions print the whole subject, so a miss
+  against a page was thousands of lines of escaped HTML with the value it looked for at the end.
+  The failure now names that value, the escaped form where escaping changed it, and the length
+  rendered; `assertDontSee()` adds the offset of the first match and the text either side of it
+* docs: markup a template sets through `<xf:pageaction>`, `<xf:title>`, `<xf:h1>` or
+  `<xf:description>` is not in the rendered HTML, a template modification inside one of those tags
+  included. `assertDontSee()` and `assertNoUnresolvedPhrases()` given the HTML therefore pass
+  without checking it - read the value with `pageParam()` and assert on that
+* docs: an id the code under test stores against the visitor resolves to whatever real account holds
+  that id when a relation loads it back, since `actingAsMember()` builds a user in memory with
+  `user_id` 1. Use `createUserAccount()` where the page reads the account back
+
 ## 5.21.0 (2026-10-10)
 
 * `runRunnerStep()` runs one step of a XenForo multi-part runner - a clean-up, merge or
