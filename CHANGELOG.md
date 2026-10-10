@@ -1,6 +1,6 @@
 # Changelog
 
-## 5.21.0 (unreleased)
+## 5.21.0 (2026-10-10)
 
 * `runRunnerStep()` runs one step of a XenForo multi-part runner - a clean-up, merge or
   content-change service - to completion, for testing an add-on that contributes work to a step
