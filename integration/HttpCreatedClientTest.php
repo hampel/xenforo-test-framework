@@ -72,6 +72,103 @@ class HttpCreatedClientTest extends TestCase
 		$this->assertSame('second', $response->getBody()->getContents());
 	}
 
+	/**
+	 * The case the test above cannot show, because it builds its client after both fakes.
+	 *
+	 * An add-on's sub-container builds its client once and keeps it, so the client making the
+	 * requests was built under the first fake. Each fake used to build its own handler stack, which
+	 * that client could not be holding - so the second fake installed a queue nothing read, and the
+	 * first one's drained queue answered 'Mock queue is empty' from inside the code under test.
+	 */
+	public function test_a_second_fake_reaches_a_client_built_before_it()
+	{
+		$this->fakesHttp([new Response(200, [], 'first')]);
+		$held = $this->createClient();
+
+		$this->assertSame('first', $held->get('/thing')->getBody()->getContents());
+
+		$this->fakesHttp([new Response(200, [], 'second')]);
+
+		$this->assertSame('second', $held->get('/thing')->getBody()->getContents());
+	}
+
+	/** The same thing for the shared client, where a test kept it rather than re-fetching it. */
+	public function test_a_second_fake_reaches_the_shared_client_held_in_a_variable()
+	{
+		$this->fakesHttp([new Response(200, [], 'first')]);
+		$shared = $this->app()->http()->client();
+
+		$this->assertSame(
+			'first',
+			$shared->get('https://api.example.invalid/thing')->getBody()->getContents()
+		);
+
+		$this->fakesHttp([new Response(200, [], 'second')]);
+
+		$this->assertSame(
+			'second',
+			$shared->get('https://api.example.invalid/thing')->getBody()->getContents()
+		);
+	}
+
+	/** And re-fetching it from the container, which worked before and must keep working. */
+	public function test_a_second_fake_reaches_the_shared_client_fetched_again()
+	{
+		$this->fakesHttp([new Response(200, [], 'first')]);
+		$this->app()->http()->client()->get('https://api.example.invalid/thing');
+
+		$this->fakesHttp([new Response(200, [], 'second')]);
+
+		$response = $this->app()->http()->client()->get('https://api.example.invalid/thing');
+
+		$this->assertSame('second', $response->getBody()->getContents());
+	}
+
+	public function test_changing_fake_kind_reaches_a_client_built_before_it()
+	{
+		$this->fakesHttp([new Response(200, [], 'from the queue')]);
+		$held = $this->createClient();
+
+		$this->assertSame('from the queue', $held->get('/thing')->getBody()->getContents());
+
+		// only the base handler is replaced, so the stack the client holds is still the one in use
+		$this->fakesHttpByUrl(['*' => new Response(200, [], 'by url')]);
+
+		$this->assertSame('by url', $held->get('/thing')->getBody()->getContents());
+	}
+
+	public function test_a_second_fake_by_url_replaces_the_map_for_a_client_built_before_it()
+	{
+		$this->fakesHttpByUrl(['*thing*' => new Response(200, [], 'first map')]);
+		$held = $this->createClient();
+
+		$this->assertSame('first map', $held->get('/thing')->getBody()->getContents());
+
+		$this->fakesHttpByUrl(['*thing*' => new Response(200, [], 'second map')]);
+
+		$this->assertSame('second map', $held->get('/thing')->getBody()->getContents());
+	}
+
+	/** The history is per test rather than per fake, which reusing the stack has to preserve. */
+	public function test_the_history_spans_every_fake_in_the_test()
+	{
+		$this->fakesHttp([new Response(200, [], 'first')]);
+		$held = $this->createClient();
+		$held->get('/one');
+
+		$this->fakesHttp([new Response(200, [], 'second')]);
+		$held->get('/two');
+
+		$this->assertHttpRequestSentTimes(2);
+		$this->assertSame(
+			['/one', '/two'],
+			array_map(function ($request)
+			{
+				return $request->getUri()->getPath();
+			}, $this->getHttpRequests())
+		);
+	}
+
 	public function test_faking_events_does_not_restore_the_live_client()
 	{
 		// fakesEvents() stops add-on listeners running, and the interception is a listener - so

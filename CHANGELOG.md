@@ -1,5 +1,18 @@
 # Changelog
 
+## 5.22.0 (unreleased)
+
+* a second `fakesHttp()` or `fakesHttpByUrl()` in the same test reaches the clients the first one
+  covered. Each fake built its own handler stack, and a Guzzle client holds the stack it was built
+  with - so a client an add-on's sub-container had already built, or the shared client a test kept
+  in a variable, went on using the first fake's queue. The second fake installed responses nothing
+  read, and the first queue, by then drained, answered `OutOfBoundsException: Mock queue is empty`
+  from inside the code under test. The stack for each client kind is now built once per test and
+  its handler replaced, which also means changing from `fakesHttp()` to `fakesHttpByUrl()` within a
+  test takes effect everywhere
+* docs: running the code under test twice in one test with the responses queued afresh, and the one
+  case that still cannot work - a fake installed after the client was built with no fake in place
+
 ## 5.21.1 (2026-10-11)
 
 * a failed `assertSee()`, `assertDontSee()`, `assertSeeText()` or `assertDontSeeText()` no longer

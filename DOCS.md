@@ -2042,6 +2042,24 @@ timeouts has to use. A client created while a fake is installed is built on the 
 the rest of its configuration kept; one created before the fake keeps the real handler, so install
 the fake first.
 
+**A second fake in the same test reaches clients already built on the first one**, including one an
+add-on's sub-container built and kept, so a test can run the code twice with a fresh queue each
+time:
+
+```php
+$this->fakesHttp([$account, $fields]);
+$this->runConsoleCommand(MyAddOnCommand::class);
+
+// the same command again, with the responses queued afresh
+$this->fakesHttp([$account, $fields]);
+$this->runConsoleCommand(MyAddOnCommand::class, ['--strict' => true]);
+```
+
+Changing fake kind within a test works the same way, so a `fakesHttpByUrl()` after a `fakesHttp()`
+takes over for every client. What still does not work is installing any fake *after* the client was
+built with no fake in place - that client holds the real handler, and nothing retrospectively
+replaces it.
+
 ##### Parameters:
 
 * `array responseStack` - an array of Psr7 Responses or Request Exceptions to return - one for each request made

@@ -5,6 +5,18 @@ Most releases need nothing beyond `composer update`. `CHANGELOG.md` lists everyt
 
 `tests/TestCase.php` is copied into your add-on, so a change to it has to be merged by hand.
 
+## 5.22.0
+
+Nothing to do, unless a test of yours installs a second `fakesHttp()` or `fakesHttpByUrl()` and the
+code under test holds a client built under the first one - an add-on's sub-container is the usual
+case. That second fake did nothing, so such a test was either failing with
+`OutOfBoundsException: Mock queue is empty` or passing against responses the first fake supplied. It
+now gets the responses it queued.
+
+Where a test worked around this by queueing every response in one call, that still works. Each
+`fakesHttp()` replaces the queue rather than adding to it, so remove the extra responses if you
+split the calls up again.
+
 ## 5.19.0
 
 If your development forum has the *Use full friendly URLs* option **on**, dispatches that were

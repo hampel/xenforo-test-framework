@@ -17,7 +17,16 @@ trait InteractsWithHttp
 {
 	private $history = [];
 
-	/** @var HandlerStack[] - the fake handler stacks installed in this test, by client kind */
+	/**
+	 * The fake handler stack for each client kind, built once per test.
+	 *
+	 * A Guzzle client holds its handler stack, so a second fake that built a new stack could not
+	 * reach a client built under the first one - an add-on's sub-container builds its client once
+	 * and keeps it, and so does a test holding the shared client in a variable. Keeping one stack
+	 * per kind and swapping its base handler reaches every client already using it.
+	 *
+	 * @var HandlerStack[]
+	 */
 	private $httpFakeStacks = [];
 
 	/** @var bool - whether the http_client_config listener has been added in this test */
@@ -33,9 +42,7 @@ trait InteractsWithHttp
 	 */
 	protected function fakesHttp(array $responseStack, $untrusted = false)
 	{
-		$handlerStack = HandlerStack::create(new MockHandler($responseStack));
-
-		return $this->installHttpFake($handlerStack, $untrusted);
+		return $this->installHttpFake(new MockHandler($responseStack), $untrusted);
 	}
 
 	/**
@@ -92,39 +99,72 @@ trait InteractsWithHttp
 			);
 		};
 
-		return $this->installHttpFake(HandlerStack::create($handler), $untrusted);
+		return $this->installHttpFake($handler, $untrusted);
 	}
 
 	/**
-	 * Install a faked Http client built around the given handler stack.
+	 * The container key for the client a fake is being installed for.
 	 *
-	 * @param HandlerStack $handlerStack
+	 * @param bool $untrusted
+	 *
+	 * @return string
+	 */
+	private function httpClientKey($untrusted)
+	{
+		return $untrusted ? 'clientUntrusted' : 'client';
+	}
+
+	/**
+	 * Install a faked Http client around the given base handler.
+	 *
+	 * The handler stack for a client kind is built once per test and reused. A second fake replaces
+	 * its base handler rather than building another stack, which is what lets it reach a client
+	 * built under the first one - including one an add-on's sub-container holds, and the shared
+	 * client where a test kept it in a variable. Changing fake kind within a test works the same
+	 * way, since only the base handler is replaced.
+	 *
+	 * @param callable $handler
 	 * @param bool $untrusted - set to true when using the untrusted client
 	 *
 	 * @return Client
 	 */
-	private function installHttpFake(HandlerStack $handlerStack, $untrusted)
+	private function installHttpFake(callable $handler, $untrusted)
 	{
-		$handlerStack->push(Middleware::history($this->history));
+		$key = $this->httpClientKey($untrusted);
 
-		// Guzzle's real handlers return the rewound sink as the body. Both fakes instead return a
-		// body they have already read to the end - to write it to the sink, which XF's reader
-		// always sets - so without this getContents() sees an empty string. That is how XF core
-		// reads a response; a (string) cast seeks to the start first, which is why it never showed.
-		$handlerStack->push(Middleware::mapResponse(function (ResponseInterface $response)
+		if (isset($this->httpFakeStacks[$key]))
 		{
-			$body = $response->getBody();
+			// the middleware below is already on this stack, so only the handler changes
+			$this->httpFakeStacks[$key]->setHandler($handler);
+		}
+		else
+		{
+			$handlerStack = HandlerStack::create($handler);
 
-			if ($body->isSeekable())
+			$handlerStack->push(Middleware::history($this->history));
+
+			// Guzzle's real handlers return the rewound sink as the body. Both fakes instead return
+			// a body they have already read to the end - to write it to the sink, which XF's reader
+			// always sets - so without this getContents() sees an empty string. That is how XF core
+			// reads a response; a (string) cast seeks to the start first, which is why it never
+			// showed.
+			$handlerStack->push(Middleware::mapResponse(function (ResponseInterface $response)
 			{
-				$body->rewind();
-			}
+				$body = $response->getBody();
 
-			return $response;
-		}), 'rewind_body');
+				if ($body->isSeekable())
+				{
+					$body->rewind();
+				}
 
+				return $response;
+			}), 'rewind_body');
+
+			$this->httpFakeStacks[$key] = $handlerStack;
+		}
+
+		$handlerStack = $this->httpFakeStacks[$key];
 		$http = $this->app()->http();
-		$key = $untrusted ? 'clientUntrusted' : 'client';
 
 		$this->swap([$http, $key], function ($c) use ($http, $handlerStack)
 		{
@@ -138,7 +178,6 @@ trait InteractsWithHttp
 		$container->decache('reader');
 		$container->decache('metadataFetcher');
 
-		$this->httpFakeStacks[$key] = $handlerStack;
 		$this->interceptCreatedHttpClients();
 
 		return $container[$key];
