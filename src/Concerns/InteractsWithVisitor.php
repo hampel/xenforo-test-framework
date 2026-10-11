@@ -135,24 +135,6 @@ trait InteractsWithVisitor
 	}
 
 	/**
-	 * Build a User entity in memory. XenForo's guest user is the only user it will construct
-	 * without a database row, so members are built from it with the columns overridden.
-	 *
-	 * Each built user gets its own permission combination id, so that permissions granted to one
-	 * do not apply to another, and so that a user nothing has been granted for has no permissions
-	 * rather than the forum's real guest permissions. Pass permission_combination_id in $values to
-	 * opt out - `['permission_combination_id' => 1]` reads whatever the forum grants guests.
-	 *
-	 * Note XenForo ignores the id for any user whose user_state is not 'valid': User::
-	 * getPermissionCombinationId() returns the guest combination for those, so a user built as
-	 * 'moderated' shares permissions with guests exactly as it would in production.
-	 *
-	 * @param array $values
-	 * @param string|null $username
-	 *
-	 * @return User
-	 */
-	/**
 	 * Grant admin permissions to a built user, by giving it the administrator record that
 	 * buildVisitor() deliberately withholds.
 	 *
@@ -227,6 +209,24 @@ trait InteractsWithVisitor
 		return $admin;
 	}
 
+	/**
+	 * Build a User entity in memory. XenForo's guest user is the only user it will construct
+	 * without a database row, so members are built from it with the columns overridden.
+	 *
+	 * Each built user gets its own permission combination id, so that permissions granted to one
+	 * do not apply to another, and so that a user nothing has been granted for has no permissions
+	 * rather than the forum's real guest permissions. Pass permission_combination_id in $values to
+	 * opt out - `['permission_combination_id' => 1]` reads whatever the forum grants guests.
+	 *
+	 * Note XenForo ignores the id for any user whose user_state is not 'valid': User::
+	 * getPermissionCombinationId() returns the guest combination for those, so a user built as
+	 * 'moderated' shares permissions with guests exactly as it would in production.
+	 *
+	 * @param array $values
+	 * @param string|null $username
+	 *
+	 * @return User
+	 */
 	protected function buildVisitor(array $values = [], $username = null)
 	{
 		$values += [

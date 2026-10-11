@@ -1,5 +1,12 @@
 # Changelog
 
+## 5.23.0 (unreleased)
+
+* `assertExceptionLogged()`'s `$callback` is documented as accepting a string, which it has since
+  5.17.0. The parameter carried two docblocks, the older of which said otherwise
+* `buildDispatchRequest()`, `routeTypeConfig()`, `installGlobalTemplateData()` and `buildVisitor()`
+  carry their own documentation again, having each been left describing the method below them
+
 ## 5.22.0 (2026-10-11)
 
 * a second `fakesHttp()` or `fakesHttpByUrl()` in the same test reaches the clients the first one

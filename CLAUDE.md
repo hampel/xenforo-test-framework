@@ -288,3 +288,13 @@ composer format:check    # report, changing nothing
 
 That means tabs, Allman braces, and `<?php` on its own line with `namespace` below it. Do not
 hand-tune formatting or add rule overrides.
+
+**Neither check sees a docblock that has come adrift from its method.** Inserting a new docblock
+above an existing one rather than replacing it leaves two stacked on the same method, and inserting
+one at the wrong offset leaves the old one describing the method below it while its own is bare.
+`format:check` reports placement not at all, and PHPStan has never flagged one. A closing `*/`
+with an opening `/**` on the next line is the signature of both:
+
+```bash
+grep -n -A1 '^[[:space:]]*\*/$' src/Concerns/*.php | grep -B1 '/\*\*'
+```

@@ -353,21 +353,6 @@ trait InteractsWithRoutes
 	}
 
 	/**
-	 * A request a controller will accept. XenForo's own request is built from the superglobals,
-	 * which under PHPUnit describe no request at all.
-	 *
-	 * Server values the caller passes are merged over the defaults here, at construction, because
-	 * Request caches what it derives from them - the IP address and the robot name - on first read.
-	 * REQUEST_METHOD always comes from $method.
-	 *
-	 * @param string $routePath
-	 * @param array $input
-	 * @param string $method
-	 * @param array $server
-	 *
-	 * @return Request
-	 */
-	/**
 	 * Refuse a controller named by an add-on's extension of it.
 	 *
 	 * An extension inherits from the XFCP proxy XenForo declares while it resolves the class being
@@ -504,6 +489,24 @@ trait InteractsWithRoutes
 		return $this->uploadedFile(file_get_contents($path), $name ?: basename($path), $type);
 	}
 
+	/**
+	 * A request a controller will accept. XenForo's own request is built from the superglobals,
+	 * which under PHPUnit describe no request at all.
+	 *
+	 * Server values the caller passes are merged over the defaults here, at construction, because
+	 * Request caches what it derives from them - the IP address and the robot name - on first read.
+	 * REQUEST_METHOD always comes from $method.
+	 *
+	 * @param string $routePath
+	 * @param array $input
+	 * @param string $method
+	 * @param array $server
+	 * @param array $files
+	 * @param bool $withCsrfToken
+	 * @param string $type
+	 *
+	 * @return Request
+	 */
 	private function buildDispatchRequest($routePath, array $input = [], $method = 'GET', array $server = [], array $files = [], $withCsrfToken = true, $type = 'public')
 	{
 		$method = strtoupper($method);
@@ -591,11 +594,6 @@ trait InteractsWithRoutes
 	}
 
 	/**
-	 * @param string $type
-	 *
-	 * @return array - [app class type, router container key]
-	 */
-	/**
 	 * Put an application of the given type in place, as a real request would have.
 	 *
 	 * dispatch() calls this, so a test usually does not. Call it directly before renderTemplate()
@@ -657,6 +655,11 @@ trait InteractsWithRoutes
 		return \XF::app();
 	}
 
+	/**
+	 * @param string $type
+	 *
+	 * @return array - [app class type, router container key]
+	 */
 	private function routeTypeConfig($type)
 	{
 		if (!isset(self::ROUTE_TYPES[$type]))

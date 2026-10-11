@@ -61,20 +61,15 @@ trait InteractsWithErrors
 	}
 
 	/**
-	 * Assert if exception was logged based on a truth-test callback.
+	 * Assert that an exception of the given class was logged.
 	 *
-	 * @param string $class
-	 * @param  callable|int|null  $callback
-	 * @return void
-	 *
-	 * @throws \Exception
-	 */
-	/**
 	 * @param string $class - the exception class
 	 * @param int|string|callable|null $callback - a count, a string the logged message must contain,
 	 *                                            or a callback given the logged entry
 	 *
 	 * @return void
+	 *
+	 * @throws \Exception
 	 */
 	protected function assertExceptionLogged($class, $callback = null)
 	{

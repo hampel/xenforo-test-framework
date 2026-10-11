@@ -145,16 +145,6 @@ trait InteractsWithTemplates
 	}
 
 	/**
-	 * Install the `xf` template parameter - $xf.options, $xf.visitor, $xf.time and the rest - as
-	 * XenForo's App::preRender() does, from getGlobalTemplateData(). Rebuilt for every render, so
-	 * $xf.visitor follows actingAs(). An `xf` parameter the test installed itself is left alone.
-	 *
-	 * @param Templater $templater
-	 * @param AbstractReply|null $reply
-	 *
-	 * @return void
-	 */
-	/**
 	 * Render a reply through the JSON renderer and return the decoded document.
 	 *
 	 * For an endpoint whose view shapes its own response in renderJson(). renderRawReply() cannot
@@ -311,6 +301,16 @@ trait InteractsWithTemplates
 		);
 	}
 
+	/**
+	 * Install the `xf` template parameter - $xf.options, $xf.visitor, $xf.time and the rest - as
+	 * XenForo's App::preRender() does, from getGlobalTemplateData(). Rebuilt for every render, so
+	 * $xf.visitor follows actingAs(). An `xf` parameter the test installed itself is left alone.
+	 *
+	 * @param Templater $templater
+	 * @param AbstractReply|null $reply
+	 *
+	 * @return void
+	 */
 	private function installGlobalTemplateData(Templater $templater, ?AbstractReply $reply)
 	{
 		$defaultParams = new \ReflectionProperty(Templater::class, 'defaultParams');
