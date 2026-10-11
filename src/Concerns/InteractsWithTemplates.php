@@ -280,11 +280,12 @@ trait InteractsWithTemplates
 	 * @param string $html
 	 * @param string|string[] $prefix - your add-on's phrase prefix, eg `myaddon_`, or several of
 	 *                                 them where an older one survives a renaming
-	 * @param string $message
+	 * @param string|null $message - prefixed to the failure, which goes on naming the keys and the
+	 *                                surface each came from
 	 *
 	 * @return void
 	 */
-	protected function assertNoUnresolvedPhrases($html, $prefix, $message = '')
+	protected function assertNoUnresolvedPhrases($html, $prefix, $message = null)
 	{
 		$stripped = preg_replace('/\sdata-(template|inner-template)-name="[^"]*"/i', '', $html);
 		$surfaces = ['the rendered output' => $stripped] + $this->renderedPageParams();
@@ -310,7 +311,11 @@ trait InteractsWithTemplates
 		PHPUnit::assertSame(
 			[],
 			$keys,
-			$message ?: 'these phrases did not resolve and rendered as their own keys: ' . implode(', ', $keys)
+			$this->failureMessage(
+				$message,
+				'these phrases did not resolve and rendered as their own keys: ' . implode(', ', $keys),
+				'assertNoUnresolvedPhrases()'
+			)
 		);
 	}
 
@@ -435,10 +440,11 @@ trait InteractsWithTemplates
 	 *
 	 * @param string|string[]|null $templateFilter - matched against the template name; null asserts
 	 *                                               on every error the render raised
+	 * @param string|null $message - prefixed to the failure
 	 *
 	 * @return void
 	 */
-	protected function assertNoTemplateErrors($templateFilter = null)
+	protected function assertNoTemplateErrors($templateFilter = null, $message = null)
 	{
 		$errors = $this->app()->templater()->getTemplateErrors();
 
@@ -465,7 +471,11 @@ trait InteractsWithTemplates
 		PHPUnit::assertSame(
 			[],
 			array_values(array_map([$this, 'describeTemplateError'], $errors)),
-			'XenForo logs a template error and carries on rendering, so these did not fail the render'
+			$this->failureMessage(
+				$message,
+				'XenForo logs a template error and carries on rendering, so these did not fail the render',
+				'assertNoTemplateErrors()'
+			)
 		);
 	}
 
@@ -548,10 +558,11 @@ trait InteractsWithTemplates
 	 * its apply count instead.
 	 *
 	 * @param string $modificationKey - as in `_output/template_modifications/`
+	 * @param string|null $message - prefixed to the failure
 	 *
 	 * @return void
 	 */
-	protected function assertTemplateModificationApplied($modificationKey)
+	protected function assertTemplateModificationApplied($modificationKey, $message = null)
 	{
 		$db = $this->app()->db();
 
@@ -564,11 +575,13 @@ trait InteractsWithTemplates
 
 		if (!$modification)
 		{
-			PHPUnit::fail(
+			PHPUnit::fail($this->failureMessage(
+				$message,
 				"No template modification with the key '$modificationKey' exists in this forum."
 				. ' These assertions read what the forum has, so the add-on has to be installed'
-				. ' and its data imported - an edit to _output/ alone is invisible here.'
-			);
+				. ' and its data imported - an edit to _output/ alone is invisible here.',
+				'assertTemplateModificationApplied()'
+			));
 		}
 
 		$applied = (int) $db->fetchOne(
@@ -579,11 +592,15 @@ trait InteractsWithTemplates
 		PHPUnit::assertGreaterThan(
 			0,
 			$applied,
-			"Template modification '$modificationKey' on {$modification['type']}:"
-			. "{$modification['template']} applied 0 times"
-			. ($modification['enabled'] ? '' : ' (and it is disabled)')
-			. " - its find no longer matches. XenForo logs that as status 'ok', so only the apply"
-			. ' count shows it.'
+			$this->failureMessage(
+				$message,
+				"Template modification '$modificationKey' on {$modification['type']}:"
+				. "{$modification['template']} applied 0 times"
+				. ($modification['enabled'] ? '' : ' (and it is disabled)')
+				. " - its find no longer matches. XenForo logs that as status 'ok', so only the apply"
+				. ' count shows it.',
+				'assertTemplateModificationApplied()'
+			)
 		);
 	}
 
@@ -594,12 +611,15 @@ trait InteractsWithTemplates
 	 * @param string $value
 	 * @param bool $escape - escape the expected value the way a template would, which is what
 	 *                       makes an apostrophe or an ampersand match
+	 * @param string|null $message - prefixed to the failure, which goes on naming the value and the
+	 *                               size of the render
 	 *
 	 * @return void
 	 */
-	protected function assertSee($html, $value, $escape = true)
+	protected function assertSee($html, $value, $escape = true, $message = null)
 	{
 		$this->requireSearchValue($value, 'assertSee()');
+		$this->requireEscapeFlag($escape, 'assertSee()');
 
 		$expected = $this->escapeExpected($value, $escape);
 
@@ -607,7 +627,7 @@ trait InteractsWithTemplates
 		// tens of thousands of characters and the needle it did not find is the only useful part
 		PHPUnit::assertNotFalse(
 			strpos((string) $html, $expected),
-			$this->describeMissing($html, $expected, $value)
+			$this->failureMessage($message, $this->describeMissing($html, $expected, $value), 'assertSee()')
 		);
 	}
 
@@ -617,19 +637,25 @@ trait InteractsWithTemplates
 	 * @param string $html
 	 * @param string $value
 	 * @param bool $escape
+	 * @param string|null $message - prefixed to the failure
 	 *
 	 * @return void
 	 */
-	protected function assertDontSee($html, $value, $escape = true)
+	protected function assertDontSee($html, $value, $escape = true, $message = null)
 	{
 		$this->requireSearchValue($value, 'assertDontSee()');
+		$this->requireEscapeFlag($escape, 'assertDontSee()');
 
 		$expected = $this->escapeExpected($value, $escape);
 		$position = strpos((string) $html, $expected);
 
 		PHPUnit::assertFalse(
 			$position,
-			$this->describePresent($html, $expected, $value, $position)
+			$this->failureMessage(
+				$message,
+				$this->describePresent($html, $expected, $value, $position),
+				'assertDontSee()'
+			)
 		);
 	}
 
@@ -642,10 +668,13 @@ trait InteractsWithTemplates
 	 *
 	 * @param string $html
 	 * @param string $value
+	 * @param string|null $message - prefixed to the failure. There is no escaping flag here: the
+	 *                               markup is stripped before the search, so there is nothing to
+	 *                               escape the value against
 	 *
 	 * @return void
 	 */
-	protected function assertSeeText($html, $value)
+	protected function assertSeeText($html, $value, $message = null)
 	{
 		$this->requireSearchValue($value, 'assertSeeText()');
 
@@ -653,7 +682,11 @@ trait InteractsWithTemplates
 
 		PHPUnit::assertNotFalse(
 			strpos($text, (string) $value),
-			$this->describeMissing($text, (string) $value, null, 'text of the rendered output')
+			$this->failureMessage(
+				$message,
+				$this->describeMissing($text, (string) $value, null, 'text of the rendered output'),
+				'assertSeeText()'
+			)
 		);
 	}
 
@@ -662,10 +695,11 @@ trait InteractsWithTemplates
 	 *
 	 * @param string $html
 	 * @param string $value
+	 * @param string|null $message - prefixed to the failure
 	 *
 	 * @return void
 	 */
-	protected function assertDontSeeText($html, $value)
+	protected function assertDontSeeText($html, $value, $message = null)
 	{
 		$this->requireSearchValue($value, 'assertDontSeeText()');
 
@@ -674,7 +708,11 @@ trait InteractsWithTemplates
 
 		PHPUnit::assertFalse(
 			$position,
-			$this->describePresent($text, (string) $value, null, $position, 'text of the rendered output')
+			$this->failureMessage(
+				$message,
+				$this->describePresent($text, (string) $value, null, $position, 'text of the rendered output'),
+				'assertDontSeeText()'
+			)
 		);
 	}
 
@@ -684,11 +722,15 @@ trait InteractsWithTemplates
 	 * @param string $html
 	 * @param array $values
 	 * @param bool $escape
+	 * @param string|null $message - prefixed to the failure, which goes on naming the value that
+	 *                               was out of order
 	 *
 	 * @return void
 	 */
-	protected function assertSeeInOrder($html, array $values, $escape = true)
+	protected function assertSeeInOrder($html, array $values, $escape = true, $message = null)
 	{
+		$this->requireEscapeFlag($escape, 'assertSeeInOrder()');
+
 		if ($values === [])
 		{
 			throw new \LogicException(
@@ -708,8 +750,12 @@ trait InteractsWithTemplates
 
 			PHPUnit::assertNotFalse(
 				$position,
-				"Failed asserting that '$expected' appears after the values before it. "
-				. $this->describeHtml($html)
+				$this->failureMessage(
+					$message,
+					"Failed asserting that '$expected' appears after the values before it. "
+					. $this->describeHtml($html),
+					'assertSeeInOrder()'
+				)
 			);
 
 			$offset = $position + strlen($expected);
@@ -756,6 +802,62 @@ trait InteractsWithTemplates
 			. ' and its negative counterpart cannot pass. Assert on the text you expect, or on the'
 			. ' length of the render.'
 		);
+	}
+
+	/**
+	 * Refuse anything but a bool where the escaping flag goes.
+	 *
+	 * The trailing argument of these assertions is a failure message, and of the three that escape
+	 * it is the fourth rather than the third - so a message written in the third position lands on
+	 * this flag, where a non-empty string is simply truthy and the default. Nothing would change and
+	 * the message would be gone, which is the silence this parameter was added to end.
+	 *
+	 * @param mixed $escape - a bool by contract, anything at all in practice
+	 * @param string $helper - the assertion that was called, for the message
+	 *
+	 * @return void
+	 */
+	private function requireEscapeFlag($escape, $helper)
+	{
+		if (is_bool($escape))
+		{
+			return;
+		}
+
+		throw new \LogicException(
+			"The third argument of $helper is the escaping flag, which is a bool - a failure message"
+			. ' goes after it. Passed a string this parameter is merely truthy, so the assertion would'
+			. ' behave exactly as it does by default and the message would say nothing to anybody.'
+		);
+	}
+
+	/**
+	 * A failure message carrying what the caller said and what the assertion found.
+	 *
+	 * The caller's message is prefixed rather than substituted. What these assertions compose is the
+	 * value searched for, the size of the render and a window around an unwanted match - a reader
+	 * needs that as well as the diagnosis, and an assertion that threw one away in favour of the
+	 * other would make supplying a message cost something.
+	 *
+	 * @param mixed $message - a string or null by contract, anything at all in practice
+	 * @param string $description - what the assertion itself has to say
+	 * @param string $helper - the assertion that was called, for the message
+	 *
+	 * @return string
+	 */
+	private function failureMessage($message, $description, $helper)
+	{
+		if ($message !== null && !is_string($message))
+		{
+			// the text assertions take no escaping flag, so a false meant for one lands here
+			throw new \LogicException(
+				"The last argument of $helper is a failure message, not a flag or an expected value."
+				. ' assertSeeText() and assertDontSeeText() strip the markup before searching, so there'
+				. ' is nothing for an escaping flag to do and they do not take one.'
+			);
+		}
+
+		return $message === null || $message === '' ? $description : "$message - $description";
 	}
 
 	/**

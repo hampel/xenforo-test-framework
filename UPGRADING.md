@@ -7,8 +7,8 @@ Most releases need nothing beyond `composer update`. `CHANGELOG.md` lists everyt
 
 ## 5.23.0
 
-Three refusals, each of which can only turn red a test that was already not checking what it
-looked like it checked.
+Five refusals, each of which can only turn red a test that was already not checking what it looked
+like it checked.
 
 **A `REQUEST_METHOD` value in `$server` now throws.** It never had any effect - the method comes
 from the `$method` argument - so a test passing one was sending a different method from the one it
@@ -30,6 +30,26 @@ failure names the parameter it came from, since searching the HTML for that key 
 anything and `assertDontSee($html, '')` used to fail against anything, so a test reaching this was
 asserting nothing either way. The usual cause is a value built from something that came back empty
 itself, which is the thing worth looking at.
+
+**Every assertion in `InteractsWithTemplates` now takes a failure message last**, which the five
+output assertions did not take at all - so a third argument passed to `assertSeeText()` or
+`assertDontSeeText()` was discarded in silence, and one passed to `assertSee()` became its
+`$escape` flag, where a non-empty string is merely truthy and therefore the default. Both are now
+refused rather than accepted:
+
+* a string where `assertSee()`, `assertDontSee()` or `assertSeeInOrder()` take `$escape`;
+* a bool where `assertSeeText()` or `assertDontSeeText()` take their message. Those two strip the
+  markup before searching, so there is nothing for an escaping flag to do and they do not have one.
+
+A test doing either was passing, and goes from passing to a `LogicException` naming the helper and
+which argument is which. **A grep will not find these for you** - an expected value containing a
+comma looks exactly like a third argument, and on the suites checked here every hit of that search
+was one. Run the suite: both refusals name the assertion and the argument.
+
+A message is prefixed to what the assertion found rather than replacing it, so nothing that a
+failure used to say is lost by supplying one. `assertNoUnresolvedPhrases()` already took a message
+and used to substitute it for the list of unresolved keys; it now prefixes it like the rest, so a
+test of yours that supplies one will start seeing the keys as well.
 
 ## 5.22.0
 

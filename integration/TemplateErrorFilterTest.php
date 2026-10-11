@@ -71,4 +71,24 @@ class TemplateErrorFilterTest extends TestCase
 
 		$this->assertNoTemplateErrors(['someoneelse_', 'myaddon_']);
 	}
+
+	public function test_a_supplied_message_is_carried_without_hiding_the_errors()
+	{
+		$this->renderATemplateThatErrors();
+
+		try
+		{
+			$this->assertNoTemplateErrors('myaddon_', 'zzthe render is missing its wrapper');
+			$this->fail('the recorded template error should have failed the assertion');
+		}
+		catch (ExpectationFailedException $e)
+		{
+			$this->assertStringContainsString('zzthe render is missing its wrapper', $e->getMessage());
+
+			// prefixed, not substituted: what the assertion itself says survives beside it. The
+			// errors are the asserted value rather than part of the message, so they reach the
+			// reader through PHPUnit's comparison either way
+			$this->assertStringContainsString('carries on rendering', $e->getMessage());
+		}
+	}
 }

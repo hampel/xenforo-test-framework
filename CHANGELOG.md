@@ -18,6 +18,24 @@
   negative one could not pass
 * `assertExceptionLogged()`'s `$callback` is documented as accepting a string, which it has since
   5.17.0. The parameter carried two docblocks, the older of which said otherwise
+* every assertion in `InteractsWithTemplates` takes an optional failure message last, prefixed to
+  what the assertion found rather than replacing it - `assertSee()`, `assertDontSee()`,
+  `assertSeeText()`, `assertDontSeeText()`, `assertSeeInOrder()`, `assertNoUnresolvedPhrases()`,
+  `assertNoTemplateErrors()` and `assertTemplateModificationApplied()`. The five output assertions
+  took no message at all, and a third argument passed to `assertSeeText()` or `assertDontSeeText()`
+  was discarded without a word
+* a failure message written where `assertSee()`, `assertDontSee()` or `assertSeeInOrder()` take
+  their `$escape` flag is refused, and a bool written where `assertSeeText()` or
+  `assertDontSeeText()` take their message is refused. A non-empty string is merely truthy, so a
+  message in the flag's place left the assertion behaving exactly as it does by default with the
+  message gone
+* a failure message given to `assertNoUnresolvedPhrases()` no longer replaces the list of
+  unresolved keys, which is what says which phrases failed and on which surface
+* docs: saving an `XF:User` row rewrites the user's rows in `xf_user_group_relation`, and the
+  delete that precedes the insert locks the index gap above the last row for the rest of the
+  transaction. Two tests creating users concurrently deadlock there on different user ids.
+  `createEntity('XF:User')` reaches it as well as `createUserAccount()`, and `fakesRegistry()` does
+  not cover it
 * `buildDispatchRequest()`, `routeTypeConfig()`, `installGlobalTemplateData()` and `buildVisitor()`
   carry their own documentation again, having each been left describing the method below them
 * docs: call `fakesRegistry()` from the `setUp()` of any class that creates or deletes content

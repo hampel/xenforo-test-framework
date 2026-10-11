@@ -957,6 +957,8 @@ The filter matches the template *name*. Each error XenForo records is an array -
 `error`, `file`, `line` - so a filter of your own has to pick a field, and matching the message as
 well as the name would also match an add-on's name appearing in somebody else's error text.
 
+A failure message of your own goes after the filter, and is prefixed to the failure.
+
 ### assertSee / assertDontSee / assertSeeInOrder
 Assert on rendered output.
 
@@ -965,6 +967,7 @@ Assert on rendered output.
 * `html` - as returned by `renderTemplate()` or `renderReply()`
 * `value`, or `values` for `assertSeeInOrder`
 * `escape` - optional, default `true`
+* `message` - optional
 
 ##### Example:
 
@@ -993,6 +996,32 @@ nothing rendered.
 A failure names the value searched for, the escaped form where escaping changed it, and the length
 rendered, without printing the markup. `assertDontSee()` also gives the offset of the first match
 and the text either side of it.
+
+**Every rendering assertion takes an optional failure message last, and it is prefixed to what
+the assertion found rather than replacing it** - so a reader gets the diagnosis and the value
+and the size of the render together:
+
+```php
+$this->assertSee($html, 'Email me a digest', true, 'the preference block did not render');
+$this->assertSeeText($html, "Bob's thread", "the thread list rendered without its titles");
+```
+
+**Which position it takes depends on whether that assertion has an `escape` flag**, so the two are
+refused in each other's place rather than silently accepted:
+
+| assertion | the message is |
+|---|---|
+| `assertSee`, `assertDontSee`, `assertSeeInOrder` | the fourth argument, after `escape` |
+| `assertSeeText`, `assertDontSeeText` | the third, since they take no `escape` |
+| `assertNoUnresolvedPhrases` | the third, after `prefix` |
+| `assertNoTemplateErrors` | the second, after the template filter |
+| `assertTemplateModificationApplied` | the second |
+
+A string where `escape` goes is refused, because a non-empty string is merely truthy and would be
+the default - the assertion would behave exactly as it does without it and the message would be
+gone. A bool where the message goes is refused for the same reason in reverse: the text assertions
+strip the markup before searching, so there is nothing for an escaping flag to do and they do not
+take one.
 
 **An empty value is refused**, by all of these and by `assertSeeText()` and `assertDontSeeText()`.
 An empty string is found at position 0 of anything, so `assertSee($html, '')` cannot fail and
@@ -1041,7 +1070,9 @@ convention - renaming a phrase loses any customisation of it, so the old names a
 $this->assertNoUnresolvedPhrases($html, ['myaddon_', 'my_add_on_']);
 ```
 
-Every unresolved key found is reported, rather than the first prefix that matches failing alone.
+Every unresolved key found is reported, rather than the first prefix that matches failing alone. A
+failure message of your own is prefixed to that list rather than replacing it, so the keys and the
+surface each came from survive beside it.
 
 **To prove the assertion can fail, reference a phrase that does not exist from the template**, not
 from the phrase table. A phrase the language has already resolved in this test is cached, so changing
@@ -1084,6 +1115,7 @@ has no distinctive markup to search for.
 ##### Parameters:
 
 * `modificationKey` - as in `_output/template_modifications/`
+* `message` - optional
 
 ##### Example:
 
@@ -1110,6 +1142,7 @@ first, so text split across a tag boundary still matches.
 
 * `html`
 * `value`
+* `message` - optional
 
 ##### Example:
 
@@ -1119,6 +1152,10 @@ $this->assertSeeText($html, "Bob's thread");
 ```
 
 `textOf($html)` returns that text, for asserting on it yourself.
+
+These take no `escape` flag, because the markup is stripped and the entities decoded before the
+search - so there is nothing to escape the value against, and the third argument is the failure
+message. See `assertSee()` for what a message does and where each assertion takes one.
 
 ### swap
 Register an instance of an object in the container.
@@ -1443,12 +1480,11 @@ instead gets a deadlock, which the server resolves by rolling your transaction b
 `callAction()` and `runJobToCompletion()` leave XenForo's own `autoJobRun` registry row alone for
 that reason.
 
-**The data registry is the surface to watch, more than any content table.** `DataRegistry::set()`
-is a read-modify-write of a single row keyed by name, so any two writers of that key contend - and
-the registry is where XenForo caches counters that core rebuilds as a side effect of something
-else. A user deletion rebuilds the approval queue's unapproved counts; a thread move rebuilds forum
-totals. Whatever your test is about, read what the service or job you invoke does *after* the part
-you care about.
+**The data registry is the first surface to watch.** `DataRegistry::set()` is a read-modify-write
+of a single row keyed by name, so any two writers of that key contend - and the registry is where
+XenForo caches counters that core rebuilds as a side effect of something else. A user deletion
+rebuilds the approval queue's unapproved counts; a thread move rebuilds forum totals. Whatever your
+test is about, read what the service or job you invoke does *after* the part you care about.
 
 **Call `fakesRegistry()` from the `setUp()` of any class that creates or deletes content under this
 trait.** It keeps those writes out of the database entirely, so there is no row to contend for, and
@@ -1467,6 +1503,25 @@ The fake pre-loads the real registry, so reads still answer with the forum's own
 that does not care about the registry is unaffected. The one thing it changes is a test asserting
 that a registry row reached the database; assert on the value the code read instead, or leave the
 call off that class.
+
+**Creating a user is the other surface, and the registry fake does not cover it.** Saving an
+`XF:User` row rewrites that user's group memberships: XenForo deletes the user's rows from
+`xf_user_group_relation` and re-inserts them, inside your transaction. A new user's id is higher
+than every id already in that table, so the delete matches nothing and locks the index gap above
+the last row until the transaction ends. Two tests creating users at the same time take that same
+gap, and each one's insert then waits on the other's lock - a deadlock, which the server resolves
+by rolling one of the transactions back. **Different user ids are enough**: nothing is shared but
+the gap in the index.
+
+This reaches `createEntity('XF:User')` as well as `createUserAccount()`, because XenForo rebuilds
+the relations whenever a user's groups are set, which an insert always does. It is index locking
+rather than two writers of one row, so `fakesRegistry()` has nothing to fake here and a server
+without snapshot isolation behaves the same way.
+
+**So a suite that creates users is reliable against a forum nothing else is writing to, and
+intermittent against a shared development install.** Where a test needs a visitor rather than a
+row, `actingAsMember()` builds one in memory and writes nothing at all. Where it needs the row -
+anything rendering a member through XenForo's own pages - the remedy is a forum of its own.
 
 Where you need the real path, run the one step your add-on's behaviour hangs on rather than the
 whole service - `runRunnerStep()` does that, and the event still fires from the real constructor.
