@@ -113,7 +113,8 @@ trait InteractsWithRoutes
 	 * @param string $type - 'public', 'admin' or 'api'
 	 * @param array $input - GET parameters the route reads, as $_GET would carry them
 	 * @param array $server - request server values, as $_SERVER would carry them - eg REMOTE_ADDR,
-	 *                        HTTP_USER_AGENT, HTTP_REFERER - merged over the defaults
+	 *                        HTTP_USER_AGENT, HTTP_REFERER - merged over the defaults. Not
+	 *                        REQUEST_METHOD, which comes from $method and is refused here
 	 * @param string $method - the request method. A non-GET is sent with a CSRF token the request
 	 *                         carries a matching cookie for, so the action behind the check is
 	 *                         reachable. Pass your own `_xfToken` in $input to send something else,
@@ -232,7 +233,8 @@ trait InteractsWithRoutes
 	 * @param array $params - route parameters, eg ['advert_id' => 3]
 	 * @param string $method - the request method; POST unless you have a reason
 	 * @param array $server - request server values, as $_SERVER would carry them, merged over the
-	 *                        defaults
+	 *                        defaults. Not REQUEST_METHOD, which comes from $method and is refused
+	 *                        here
 	 *
 	 * @return AbstractReply
 	 */
@@ -495,7 +497,7 @@ trait InteractsWithRoutes
 	 *
 	 * Server values the caller passes are merged over the defaults here, at construction, because
 	 * Request caches what it derives from them - the IP address and the robot name - on first read.
-	 * REQUEST_METHOD always comes from $method.
+	 * REQUEST_METHOD comes from $method and is refused in $server.
 	 *
 	 * @param string $routePath
 	 * @param array $input
@@ -509,6 +511,16 @@ trait InteractsWithRoutes
 	 */
 	private function buildDispatchRequest($routePath, array $input = [], $method = 'GET', array $server = [], array $files = [], $withCsrfToken = true, $type = 'public')
 	{
+		if (isset($server['REQUEST_METHOD']))
+		{
+			throw new \LogicException(
+				'REQUEST_METHOD in $server does nothing - the request method comes from the $method'
+				. ' argument, which also decides whether a CSRF token is minted, so a method'
+				. ' supplied through $server could only produce a request XenForo refuses. Pass it'
+				. ' as $method instead.'
+			);
+		}
+
 		$method = strtoupper($method);
 
 		$container = $this->app()->container();

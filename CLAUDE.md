@@ -248,6 +248,11 @@ Rules that follow:
   suite stay green proves nothing if the thing under test could not have shown the difference either
   way - `requireClassNotExtended()` was first controlled against a class nothing extends, where its
   correct and its broken resolution agree.
+- **Check the order the subject was constructed in, because the natural order is the safe one.** A
+  test gets written in the order its author is thinking in, and that order is usually the one that
+  works - so a subject built after everything that acts on it cannot show a defect in how they
+  interact. `test_a_second_fake_replaces_the_first` built its client after both fakes, in the test
+  written for exactly that hazard. Vary the construction order, or say which one was tested.
 
 **`renderTemplate()` writing template errors to the real `xf_error_log` is intended** — the test
 writer opts out with `fakesErrors()`, which keeps the errors available to the test. Do not suppress

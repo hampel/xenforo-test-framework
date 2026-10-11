@@ -268,6 +268,12 @@ trait InteractsWithTemplates
 	 * name into its first tag, and that name carries your prefix too. Those attributes are stripped
 	 * before the search.
 	 *
+	 * The page parameters the render set are searched as well as the html. `<xf:title>` and its
+	 * siblings compile to a write into the templater rather than to markup, so a key that failed
+	 * to resolve in one of them never reaches the output - and a search of the html alone passes
+	 * having checked nothing. The failure names which surface each key came from, because a reader
+	 * given only the key would look in the html and not find it.
+	 *
 	 * Pair this with an assertion that the text you expect IS present - output that never rendered
 	 * carries no unresolved key either.
 	 *
@@ -281,24 +287,57 @@ trait InteractsWithTemplates
 	protected function assertNoUnresolvedPhrases($html, $prefix, $message = '')
 	{
 		$stripped = preg_replace('/\sdata-(template|inner-template)-name="[^"]*"/i', '', $html);
-		$keys = [];
+		$surfaces = ['the rendered output' => $stripped] + $this->renderedPageParams();
+		$found = [];
 
-		// an add-on with a phrase predating its naming convention has more than one prefix, and
-		// renaming a phrase loses any customisation of it - so the old ones are permanent
-		foreach ((array) $prefix AS $onePrefix)
+		foreach ($surfaces AS $surface => $subject)
 		{
-			preg_match_all('/\b' . preg_quote($onePrefix, '/') . '[a-z0-9_]+/i', $stripped, $matches);
+			// an add-on with a phrase predating its naming convention has more than one prefix, and
+			// renaming a phrase loses any customisation of it - so the old ones are permanent
+			foreach ((array) $prefix AS $onePrefix)
+			{
+				preg_match_all('/\b' . preg_quote($onePrefix, '/') . '[a-z0-9_]+/i', $subject, $matches);
 
-			$keys = array_merge($keys, $matches[0]);
+				foreach ($matches[0] AS $key)
+				{
+					$found["$key (in $surface)"] = true;
+				}
+			}
 		}
 
-		$keys = array_values(array_unique($keys));
+		$keys = array_keys($found);
 
 		PHPUnit::assertSame(
 			[],
 			$keys,
 			$message ?: 'these phrases did not resolve and rendered as their own keys: ' . implode(', ', $keys)
 		);
+	}
+
+	/**
+	 * The page parameters this render set, keyed by how a failure should describe each one.
+	 *
+	 * The four names are XenForo's own, read from the template compiler rather than assumed:
+	 * `<xf:title>`, `<xf:description>`, `<xf:h1>` and `<xf:pageaction>`. They accumulate on the
+	 * templater as each template sets them, so a test rendering twice sees both renders' values.
+	 *
+	 * @return array - description => value
+	 */
+	private function renderedPageParams()
+	{
+		$surfaces = [];
+
+		foreach (['pageTitle', 'pageDescription', 'pageH1', 'pageAction'] AS $name)
+		{
+			$value = $this->pageParam($name);
+
+			if ($value !== null && $value !== '')
+			{
+				$surfaces["the $name page parameter"] = $value;
+			}
+		}
+
+		return $surfaces;
 	}
 
 	/**
@@ -560,6 +599,8 @@ trait InteractsWithTemplates
 	 */
 	protected function assertSee($html, $value, $escape = true)
 	{
+		$this->requireSearchValue($value, 'assertSee()');
+
 		$expected = $this->escapeExpected($value, $escape);
 
 		// not assertStringContainsString(), which prints the whole haystack on failure - a page is
@@ -581,6 +622,8 @@ trait InteractsWithTemplates
 	 */
 	protected function assertDontSee($html, $value, $escape = true)
 	{
+		$this->requireSearchValue($value, 'assertDontSee()');
+
 		$expected = $this->escapeExpected($value, $escape);
 		$position = strpos((string) $html, $expected);
 
@@ -604,6 +647,8 @@ trait InteractsWithTemplates
 	 */
 	protected function assertSeeText($html, $value)
 	{
+		$this->requireSearchValue($value, 'assertSeeText()');
+
 		$text = $this->textOf($html);
 
 		PHPUnit::assertNotFalse(
@@ -622,6 +667,8 @@ trait InteractsWithTemplates
 	 */
 	protected function assertDontSeeText($html, $value)
 	{
+		$this->requireSearchValue($value, 'assertDontSeeText()');
+
 		$text = $this->textOf($html);
 		$position = strpos($text, (string) $value);
 
@@ -642,10 +689,20 @@ trait InteractsWithTemplates
 	 */
 	protected function assertSeeInOrder($html, array $values, $escape = true)
 	{
+		if ($values === [])
+		{
+			throw new \LogicException(
+				'assertSeeInOrder() was given no values, so it asserts nothing at all. Name the'
+				. ' values you expect, in the order you expect them.'
+			);
+		}
+
 		$offset = 0;
 
 		foreach ($values AS $value)
 		{
+			$this->requireSearchValue($value, 'assertSeeInOrder()');
+
 			$expected = $this->escapeExpected($value, $escape);
 			$position = strpos($html, $expected, $offset);
 
@@ -671,6 +728,34 @@ trait InteractsWithTemplates
 		$text = html_entity_decode(strip_tags($html), ENT_QUOTES, 'utf-8');
 
 		return trim(preg_replace('/\s+/', ' ', $text));
+	}
+
+	/**
+	 * Refuse an empty string to search for.
+	 *
+	 * strpos() answers 0 for an empty needle, which is found in anything - so an empty value makes
+	 * a positive assertion unable to fail and a negative one unable to pass. Either way the
+	 * assertion has stopped being about the output, which is worse than not having it. A test
+	 * reaching here has usually built the value from something that came back empty itself.
+	 *
+	 * @param string $value
+	 * @param string $helper - the assertion that was called, for the message
+	 *
+	 * @return void
+	 */
+	private function requireSearchValue($value, $helper)
+	{
+		if ((string) $value !== '')
+		{
+			return;
+		}
+
+		throw new \LogicException(
+			"$helper was given an empty string to search for, which says nothing about the output:"
+			. ' an empty value is found at position 0 of anything, so the assertion cannot fail -'
+			. ' and its negative counterpart cannot pass. Assert on the text you expect, or on the'
+			. ' length of the render.'
+		);
 	}
 
 	/**

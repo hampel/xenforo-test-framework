@@ -5,6 +5,32 @@ Most releases need nothing beyond `composer update`. `CHANGELOG.md` lists everyt
 
 `tests/TestCase.php` is copied into your add-on, so a change to it has to be merged by hand.
 
+## 5.23.0
+
+Three refusals, each of which can only turn red a test that was already not checking what it
+looked like it checked.
+
+**A `REQUEST_METHOD` value in `$server` now throws.** It never had any effect - the method comes
+from the `$method` argument - so a test passing one was sending a different method from the one it
+named. Move the value to `$method`:
+
+```bash
+git grep -n "REQUEST_METHOD" tests/
+```
+
+A `GET` test that was passing `'POST'` this way becomes a real `POST`, which reaches the CSRF check
+and the action behind it. Use `dispatchWithoutCsrfToken()` where sending no token is the point.
+
+**`assertNoUnresolvedPhrases()` now reads the page parameters too.** A suite can go red here, and
+the key it reports is a phrase that genuinely came out unresolved in a `<xf:title>`,
+`<xf:description>`, `<xf:h1>` or `<xf:pageaction>` - somewhere the old call could not see. The
+failure names the parameter it came from, since searching the HTML for that key will not find it.
+
+**An empty value is refused by the output assertions.** `assertSee($html, '')` used to pass against
+anything and `assertDontSee($html, '')` used to fail against anything, so a test reaching this was
+asserting nothing either way. The usual cause is a value built from something that came back empty
+itself, which is the thing worth looking at.
+
 ## 5.22.0
 
 Nothing to do, unless a test of yours installs a second `fakesHttp()` or `fakesHttpByUrl()` and the

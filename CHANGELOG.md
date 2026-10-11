@@ -2,10 +2,30 @@
 
 ## 5.23.0 (unreleased)
 
+* a `REQUEST_METHOD` value in `$server` is refused rather than ignored, by `dispatch()`,
+  `dispatchWithoutCsrfToken()` and `callAction()`. The request method comes from the `$method`
+  argument, which also decides whether a CSRF token is minted, so a method supplied through
+  `$server` could only have produced a request XenForo refuses - the value was discarded and the
+  request sent with the method the argument named. A test asserting on a view could pass against a
+  method it had not asked for
+* `assertNoUnresolvedPhrases()` searches the page parameters the render set as well as the HTML.
+  `<xf:title>`, `<xf:description>`, `<xf:h1>` and `<xf:pageaction>` compile to a write into the
+  templater rather than to markup, so a phrase that came out as its own key in one of them was
+  nowhere in the string the assertion was given. The failure names which surface each key came from
+* `assertSee()`, `assertDontSee()`, `assertSeeText()`, `assertDontSeeText()` and
+  `assertSeeInOrder()` refuse an empty value, and `assertSeeInOrder()` refuses an empty list. An
+  empty value is found at position 0 of anything, so a positive assertion could not fail and a
+  negative one could not pass
 * `assertExceptionLogged()`'s `$callback` is documented as accepting a string, which it has since
   5.17.0. The parameter carried two docblocks, the older of which said otherwise
 * `buildDispatchRequest()`, `routeTypeConfig()`, `installGlobalTemplateData()` and `buildVisitor()`
   carry their own documentation again, having each been left describing the method below them
+* docs: call `fakesRegistry()` from the `setUp()` of any class that creates or deletes content
+  under `UsesDatabaseTransactions`, not only in a test about the registry
+* docs: on XenForo 2.3.0 an entity keeps its cascaded saves after it is saved, so a parent a
+  service created re-saves its children and setting a value on one of them throws `Attempted to set
+  '<column>' while a save was pending without forceSet`. Re-fetch the parent or call
+  `removeCascadedSave()`; `reset()` is not the remedy
 
 ## 5.22.0 (2026-10-11)
 

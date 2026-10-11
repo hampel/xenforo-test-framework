@@ -382,7 +382,8 @@ directly does not do.
 * `type` - optional - `public` (the default), `admin` or `api`
 * `input` - optional - the `GET` parameters the route reads, as `$_GET` would carry them
 * `server` - optional - request server values, as `$_SERVER` would carry them, merged over the
-  defaults. `REQUEST_METHOD` cannot be changed
+  defaults. Not `REQUEST_METHOD`: the method comes from the `method` argument, and passing one here
+  is refused rather than ignored
 
 ##### Example:
 
@@ -435,8 +436,12 @@ $reply = $this->dispatch('my-addon/callback', 'public', ['key' => '...'], [], 'P
 
 That is the one case where the opt-out is the thing worth testing: the same endpoint's
 `assertViewingPermissions()` and `assertBoardActive()` overrides also live in `preDispatch()`, and
-`callAction()` skips all three. Note the method cannot come through `$server` - `REQUEST_METHOD` is
-set from this argument.
+`callAction()` skips all three.
+
+**The method comes from this argument and nowhere else.** `REQUEST_METHOD` in `$server` is refused,
+by `dispatch()`, `dispatchWithoutCsrfToken()` and `callAction()` alike, because it could not work:
+the CSRF token is minted according to the `method` argument, so a `POST` smuggled through `$server`
+would be sent without one and answered with a 400.
 
 **The response code says which layer refused.** Dispatch such an endpoint with a `GET` and its own
 `assertPostOnly()` answers 405 - which is itself evidence that `preDispatch()` let the request
@@ -845,18 +850,20 @@ goes with it - core's `<!--[XF:actions_menu:bottom]-->` in `admin:user_edit` is 
 tags compile to a write into the templater's page params rather than to output. Read them with
 `pageParam()` before the next render.
 
-The direction that fails loudly is the safe one: `assertSee()` reports a miss. The two to watch are
-`assertDontSee()`, which passes against a page that does show the value, and
-`assertNoUnresolvedPhrases($html, ...)`, which is handed the HTML and so cannot see a phrase that
-failed to resolve inside one of those tags. Both work on the page param itself:
+The direction that fails loudly is the safe one: `assertSee()` reports a miss. The one to watch is
+`assertDontSee()`, which passes against a page that does show the value. Assert on the page param
+itself:
 
 ```php
 $html = $this->renderReply($reply);
 $action = $this->pageParam('pageAction');
 
 $this->assertSee($action, 'Convert to API user');
-$this->assertNoUnresolvedPhrases($action, 'myaddon_');
+$this->assertDontSee($action, 'Delete for ever');
 ```
+
+`assertNoUnresolvedPhrases()` needs no such handling: it reads these four parameters itself, so the
+call that is given the HTML covers them too.
 
 ### renderMacro
 Render one macro from a template, with the arguments a caller would pass it - for a macro your
@@ -987,6 +994,12 @@ A failure names the value searched for, the escaped form where escaping changed 
 rendered, without printing the markup. `assertDontSee()` also gives the offset of the first match
 and the text either side of it.
 
+**An empty value is refused**, by all of these and by `assertSeeText()` and `assertDontSeeText()`.
+An empty string is found at position 0 of anything, so `assertSee($html, '')` cannot fail and
+`assertDontSee($html, '')` cannot pass - the assertion has stopped being about the output. The
+usual cause is a value built from something that came back empty itself. `assertSeeInOrder()`
+refuses an empty list for the same reason: a loop over no values makes no assertion.
+
 ### assertNoUnresolvedPhrases
 Assert that no phrase in the rendered output came out as its own key - which is what XenForo renders
 for a phrase it cannot find.
@@ -1009,6 +1022,14 @@ $this->assertNoUnresolvedPhrases($html, 'myaddon_');
 Searching for the prefix yourself is not enough: for an administrator with the `embedTemplateNames`
 option on, the templater writes each template's own name into its first tag, and that name carries
 your prefix. Those attributes are stripped before the search.
+
+**The page parameters the render set are searched as well as the html.** `<xf:title>`,
+`<xf:description>`, `<xf:h1>` and `<xf:pageaction>` compile to a write into the templater rather
+than to markup, so a key that failed to resolve in one of them is nowhere in the rendered output -
+and a search of the html alone passes having checked nothing. The failure names which surface each
+key came from, since a key reported from a page parameter cannot be found by searching the html for
+it. Page parameters accumulate as each template sets them, so a test that renders twice is told
+about both renders.
 
 **Pair it with an assertion that the text you expect is present.** Output that never rendered
 carries no unresolved key either.
@@ -1429,7 +1450,24 @@ else. A user deletion rebuilds the approval queue's unapproved counts; a thread 
 totals. Whatever your test is about, read what the service or job you invoke does *after* the part
 you care about.
 
-`fakesRegistry()` keeps those writes out of the database entirely, which is the cheapest answer.
+**Call `fakesRegistry()` from the `setUp()` of any class that creates or deletes content under this
+trait.** It keeps those writes out of the database entirely, so there is no row to contend for, and
+it is one line in your own base test case:
+
+```php
+protected function setUp(): void
+{
+    parent::setUp();
+
+    $this->fakesRegistry();
+}
+```
+
+The fake pre-loads the real registry, so reads still answer with the forum's own data and a class
+that does not care about the registry is unaffected. The one thing it changes is a test asserting
+that a registry row reached the database; assert on the value the code read instead, or leave the
+call off that class.
+
 Where you need the real path, run the one step your add-on's behaviour hangs on rather than the
 whole service - `runRunnerStep()` does that, and the event still fires from the real constructor.
 
@@ -1664,6 +1702,21 @@ class ThingTest extends TestCase
 profile, option, privacy and authentication records, and a XenForo page that reads one of them - the
 admin user editor does - fails on a null relation rather than on anything the test is about. Use
 `createUserAccount()` where the test needs a member XenForo's own pages can display.
+
+##### Reusing an entity after something else saved it
+
+**On XenForo 2.3.0 an entity keeps its cascaded saves once it has been saved**, where by 2.3.12 the
+list is cleared. So a parent a service created re-saves its children on every later save, and
+setting a value on one of those children throws `Attempted to set '<column>' while a save was
+pending without forceSet` - from the test's own line, naming a column the test may never mention.
+
+Two things work on every 2.3 release:
+
+* re-fetch the parent after the service saved it, so the test goes on from a fresh instance;
+* `$parent->removeCascadedSave($child)` for the child the test is about.
+
+`$parent->reset()` is not one of them. The releases that clear the list on save clear it in
+`reset()` as well, so on the only version that needs it `reset()` clears nothing.
 
 ### mockFinder
 Mock a Finder.
@@ -2589,6 +2642,12 @@ class OptionTest extends TestCase
 ### fakesRegistry
 Disables database and cache updates for registry changes - all updates are written to memory only, so no side-effects
 when writing to the registry.
+
+**Reach for it in any test class that creates or deletes content under `UsesDatabaseTransactions`**,
+not only in a test about the registry. The registry is a read-modify-write of one row per key, and
+core rebuilds cached counters into it as a side effect of saves and deletions a test is not
+otherwise concerned with - so a transaction and the live forum contend for the same row. See
+`UsesDatabaseTransactions` for the shape of that failure.
 
 ##### Parameters:
 

@@ -88,11 +88,46 @@ class RequestServerTest extends TestCase
 		$this->assertStringContainsString('api/users', $request->getServer('REQUEST_URI'));
 	}
 
-	public function test_the_request_method_is_not_overridden_by_a_server_value()
+	public function test_a_request_method_among_the_server_values_is_refused()
 	{
-		$this->dispatch('help/terms', 'public', [], ['REQUEST_METHOD' => 'POST']);
+		// the request method cannot come from here: the server array is merged over the defaults
+		// while REQUEST_METHOD is set from $method, so this value would be dropped with nothing
+		// said - and a test asserting on a view would pass against a method it did not ask for
+		$this->expectException(\LogicException::class);
+		$this->expectExceptionMessage('REQUEST_METHOD in $server does nothing');
 
-		$this->assertFalse($this->app()->request()->isPost());
+		$this->dispatch('help/terms', 'public', [], ['REQUEST_METHOD' => 'POST']);
+	}
+
+	public function test_the_refusal_says_what_to_do_instead()
+	{
+		try
+		{
+			$this->dispatch('help/terms', 'public', [], ['REQUEST_METHOD' => 'POST']);
+			$this->fail('a REQUEST_METHOD server value should have been refused');
+		}
+		catch (\LogicException $e)
+		{
+			$this->assertStringContainsString('Pass it as $method instead', $e->getMessage());
+		}
+	}
+
+	public function test_dispatching_without_a_csrf_token_refuses_it_too()
+	{
+		$this->expectException(\LogicException::class);
+		$this->expectExceptionMessage('REQUEST_METHOD in $server does nothing');
+
+		$this->dispatchWithoutCsrfToken('help/terms', 'public', [], ['REQUEST_METHOD' => 'GET']);
+	}
+
+	public function test_calling_an_action_refuses_it_too()
+	{
+		// callAction() takes $method and $server as well, so a guard on dispatch() alone would
+		// leave this entry point carrying the same hazard
+		$this->expectException(\LogicException::class);
+		$this->expectExceptionMessage('REQUEST_METHOD in $server does nothing');
+
+		$this->callAction('XF:Notice', 'save', 'admin', [], [], 'POST', ['REQUEST_METHOD' => 'GET']);
 	}
 
 	public function test_call_action_sends_the_server_values_too()

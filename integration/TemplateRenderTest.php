@@ -376,11 +376,12 @@ class TemplateRenderTest extends TestCase
 	 * The pair that matters about page params, in one test so neither half can drift from the other.
 	 *
 	 * <xf:pageaction> and friends compile to a write into the templater's page params rather than to
-	 * output, so a phrase that failed to resolve in one of them is not in the html - and an
-	 * assertion handed that html passes having checked nothing. That is the absent-thing shape, so
-	 * the positive half is asserted beside it.
+	 * output, so a phrase that failed to resolve in one of them is nowhere in the html. An
+	 * assertion given that html and nothing else would pass having checked nothing, which is the
+	 * absent-thing shape - so the helper reads the page params itself, and the positive half of
+	 * that is asserted beside it.
 	 */
-	public function test_a_phrase_in_a_page_param_is_invisible_to_the_html_and_caught_in_the_param()
+	public function test_a_phrase_in_a_page_param_is_caught_although_it_is_not_in_the_html()
 	{
 		$this->makeTemplate(
 			'probe_pageaction',
@@ -390,15 +391,89 @@ class TemplateRenderTest extends TestCase
 		$html = $this->renderTemplate('public:probe_pageaction');
 		$action = (string) $this->pageParam('pageAction');
 
+		// the precondition: the key really is in the page param and really is absent from the
+		// output, which is what makes a search of the html alone unable to see it
 		$this->assertSame('<p>body markup</p>', trim($html), 'the page action is not in the output');
 		$this->assertStringContainsString('probeph_never_defined', $action);
+		$this->assertStringNotContainsString('probeph_', $html);
 
-		// passes against the html, because the key was never in the string it was given
+		try
+		{
+			$this->assertNoUnresolvedPhrases($html, 'probeph_');
+			$this->fail('an unresolved phrase in a page parameter should have failed the assertion');
+		}
+		catch (ExpectationFailedException $e)
+		{
+			// the surface is named, because a reader given only the key would search the html for
+			// it and not find it
+			$this->assertStringContainsString('probeph_never_defined', $e->getMessage());
+			$this->assertStringContainsString('pageAction', $e->getMessage());
+		}
+	}
+
+	public function test_a_page_param_whose_phrases_resolved_does_not_fail_the_assertion()
+	{
+		// the other half: reading the page params must not turn an ordinary title into a failure
+		$this->makeTemplate('probe_pagetitle', '<xf:title>A real title</xf:title><p>body</p>');
+
+		$html = $this->renderTemplate('public:probe_pagetitle');
+
+		$this->assertSame('A real title', $this->pageParam('pageTitle'));
 		$this->assertNoUnresolvedPhrases($html, 'probeph_');
+	}
 
-		// and catches it in the page param, which is where it went
-		$this->expectException(AssertionFailedError::class);
-		$this->assertNoUnresolvedPhrases($action, 'probeph_');
+	/**
+	 * strpos() answers 0 for an empty needle, so an empty value is found in anything - which makes
+	 * assertSee() unable to fail and assertDontSee() unable to pass. Both are refused.
+	 */
+	public function test_an_empty_value_is_refused_by_every_output_assertion()
+	{
+		$calls = [
+			'assertSee' => function ()
+			{
+				$this->assertSee('<p>anything at all</p>', '');
+			},
+			'assertDontSee' => function ()
+			{
+				$this->assertDontSee('<p>anything at all</p>', '');
+			},
+			'assertSeeText' => function ()
+			{
+				$this->assertSeeText('<p>anything at all</p>', '');
+			},
+			'assertDontSeeText' => function ()
+			{
+				$this->assertDontSeeText('<p>anything at all</p>', '');
+			},
+			'assertSeeInOrder' => function ()
+			{
+				$this->assertSeeInOrder('<p>anything at all</p>', ['anything', '']);
+			},
+		];
+
+		foreach ($calls AS $name => $call)
+		{
+			try
+			{
+				$call();
+				$this->fail("$name should have refused an empty value");
+			}
+			catch (\LogicException $e)
+			{
+				$this->assertStringContainsString('empty string to search for', $e->getMessage());
+				$this->assertStringContainsString($name . '()', $e->getMessage());
+			}
+		}
+	}
+
+	public function test_an_empty_list_of_values_is_refused_as_well()
+	{
+		// a loop over nothing makes no assertion, so the call reports success having checked no
+		// output at all
+		$this->expectException(\LogicException::class);
+		$this->expectExceptionMessage('asserts nothing at all');
+
+		$this->assertSeeInOrder('<p>anything at all</p>', []);
 	}
 
 	private function makeTemplate($title, $content)
