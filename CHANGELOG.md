@@ -2,6 +2,19 @@
 
 ## 5.24.0 (2026-10-12)
 
+* rendered templates are given a style. `$xf.style` was null in every render, because only a real
+  request sets one - so a core template calling a method on it logged an error and rendered nothing
+  for that block, and a test could assert that markup was absent and be right for the wrong
+  reason. Ten public and two admin templates read it on a stock install
+* `assertNoUnresolvedPhrases()` searches the text a page displays rather than the whole markup. An
+  add-on's prefix belongs in a form field's name, an id, a label's `for` and a CSS class, so a
+  phrase that resolved perfectly well was reported as having failed - XenForo's resource standards
+  require that prefix on a column added to a core table, and a field is named after its column. A
+  phrase that failed to resolve inside an attribute is no longer seen; assert on that one directly
+* `renderTemplateWithoutModification()` renders a template with one of its template modifications
+  left out, so a test asserting on inserted markup can show the modification is what inserts it.
+  Nothing is written and the modification is left enabled, so it is safe on an install other suites
+  are running against. It refuses a modification that does not exist or is disabled
 * `assertExceptionLogged()` and `assertExceptionNotLogged()` name their second parameter `$filter`
   rather than `$callback`, which described only one of the forms it accepts. The value and its
   forms are unchanged, and a positional call is unaffected; a call passing it by name must be
@@ -9,6 +22,12 @@
 * `assertExceptionNotLogged()` is documented as taking a string the logged message must contain as
   well as a callback. Narrowing it denies only the exceptions matching the filter rather than all
   of that class, and a count is not accepted there - use `assertExceptionLoggedTimes()`
+* docs: an empty `$permissions` given to `actingAs()` grants nothing rather than denying
+  everything, so an account with a real permission combination - anything from
+  `createUserAccount()`, or a user already in the forum - keeps what that forum grants it. A test
+  asserting such a member is refused something needs `setVisitorPermissions($user, [])`
+* docs: eleven core public controllers do not require `general.view`, account and login among
+  them, so a dispatch that succeeds without granting it is not evidence that the next route will
 
 ## 5.23.1 (2026-10-12)
 

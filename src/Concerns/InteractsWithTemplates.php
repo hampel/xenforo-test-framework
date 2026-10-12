@@ -3,9 +3,13 @@
 namespace Hampel\Testing\Concerns;
 
 use PHPUnit\Framework\Assert as PHPUnit;
+use XF\Entity\TemplateModification;
 use XF\Http\Response;
+use XF\Mvc\Entity\AbstractCollection;
 use XF\Mvc\Reply\AbstractReply;
 use XF\Mvc\Reply\View;
+use XF\Repository\TemplateModificationRepository;
+use XF\Style;
 use XF\Template\Templater;
 
 trait InteractsWithTemplates
@@ -263,10 +267,19 @@ trait InteractsWithTemplates
 	 * Assert that every phrase in the rendered output resolved.
 	 *
 	 * A phrase XenForo cannot find renders as its own key, so an add-on's phrase keys appearing in
-	 * the output means a phrase is missing. Searching for the key alone is not enough: for an
-	 * administrator with the embedTemplateNames option on, the templater writes each template's own
-	 * name into its first tag, and that name carries your prefix too. Those attributes are stripped
-	 * before the search.
+	 * the output means a phrase is missing.
+	 *
+	 * **Only the text the page displays is searched**, because that is where an unresolved phrase
+	 * appears - everything inside a tag is an attribute, and an add-on's prefix belongs in plenty
+	 * of them legitimately. XenForo's resource standards require a prefix on any column added to a
+	 * core table, and a form field is named after its column, so `name="option[myaddon_thing]"` is
+	 * correct output for a phrase that resolved perfectly well. The same goes for an id, a label's
+	 * `for`, a CSS class, and the template names the templater writes into the first tag for an
+	 * administrator with the embedTemplateNames option on. `<script>` and `<style>` blocks are
+	 * dropped too, since they hold identifiers rather than prose.
+	 *
+	 * The cost is that a phrase which failed to resolve *inside* an attribute - the `value` of a
+	 * submit button, say - is not seen here. Assert on that one directly.
 	 *
 	 * The page parameters the render set are searched as well as the html. `<xf:title>` and its
 	 * siblings compile to a write into the templater rather than to markup, so a key that failed
@@ -287,8 +300,8 @@ trait InteractsWithTemplates
 	 */
 	protected function assertNoUnresolvedPhrases($html, $prefix, $message = null)
 	{
-		$stripped = preg_replace('/\sdata-(template|inner-template)-name="[^"]*"/i', '', $html);
-		$surfaces = ['the rendered output' => $stripped] + $this->renderedPageParams();
+		$surfaces = ['the rendered output' => $this->displayedTextOf($html)]
+			+ $this->renderedPageParams();
 		$found = [];
 
 		foreach ($surfaces AS $surface => $subject)
@@ -317,6 +330,204 @@ trait InteractsWithTemplates
 				'assertNoUnresolvedPhrases()'
 			)
 		);
+	}
+
+	/**
+	 * Render a template with one of its template modifications left out.
+	 *
+	 * This is the control for a test that asserts a modification put something on the page: render
+	 * with it, assert the markup is there, render without it, assert it is not. Mutating the test's
+	 * own expectations proves much less, and disabling the modification for real recompiles the
+	 * install's templates for every other suite running against it.
+	 *
+	 * Nothing is written: the template's text is read, the other modifications are applied to it by
+	 * XenForo's own repository, and the result is compiled and rendered in memory. The forum's
+	 * compiled templates, its modification rows and the style cache are all untouched, so this is
+	 * safe on a shared development install and inside a transaction.
+	 *
+	 * The modification has to exist and be enabled, because a render missing a modification that
+	 * was never applying is identical to a render missing one that was - and the assertion a test
+	 * writes afterwards would pass for the wrong reason.
+	 *
+	 * @param string $modificationKey - the modification to leave out, as
+	 *                                  assertTemplateModificationApplied() takes it
+	 * @param array $params - template parameters, as renderTemplate() takes them
+	 *
+	 * @return string
+	 */
+	protected function renderTemplateWithoutModification($modificationKey, array $params = [])
+	{
+		$modification = $this->app()->db()->fetchRow(
+			'SELECT modification_id, type, template, enabled
+				FROM xf_template_modification
+				WHERE modification_key = ?',
+			$modificationKey
+		);
+
+		if (!$modification)
+		{
+			throw new \LogicException(
+				"No template modification with the key '{$modificationKey}' exists in this forum."
+				. ' This reads what the forum has, so the add-on has to be installed and its data'
+				. ' imported - an edit to _output/ alone is invisible here.'
+			);
+		}
+
+		if (!$modification['enabled'])
+		{
+			throw new \LogicException(
+				"The template modification '{$modificationKey}' is disabled, so every render"
+				. ' already leaves it out and rendering without it would prove nothing.'
+			);
+		}
+
+		$type = $modification['type'];
+		$title = $modification['template'];
+
+		$template = $this->app()->finder('XF:Template')
+			->where(['type' => $type, 'title' => $title, 'style_id' => 0])
+			->fetchOne();
+
+		if (!$template)
+		{
+			throw new \LogicException(
+				"The template '{$type}:{$title}' that '{$modificationKey}' modifies does not exist."
+			);
+		}
+
+		$others = [];
+
+		foreach ($this->modificationsFor($type, $title) AS $candidate)
+		{
+			if (!($candidate instanceof TemplateModification))
+			{
+				throw new \LogicException(
+					'Expected XF:TemplateModification to resolve to a '
+					. TemplateModification::class . ', got ' . get_debug_type($candidate)
+				);
+			}
+
+			if ($candidate->modification_key !== $modificationKey)
+			{
+				$others[$candidate->modification_id] = $candidate;
+			}
+		}
+
+		$repository = $this->app()->repository('XF:TemplateModification');
+
+		if (!($repository instanceof TemplateModificationRepository))
+		{
+			throw new \LogicException(
+				'Expected XF:TemplateModification to resolve to a '
+				. TemplateModificationRepository::class . ', got ' . get_debug_type($repository)
+			);
+		}
+
+		$status = [];
+		$text = $repository->applyTemplateModifications($template->template, $others, $status);
+
+		return $this->renderTemplateText($type, $title, $text, $params);
+	}
+
+	/**
+	 * The enabled modifications for a template, in the order XenForo applies them.
+	 *
+	 * @param string $type
+	 * @param string $title
+	 *
+	 * @return AbstractCollection
+	 */
+	private function modificationsFor($type, $title)
+	{
+		return $this->app()->finder('XF:TemplateModification')
+			->where(['type' => $type, 'template' => $title, 'enabled' => 1])
+			->whereAddOnActive()
+			->order(['execution_order', 'modification_key'])
+			->fetch();
+	}
+
+	/**
+	 * Compile the given template text and render it under the given template's name.
+	 *
+	 * The templater checks its own in-memory cache before it looks for a compiled file, so putting
+	 * the compiled code there is enough to render text that is not in the database - and nothing on
+	 * disk or in the forum changes. The entry is put back as it was afterwards, so a later render of
+	 * the same template in the same test gets the real one.
+	 *
+	 * @param string $type
+	 * @param string $title
+	 * @param string $text
+	 * @param array $params
+	 *
+	 * @return string
+	 */
+	private function renderTemplateText($type, $title, $text, array $params)
+	{
+		$templater = $this->app()->templater();
+		$compiled = $this->app()->templateCompiler()->compile($text);
+
+		$file = tempnam(sys_get_temp_dir(), 'xftest') . '.php';
+		file_put_contents($file, "<?php\n" . $compiled . ";\n");
+
+		try
+		{
+			$data = include $file;
+		}
+		finally
+		{
+			unlink($file);
+		}
+
+		$key = $this->app()->language()->getId() . '-' . $templater->getStyleId()
+			. '-' . $type . '-' . $title;
+
+		$cacheProperty = new \ReflectionProperty(Templater::class, 'templateCache');
+		$cacheProperty->setAccessible(true);
+
+		$cache = $cacheProperty->getValue($templater);
+		$had = array_key_exists($key, $cache);
+		$previous = $had ? $cache[$key] : null;
+
+		$cache[$key] = $data;
+		$cacheProperty->setValue($templater, $cache);
+
+		try
+		{
+			return $this->renderTemplate($type . ':' . $title, $params);
+		}
+		finally
+		{
+			$cache = $cacheProperty->getValue($templater);
+
+			if ($had)
+			{
+				$cache[$key] = $previous;
+			}
+			else
+			{
+				unset($cache[$key]);
+			}
+
+			$cacheProperty->setValue($templater, $cache);
+		}
+	}
+
+	/**
+	 * The text a page displays, with every tag and every scripted block removed.
+	 *
+	 * An unresolved phrase renders as visible text, so this is the whole surface where one can
+	 * appear - and dropping the markup is what stops an attribute that legitimately carries an
+	 * add-on's prefix being reported as a phrase that failed.
+	 *
+	 * @param string $html
+	 *
+	 * @return string
+	 */
+	private function displayedTextOf($html)
+	{
+		$withoutScripts = preg_replace('#<(script|style)\b[^>]*>.*?</\1>#is', ' ', (string) $html);
+
+		return preg_replace('/<[^>]*>/', ' ', $withoutScripts);
 	}
 
 	/**
@@ -366,6 +577,10 @@ trait InteractsWithTemplates
 			return;
 		}
 
+		// before the global data is built, because getGlobalTemplateData() reads the style off the
+		// templater and a null one reaches every template as $xf.style
+		$this->installTemplaterStyle($templater);
+
 		// on the application in \XF::app() rather than this one: setAppClassType() puts a Pub, Admin
 		// or Api application there, and getGlobalTemplateData() fires templater_global_data with
 		// whichever application built it - which is what a listener gated on the app type reads.
@@ -373,6 +588,51 @@ trait InteractsWithTemplates
 		$data = \XF::app()->getGlobalTemplateData($reply);
 		$templater->addDefaultParam('xf', $data);
 		$this->installedGlobalTemplateData = $data;
+	}
+
+	/**
+	 * Give the templater a style, which only a real request otherwise does.
+	 *
+	 * `XF\Pub\App` and `XF\Admin\App` both set one while serving a page, and
+	 * `getGlobalTemplateData()` reads it back to build `$xf.style`. This package boots the base
+	 * `XF\App`, which sets none - so without this every template sees `$xf.style` as null, and a
+	 * core template calling a method on it logs an error and renders nothing for that block. Ten
+	 * public and two admin templates read it on a stock 2.3 install.
+	 *
+	 * The style installed is `style.fallback`, the master style `XF\Admin\App` uses, because its id
+	 * is 0 and that is already the templater's default - so template resolution is exactly what it
+	 * was and only `$xf.style` changes. **The visitor's own style is deliberately not used:** it
+	 * would move the templater to that style id, and an `admin:` template does not exist there, so
+	 * an admin render would fail to find its own templates. A test that needs a particular style
+	 * sets one itself, and a style already set is left alone.
+	 *
+	 * The icon renderer gets the same style because `XF\IconRenderer::getStyle()` is declared to
+	 * return a `Style` while the property is nullable, so leaving it unset is a TypeError waiting
+	 * for whatever first asks.
+	 *
+	 * @param Templater $templater
+	 *
+	 * @return void
+	 */
+	private function installTemplaterStyle(Templater $templater)
+	{
+		if ($templater->getStyle())
+		{
+			return;
+		}
+
+		$style = $this->app()->container()['style.fallback'];
+
+		if (!($style instanceof Style))
+		{
+			throw new \LogicException(
+				'Expected the style factory to give a ' . Style::class . ', got '
+				. get_debug_type($style)
+			);
+		}
+
+		$templater->setStyle($style);
+		\XF::app()->iconRenderer()->setStyle($style);
 	}
 
 	/**

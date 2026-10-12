@@ -198,6 +198,24 @@ $user = $this->createUserAccount('alice');
 $this->actingAs($user, ['forum' => ['view' => true]]);
 ```
 
+**An empty `$permissions` grants nothing, and for a saved account that is not the same as denying
+everything.** Permissions are only written when you pass some, so a user with a real
+`permission_combination_id` - any account from `createUserAccount()`, or one already in the forum -
+keeps whatever that forum grants it. A built visitor has a combination of its own that nothing has
+granted, so there it makes no difference.
+
+This matters for a test asserting a member is *refused* something: written as
+`actingAs($user)` against a saved account, it answers from the forum's configuration rather than
+from the test, and passes for the wrong reason wherever that member happens to lack the permission
+anyway. Pass an explicit empty set to decide it in the test:
+
+```php
+$user = $this->createUserAccount();
+
+$this->actingAs($user);
+$this->setVisitorPermissions($user, []);   // now nothing is granted, whatever the forum says
+```
+
 That writes rows, so the test class needs `UsesDatabaseTransactions`.
 
 ##### Parameters:
@@ -355,6 +373,11 @@ user repository, as registration does.
 
 The rows are real, so call it from a class using `UsesDatabaseTransactions`.
 
+**The account gets a real permission combination**, so it holds whatever this forum grants that
+user group until the test says otherwise - see `actingAs` above for why an assertion about a
+member being refused something needs `setVisitorPermissions($user, [])` rather than an empty
+argument.
+
 ##### Parameters:
 
 * `username` - optional - a unique one is generated when not given
@@ -415,8 +438,8 @@ key an add-on registers in that event never exists, and a listener gated on
 `$app instanceof \XF\Pub\App` never runs its body. Call `setAppClassType('public')` yourself
 before `renderTemplate()` or `renderMacro()` when the markup depends on it. `app()` is unchanged.
 
-**A public route needs `general.view`**, which a built visitor does not have, so a public dispatch
-returns a 403 until the test grants it:
+**Most public routes need `general.view`**, which a built visitor does not have, so a public
+dispatch returns a 403 until the test grants it:
 
 ```php
 $member = $this->actingAsMember();
@@ -424,6 +447,14 @@ $this->setVisitorPermissions($member, ['general' => ['view' => true]]);
 
 $reply = $this->dispatch('members');
 ```
+
+**A whole family of core routes is exempt, so a dispatch there succeeds without the grant.**
+`XF\Pub\Controller\AbstractController` is where the check lives, and eleven core controllers
+override it with an empty method - account, account confirmation, email stop, error, help, login,
+logout, lost password, register, security lock and service worker - while the misc controller
+exempts itself per action. Those are also the routes a test is most likely to reach for, so a
+dispatch to `account/preferences` that works without `general.view` is not evidence that the grant
+is unnecessary anywhere else.
 
 **`dispatch()` sends a `GET` unless you ask for something else.** Pass the method as the fifth
 argument. XenForo asserts a CSRF token in `preDispatch()` for anything that is not a `GET`, so a
@@ -1048,9 +1079,17 @@ $this->assertSee($html, 'Send me a weekly digest');
 $this->assertNoUnresolvedPhrases($html, 'myaddon_');
 ```
 
-Searching for the prefix yourself is not enough: for an administrator with the `embedTemplateNames`
-option on, the templater writes each template's own name into its first tag, and that name carries
-your prefix. Those attributes are stripped before the search.
+**Only the text the page displays is searched**, because that is where an unresolved phrase
+appears. Everything inside a tag is an attribute, and an add-on's prefix belongs in plenty of them:
+XenForo's resource standards require a prefix on any column added to a core table, and a form field
+is named after its column, so `name="option[myaddon_thing]"` is correct output for a phrase that
+resolved perfectly well. The same goes for an id, a label's `for`, a CSS class, and the template
+names the templater writes into the first tag for an administrator with the `embedTemplateNames`
+option on. `<script>` and `<style>` blocks are dropped too, since they hold identifiers rather than
+prose.
+
+The cost is that a phrase which failed to resolve *inside* an attribute - the `value` of a submit
+button, say - is not seen here. Assert on that one directly.
 
 **The page parameters the render set are searched as well as the html.** `<xf:title>`,
 `<xf:description>`, `<xf:h1>` and `<xf:pageaction>` compile to a write into the templater rather
@@ -1133,6 +1172,44 @@ so assert on the markup it produces instead.
 This assertion is also the one to reach for where the insertion lands somewhere the rendered HTML
 does not carry at all - inside `<xf:pageaction>`, `<xf:title>`, `<xf:h1>` or `<xf:description>`. See
 `renderTemplate()`, which has what those tags do and how to read them.
+
+### renderTemplateWithoutModification
+Render a template with one of its template modifications left out, so a test can show that the
+markup it asserts on is the modification's work.
+
+`assertTemplateModificationApplied()` and an assertion on the inserted markup both pass whether or
+not the modification is the thing producing it. The control is the same render without it - and
+getting that by disabling the modification recompiles the install's templates for every other suite
+running against the same forum.
+
+##### Parameters:
+
+* `modificationKey` - as in `_output/template_modifications/`
+* `params` - optional - template parameters, as `renderTemplate()` takes them
+
+##### Example:
+
+```php
+$this->fakesErrors();
+
+$with = $this->renderTemplate('public:account_preferences');
+$without = $this->renderTemplateWithoutModification('myaddon_preferences_hint');
+
+$this->assertSee($with, 'Hide adverts');
+$this->assertDontSee($without, 'Hide adverts');
+```
+
+**Nothing is written.** The template's text is read, the other modifications are applied to it by
+XenForo's own repository, and the result is compiled and rendered in memory - so the forum's
+compiled templates, its modification rows and its style cache are untouched, and this is safe on a
+shared install and inside a transaction. The real template renders again afterwards, so a later
+render of it in the same test is the forum's own.
+
+**The modification has to exist and be enabled**, or this refuses. A render missing a modification
+that was never applying looks exactly like a render missing one that was, so the assertion written
+afterwards would pass for the wrong reason.
+
+The template is read at `style_id` 0, which is the style the templater renders under here.
 
 ### assertSeeText / assertDontSeeText / textOf
 Assert on the text of rendered output, ignoring the markup. Tags are stripped and entities decoded

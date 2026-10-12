@@ -452,6 +452,8 @@ access checks in `preDispatch()` run
 and `renderReply` renders the template a dispatched reply named, with `assertSee`, `assertDontSee`, `assertSeeText`,
 `assertDontSeeText` and `assertSeeInOrder` to assert on the output
 * `assertTemplateModificationApplied` asserts that a template modification has applied, using its apply count
+* `renderTemplateWithoutModification` renders a template with one of its modifications left out, so a test can show
+the markup it asserts on is that modification's work, without disabling it for every other suite on the forum
 * `assertNoTemplateErrors` asserts that nothing the test rendered raised an error
 * `pageParam` reads back what a rendered template set with `<xf:title>` and friends, which never appear in the
 template's own output
@@ -779,8 +781,9 @@ its own authorisation checks within reach. `dispatchWithoutCsrfToken()` sends no
 refuses. `callAction()` calls an action directly, skipping `preDispatch()` and so the permission checks too, for the
 cases where that is what you want to test.
 
-A public route also needs the visitor to hold `general.view`, which a built visitor does not, so a public dispatch
-returns a 403 until the test grants it. See `dispatch()` in DOCS.md.
+Most public routes also need the visitor to hold `general.view`, which a built visitor does not, so a public
+dispatch returns a 403 until the test grants it. Eleven core controllers are exempt, account and login among them,
+so a route that works without the grant is not evidence that the next one will. See `dispatch()` in DOCS.md.
 
 Name the controller your add-on **extends**, not your extension of it - `'XF:Tools'`, not
 `MyVendor\MyAddon\XF\Admin\Controller\Tools`. XenForo resolves the base to the most derived class, which is your

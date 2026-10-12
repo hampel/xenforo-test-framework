@@ -7,6 +7,18 @@ Most releases need nothing beyond `composer update`. `CHANGELOG.md` lists everyt
 
 ## 5.24.0
 
+**Rendered templates now have a style, so a render can produce more markup than it did.** `$xf.style`
+used to be null, and a core template calling a method on it rendered nothing for that block - so a
+test asserting that block's markup is *absent* was passing because the block never rendered, and
+that assertion now fails. It is the assertion that was wrong, not the render. A test that scoped
+`assertNoTemplateErrors()` to avoid the `isVariationsEnabled` error can drop the scope.
+
+**`assertNoUnresolvedPhrases()` searches displayed text rather than the whole markup**, so it no
+longer reports a phrase key that appears only in an attribute - a field name, an id, a `for` or a
+CSS class. That can only turn a failing assertion into a passing one. The one thing it stops
+catching is a phrase that failed to resolve inside an attribute, such as a submit button's `value`;
+assert on that one directly.
+
 `assertExceptionLogged()` and `assertExceptionNotLogged()` renamed their second parameter from
 `$callback` to `$filter`. **A positional call needs nothing** - the value, its forms and the
 behaviour are all unchanged - so for nearly every suite this release is a `composer update`.
