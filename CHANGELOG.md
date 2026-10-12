@@ -7,6 +7,14 @@
   `XF\Http\Request` and swapping it into the container is unaffected, and there the key is how the
   method gets set - so the search finds tests that are correct and must be left alone, and the
   remedy it gave would have removed the method from them
+* docs: `UsesDatabaseTransactions` names `xf_member_stat` as a second row a test that creates a
+  user contends for, alongside `xf_user_group_relation`. Saving an `XF:User` empties the cached
+  `staff_members` statistic and clears its expiry, which XenForo's own cron then rebuilds, and
+  `fakesRegistry()` does not cover it. Includes the condition - the write happens for an ordinary
+  member, not only for a member of staff - and how to mock the repository that performs it
+* docs: `assertExceptionLogged()` states that the string form matches the prefix passed to
+  `\XF::logException()` as well as the exception's own message, in the bullet describing that form
+  and in the method's docblock. It was said only in the paragraph about the callback
 
 ## 5.23.0 (2026-10-12)
 

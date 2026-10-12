@@ -1504,19 +1504,45 @@ that does not care about the registry is unaffected. The one thing it changes is
 that a registry row reached the database; assert on the value the code read instead, or leave the
 call off that class.
 
-**Creating a user is the other surface, and the registry fake does not cover it.** Saving an
-`XF:User` row rewrites that user's group memberships: XenForo deletes the user's rows from
-`xf_user_group_relation` and re-inserts them, inside your transaction. A new user's id is higher
-than every id already in that table, so the delete matches nothing and locks the index gap above
-the last row until the transaction ends. Two tests creating users at the same time take that same
-gap, and each one's insert then waits on the other's lock - a deadlock, which the server resolves
-by rolling one of the transactions back. **Different user ids are enough**: nothing is shared but
-the gap in the index.
+**Creating a user reaches two further rows, and the registry fake covers neither.** The first is
+the user's group memberships. Saving an `XF:User` row rewrites them: XenForo deletes the user's
+rows from `xf_user_group_relation` and re-inserts them, inside your transaction. A new user's id is
+higher than every id already in that table, so the delete matches nothing and locks the index gap
+above the last row until the transaction ends. Two tests creating users at the same time take that
+same gap, and each one's insert then waits on the other's lock - a deadlock, which the server
+resolves by rolling one of the transactions back. **Different user ids are enough**: nothing is
+shared but the gap in the index.
 
 This reaches `createEntity('XF:User')` as well as `createUserAccount()`, because XenForo rebuilds
 the relations whenever a user's groups are set, which an insert always does. It is index locking
 rather than two writers of one row, so `fakesRegistry()` has nothing to fake here and a server
 without snapshot isolation behaves the same way.
+
+**The second is a cached member statistic.** Saving an `XF:User` empties the cached `staff_members`
+statistic, which rewrites one row in `xf_member_stat` and clears its expiry - and XenForo's own
+`memberStatsCache` cron rebuilds any expired row, every ten minutes. So the forum writes the same
+row your test does, and a test holding a transaction open across one of those runs loses it: the
+row has changed since the transaction first read it, which the server reports as
+`MySQL query error [1020]`.
+
+The column XenForo checks is `is_staff`, and an insert sets every column that has a default, so
+this happens for an ordinary member rather than only for a member of staff. Where you want the
+write gone altogether, mock the repository that performs it, for the class that creates users:
+
+```php
+protected function setUp(): void
+{
+    parent::setUp();
+
+    $this->mockRepository('XF:MemberStat', function ($mock)
+    {
+        $mock->shouldReceive('emptyCache');
+    });
+}
+```
+
+That double refuses every other call to the repository, so it belongs on a class whose tests do
+not read member statistics themselves.
 
 **So a suite that creates users is reliable against a forum nothing else is writing to, and
 intermittent against a shared development install.** Where a test needs a visitor rather than a
@@ -1916,6 +1942,12 @@ none
 * `assertExceptionLoggedTimes`
 * `assertExceptionNotLogged`
 * `assertNoExceptionsLogged`
+
+**The string form matches the message that was logged, prefix included.**
+`\XF::logException($e, false, 'MyAddon: ')` stores that prefix in front of the exception's own
+message, so `assertExceptionLogged($class, 'MyAddon: ')` asserts the prefix and
+`assertExceptionLogged($class, 'smtp is down')` asserts the exception. It is a substring match,
+anywhere in the message.
 
 **A callback is handed the logged entry, not the throwable.** It is an array, whose useful keys are
 `message` (including any prefix the caller added), `exception_type`, `filename`, `line` and

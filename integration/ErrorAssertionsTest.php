@@ -29,4 +29,28 @@ class ErrorAssertionsTest extends TestCase
 
 		$this->assertErrorNotLogged('a different message');
 	}
+
+	/**
+	 * The string form of assertExceptionLogged() matches the message as it was logged, which
+	 * carries the prefix the caller passed to \XF::logException() in front of the exception's
+	 * own message. Matching the prefix is the case the string form was added for.
+	 */
+	public function test_a_logged_exception_matches_on_its_prefix_and_on_its_own_message()
+	{
+		$this->fakesErrors();
+
+		\XF::logException(new \RuntimeException('smtp is down'), false, 'MyAddon: ');
+
+		$this->assertExceptionLogged(\RuntimeException::class, 'MyAddon: ');
+		$this->assertExceptionLogged(\RuntimeException::class, 'smtp is down');
+	}
+
+	public function test_a_logged_exception_does_not_match_a_prefix_it_was_not_given()
+	{
+		$this->fakesErrors();
+
+		\XF::logException(new \RuntimeException('smtp is down'), false, 'MyAddon: ');
+
+		$this->assertExceptionNotLogged(\RuntimeException::class, 'SomeoneElse: ');
+	}
 }

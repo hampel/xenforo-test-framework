@@ -65,7 +65,9 @@ trait InteractsWithErrors
 	 *
 	 * @param string $class - the exception class
 	 * @param int|string|callable|null $callback - a count, a string the logged message must contain,
-	 *                                            or a callback given the logged entry
+	 *                                            or a callback given the logged entry. The message
+	 *                                            carries the prefix passed to \XF::logException(),
+	 *                                            so the prefix itself is a string you can match on
 	 *
 	 * @return void
 	 *
