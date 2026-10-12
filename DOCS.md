@@ -2943,8 +2943,16 @@ None
 
 * `assertSimpleCacheHas`
 * `assertSimpleCacheHasNot`
-* `assertSimpleCacheEqual`
-* `assertSimpleCacheNotEqual`
+* `assertSimpleCacheEqual`, also spelled `assertSimpleCacheEquals`
+* `assertSimpleCacheNotEqual`, also spelled `assertSimpleCacheNotEquals`
+
+##### Reading the cache:
+
+* `getSimpleCache()` - the fake, for reading a value back or setting one up
+
+Use this rather than reaching into the container for `simpleCache`: it refuses with a message
+naming `fakesSimpleCache()` when the fake was never installed, where the container hands back the
+real cache and the test writes to the forum's own.
 
 ##### Example: 
 
@@ -2960,9 +2968,9 @@ class SimpleCacheTest extends TestCase
 		// initialise the SimpleCache fake system
 		$this->fakesSimpleCache();
 		
-		// retrieve the simpleCache from the app container
-		$simpleCache = $this->app['simpleCache'];
-		
+		// retrieve the fake, which refuses if fakesSimpleCache() was not called
+		$simpleCache = $this->getSimpleCache();
+
 		// do something which causes an update to the simpleCache, for example
 		$simpleCache->setValue('MyAddon', 'foo', 'bar');
 		

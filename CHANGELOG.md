@@ -12,6 +12,10 @@
   displays each option's id as ordinary text, so every option on the page is reported whether or
   not its phrase resolved - pass the keys instead. The ids are displayed only in development mode,
   so a bare prefix there passes on one install and fails on another
+* docs: `fakesSimpleCache()` documents `getSimpleCache()`, and its example reads the fake back
+  through that rather than out of the container - the accessor refuses when the fake was never
+  installed, where the container hands back the forum's real cache. Both spellings of
+  `assertSimpleCacheEqual()` and `assertSimpleCacheNotEqual()` are listed
 * docs: the README's helper list names `assertNoUnresolvedPhrases()`, `renderRawReply()`,
   `renderJsonReply()`, `renderBbCode()` and `textOf()`, which were documented in `DOCS.md` and
   missing from the list a reader uses to decide what the package covers. Its
