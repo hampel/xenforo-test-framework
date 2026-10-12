@@ -263,21 +263,22 @@ class OutputAssertionFailureTest extends TestCase
 		// a non-empty string is truthy, so it would silently be the default and the message would
 		// be gone - which is the state this parameter was added to end
 		$calls = [
-			'assertSee()' => function ()
+			'assertSee()' => ['assertSee($html, $value, $escape, $message)', function ()
 			{
 				$this->assertSee('<p>zzpresent</p>', 'zzpresent', 'a message in the wrong slot');
-			},
-			'assertDontSee()' => function ()
+			}],
+			'assertDontSee()' => ['assertDontSee($html, $value, $escape, $message)', function ()
 			{
 				$this->assertDontSee('<p>zzpresent</p>', 'zzabsent', 'a message in the wrong slot');
-			},
-			'assertSeeInOrder()' => function ()
+			}],
+			// the values are a list here, so the printed call cannot be one form for all three
+			'assertSeeInOrder()' => ['assertSeeInOrder($html, $values, $escape, $message)', function ()
 			{
 				$this->assertSeeInOrder('<p>zzpresent</p>', ['zzpresent'], 'a message in the wrong slot');
-			},
+			}],
 		];
 
-		foreach ($calls AS $helper => $call)
+		foreach ($calls AS $helper => [$form, $call])
 		{
 			try
 			{
@@ -288,6 +289,10 @@ class OutputAssertionFailureTest extends TestCase
 			{
 				$this->assertStringContainsString($helper, $e->getMessage());
 				$this->assertStringContainsString('escaping flag', $e->getMessage());
+
+				// and the call it should have been, so the reader need not go and look the
+				// signature up - the flag is third and the message fourth
+				$this->assertStringContainsString($form, $e->getMessage());
 			}
 		}
 	}
@@ -296,17 +301,17 @@ class OutputAssertionFailureTest extends TestCase
 	{
 		// the text assertions take no flag, so a false meant for one lands in the message
 		$calls = [
-			'assertSeeText()' => function ()
+			'assertSeeText()' => ['assertSeeText($html, $value, $message)', function ()
 			{
 				$this->assertSeeText('<p>zzpresent</p>', 'zzpresent', false);
-			},
-			'assertDontSeeText()' => function ()
+			}],
+			'assertDontSeeText()' => ['assertDontSeeText($html, $value, $message)', function ()
 			{
 				$this->assertDontSeeText('<p>zzpresent</p>', 'zzabsent', false);
-			},
+			}],
 		];
 
-		foreach ($calls AS $helper => $call)
+		foreach ($calls AS $helper => [$form, $call])
 		{
 			try
 			{
@@ -317,6 +322,9 @@ class OutputAssertionFailureTest extends TestCase
 			{
 				$this->assertStringContainsString($helper, $e->getMessage());
 				$this->assertStringContainsString('strip the markup', $e->getMessage());
+
+				// these take three arguments and no flag, which is what the printed call says
+				$this->assertStringContainsString($form, $e->getMessage());
 			}
 		}
 	}

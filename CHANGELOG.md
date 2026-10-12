@@ -26,6 +26,11 @@
   `renderJsonReply()`, `renderBbCode()` and `textOf()`, which were documented in `DOCS.md` and
   missing from the list a reader uses to decide what the package covers. Its
   `renderTemplateWithoutModification()` entry carries the way to pair it with a dispatch
+* The refusals on the rendering assertions print the call they want. `assertSee()`,
+  `assertDontSee()` and `assertSeeInOrder()` take the escaping flag third and the failure message
+  fourth, while `assertSeeText()` and `assertDontSeeText()` take no flag at all - so a value in the
+  wrong slot is answered with that assertion's own argument list rather than with a description of
+  it
 
 ## 5.24.1 (2026-10-12)
 

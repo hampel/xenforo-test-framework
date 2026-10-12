@@ -1174,6 +1174,7 @@ trait InteractsWithTemplates
 			"The third argument of $helper is the escaping flag, which is a bool - a failure message"
 			. ' goes after it. Passed a string this parameter is merely truthy, so the assertion would'
 			. ' behave exactly as it does by default and the message would say nothing to anybody.'
+			. ' The call this takes is ' . $this->callForm($helper) . '.'
 		);
 	}
 
@@ -1199,11 +1200,43 @@ trait InteractsWithTemplates
 			throw new \LogicException(
 				"The last argument of $helper is a failure message, not a flag or an expected value."
 				. ' assertSeeText() and assertDontSeeText() strip the markup before searching, so there'
-				. ' is nothing for an escaping flag to do and they do not take one.'
+				. ' is nothing for an escaping flag to do and they do not take one. The call this takes'
+				. ' is ' . $this->callForm($helper) . '.'
 			);
 		}
 
 		return $message === null || $message === '' ? $description : "$message - $description";
+	}
+
+	/**
+	 * The call an assertion takes, written out, for a refusal about which argument went where.
+	 *
+	 * Read off the method rather than written out at each call site, so it cannot disagree with the
+	 * signature it is telling the reader to match - the three that escape take the flag third and
+	 * the message fourth, the text ones take no flag at all, and that difference is the whole
+	 * reason these refusals exist.
+	 *
+	 * @param string $helper - the assertion's name, as the refusals carry it, with or without ()
+	 *
+	 * @return string
+	 */
+	private function callForm($helper)
+	{
+		$name = str_replace('()', '', $helper);
+
+		if (!method_exists($this, $name))
+		{
+			return $helper;
+		}
+
+		$parameters = [];
+
+		foreach ((new \ReflectionMethod($this, $name))->getParameters() AS $parameter)
+		{
+			$parameters[] = '$' . $parameter->getName();
+		}
+
+		return $name . '(' . implode(', ', $parameters) . ')';
 	}
 
 	/**
