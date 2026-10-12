@@ -12,8 +12,10 @@
   displays each option's id as ordinary text, so every option on the page is reported whether or
   not its phrase resolved - pass the keys instead. The ids are displayed only in development mode,
   so a bare prefix there passes on one install and fails on another
-* docs: the README names `assertNoUnresolvedPhrases()` in its helper list, and
-  `renderTemplateWithoutModification()` there carries the way to pair it with a dispatch
+* docs: the README's helper list names `assertNoUnresolvedPhrases()`, `renderRawReply()`,
+  `renderJsonReply()`, `renderBbCode()` and `textOf()`, which were documented in `DOCS.md` and
+  missing from the list a reader uses to decide what the package covers. Its
+  `renderTemplateWithoutModification()` entry carries the way to pair it with a dispatch
 
 ## 5.24.1 (2026-10-12)
 

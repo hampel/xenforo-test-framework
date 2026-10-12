@@ -450,7 +450,8 @@ access checks in `preDispatch()` run
 * `actingAsApiKey` runs api dispatches as a given api key, and restores `\XF::$apiKey` afterwards
 * `renderTemplate` renders a template to HTML with no web server, `renderMacro` renders one macro out of a template,
 and `renderReply` renders the template a dispatched reply named, with `assertSee`, `assertDontSee`, `assertSeeText`,
-`assertDontSeeText` and `assertSeeInOrder` to assert on the output
+`assertDontSeeText` and `assertSeeInOrder` to assert on the output, and `textOf` to read that output back with
+its markup stripped and its entities decoded
 * `assertTemplateModificationApplied` asserts that a template modification has applied, using its apply count
 * `renderTemplateWithoutModification` renders a template with one of its modifications left out, so a test can show
 the markup it asserts on is that modification's work, without disabling it for every other suite on the forum. To
@@ -463,6 +464,10 @@ XenForo renders for a phrase it cannot find. It takes a prefix or a whole phrase
 displays and the page parameters the render set
 * `pageParam` reads back what a rendered template set with `<xf:title>` and friends, which never appear in the
 template's own output
+* `renderRawReply` and `renderJsonReply` render a reply whose view builds its own output rather than naming a
+template - a file download shaped in `renderRaw()`, or an endpoint shaping its response in `renderJson()`. The first
+returns the `XF\Http\Response` with the body set, the second the decoded JSON document
+* `renderBbCode` renders BB code to HTML, the BB code twin of `renderTemplate`
 * `setVisitorAdminPermissions` grants admin permissions to a built visitor
 * `UsesDatabaseTransactions` is a trait you opt into per test class: it wraps each test in a transaction and rolls it
 back, so tests can save entities without leaving anything behind. `assertDatabaseHas`,
