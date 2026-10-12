@@ -1,6 +1,6 @@
 # Changelog
 
-## 5.23.1 (unreleased)
+## 5.23.1 (2026-10-12)
 
 * docs: the upgrade note for 5.23.0's `REQUEST_METHOD` refusal names the three helpers it applies
   to, and no longer offers a search for the key as the way to find affected tests. Building an
