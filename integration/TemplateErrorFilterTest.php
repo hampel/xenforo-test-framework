@@ -72,6 +72,100 @@ class TemplateErrorFilterTest extends TestCase
 		$this->assertNoTemplateErrors(['someoneelse_', 'myaddon_']);
 	}
 
+	/**
+	 * The shape an add-on that owns no templates is in: its only markup is a modification of a
+	 * core template, so the error it is answerable for is raised while rendering somebody else's.
+	 */
+	private function renderSomeoneElsesTemplateWithOurErrorInIt()
+	{
+		$this->fakesErrors();
+		$title = 'zzsibling_page_' . substr(md5(uniqid('', true)), 0, 6);
+
+		$this->createEntity('XF:Template', [
+			'style_id' => 0,
+			'type' => 'public',
+			'title' => $title,
+			// XenForo only allows a template to call a method whose name reads as an accessor
+			// (XF\Util\Php::nameIndicatesReadOnly), so the identifier goes after a `get_`
+			'template' => '<div>{{ $nope.get_myaddon_marker() }}</div>',
+			'addon_id' => '',
+		]);
+
+		$this->renderTemplate('public:' . $title);
+
+		$errors = $this->app()->templater()->getTemplateErrors();
+
+		$this->assertNotEmpty($errors, 'the render should have recorded an error to filter');
+		$this->assertStringContainsString(
+			'get_myaddon_marker',
+			$errors[0]['error'],
+			'the error text should carry our identifier for these tests to find'
+		);
+	}
+
+	public function test_a_name_filter_cannot_see_an_error_raised_in_somebody_elses_template()
+	{
+		$this->renderSomeoneElsesTemplateWithOurErrorInIt();
+
+		// the template is not ours, so no name we own matches it - which is why the closure form
+		// exists rather than this being the whole story
+		$this->assertNoTemplateErrors('myaddon_');
+	}
+
+	public function test_a_closure_filter_sees_an_error_by_its_text()
+	{
+		$this->renderSomeoneElsesTemplateWithOurErrorInIt();
+
+		$this->expectException(ExpectationFailedException::class);
+
+		$this->assertNoTemplateErrors(function (array $error)
+		{
+			return strpos($error['error'], 'myaddon_') !== false;
+		});
+	}
+
+	public function test_a_closure_that_keeps_nothing_passes_although_the_render_errored()
+	{
+		$this->renderSomeoneElsesTemplateWithOurErrorInIt();
+
+		$this->assertNoTemplateErrors(function (array $error)
+		{
+			return false;
+		});
+	}
+
+	public function test_a_string_naming_a_php_function_is_still_matched_as_a_template_name()
+	{
+		$this->fakesErrors();
+		$title = 'myaddon_header_' . substr(md5(uniqid('', true)), 0, 6);
+
+		$this->createEntity('XF:Template', [
+			'style_id' => 0,
+			'type' => 'public',
+			'title' => $title,
+			'template' => '<div>{{ $nope.doesNotExist() }}</div>',
+			'addon_id' => '',
+		]);
+
+		$this->renderTemplate('public:' . $title);
+
+		// `header` is a PHP function as well as a template name, so a filter that decided by
+		// whether the value is callable would call it instead of matching the name
+		$this->expectException(ExpectationFailedException::class);
+
+		$this->assertNoTemplateErrors('header');
+	}
+
+	public function test_a_filter_list_refuses_a_value_that_is_not_a_string()
+	{
+		$this->renderATemplateThatErrors();
+
+		$this->expectException(\LogicException::class);
+		$this->expectExceptionMessage('takes a template name, a list of names, or a Closure');
+
+		$this->assertNoTemplateErrors(['myaddon_', 42]);
+	}
+
 	public function test_a_supplied_message_is_carried_without_hiding_the_errors()
 	{
 		$this->renderATemplateThatErrors();

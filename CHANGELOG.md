@@ -12,6 +12,12 @@
   displays each option's id as ordinary text, so every option on the page is reported whether or
   not its phrase resolved - pass the keys instead. The ids are displayed only in development mode,
   so a bare prefix there passes on one install and fails on another
+* `assertNoTemplateErrors()` takes a closure as its filter, given each error XenForo recorded. An
+  add-on whose only markup is a template modification of a core template raises its errors while
+  rendering a template somebody else owns - and so does a sibling add-on, so no template name tells
+  them apart. A string filter still matches the template name and is never called, whether or not
+  it happens to name a PHP function; anything that is neither a string, a list of strings nor a
+  closure is refused
 * docs: `fakesSimpleCache()` documents `getSimpleCache()`, and its example reads the fake back
   through that rather than out of the container - the accessor refuses when the fake was never
   installed, where the container hands back the forum's real cache. Both spellings of

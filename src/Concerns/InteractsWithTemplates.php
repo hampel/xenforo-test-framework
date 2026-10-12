@@ -730,8 +730,29 @@ trait InteractsWithTemplates
 	 * extension declares raises an error on every render here. Pass the prefix of the templates you
 	 * own to assert on yours alone.
 	 *
-	 * @param string|string[]|null $templateFilter - matched against the template name; null asserts
-	 *                                               on every error the render raised
+	 * **An add-on that owns no templates needs a closure rather than a name.** Where the add-on's
+	 * only markup is a template modification of a core template, the errors it is answerable for
+	 * are raised while rendering a template somebody else owns - and so are a sibling add-on's. A
+	 * closure is handed each error and says whether it is yours:
+	 *
+	 * ```php
+	 * $this->assertNoTemplateErrors(function (array $error)
+	 * {
+	 *     return strpos($error['error'], 'myaddon_') !== false;
+	 * });
+	 * ```
+	 *
+	 * The keys are XenForo's own - `template` as `type:title`, `error` as the message, `type` as
+	 * the PHP error constant, and `file` and `line`. Returning true keeps the error, so the
+	 * assertion fails on it.
+	 *
+	 * **A string is always a template name, never called.** `header`, `compact` and `link` are all
+	 * PHP functions as well as plausible template names, so the form decides this rather than
+	 * whether the value happens to be callable: pass a closure to filter by anything else.
+	 *
+	 * @param string|string[]|\Closure|null $templateFilter - a template name to match, a list of
+	 *                                                        them, or a closure given each error;
+	 *                                                        null asserts on every error raised
 	 * @param string|null $message - prefixed to the failure
 	 *
 	 * @return void
@@ -740,9 +761,13 @@ trait InteractsWithTemplates
 	{
 		$errors = $this->app()->templater()->getTemplateErrors();
 
-		if ($templateFilter !== null)
+		if ($templateFilter instanceof \Closure)
 		{
-			$needles = (array) $templateFilter;
+			$errors = array_filter($errors, $templateFilter);
+		}
+		else if ($templateFilter !== null)
+		{
+			$needles = $this->templateNameNeedles($templateFilter);
 
 			// matched against the template name rather than the whole row: the row also holds the
 			// error message, and an add-on's name can appear in somebody else's error text
@@ -769,6 +794,35 @@ trait InteractsWithTemplates
 				'assertNoTemplateErrors()'
 			)
 		);
+	}
+
+	/**
+	 * The template names assertNoTemplateErrors() was given, as a list.
+	 *
+	 * @param mixed $templateFilter - a name or a list of them by contract, anything at all in
+	 *                                practice: the guard is what turns a caller's mistake into an
+	 *                                explanation rather than a TypeError inside strpos()
+	 *
+	 * @return string[]
+	 */
+	private function templateNameNeedles($templateFilter)
+	{
+		$needles = (array) $templateFilter;
+
+		foreach ($needles AS $needle)
+		{
+			if (!is_string($needle))
+			{
+				throw new \LogicException(
+					'assertNoTemplateErrors() takes a template name, a list of names, or a Closure'
+					. ' given each error - not ' . get_debug_type($needle)
+					. '. A callable that is not a Closure is not accepted, because a string is'
+					. ' always matched as a template name.'
+				);
+			}
+		}
+
+		return $needles;
 	}
 
 	/**

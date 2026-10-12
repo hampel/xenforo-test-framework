@@ -992,9 +992,38 @@ $this->assertNoTemplateErrors(['myaddon_', 'legacy_name_']);
 Filter by the names your add-on owns rather than by the siblings to exclude: you know the first list,
 and it does not change when somebody installs something else.
 
-The filter matches the template *name*. Each error XenForo records is an array - `template`,
-`error`, `file`, `line` - so a filter of your own has to pick a field, and matching the message as
-well as the name would also match an add-on's name appearing in somebody else's error text.
+A string filter matches the template *name*, not the whole error: the row holds the message too,
+and an add-on's name can appear in somebody else's error text.
+
+**An add-on that owns no templates needs a closure instead.** Where your only markup is a template
+modification of a core template, the errors you are answerable for are raised while rendering a
+template somebody else owns - and so are a sibling's, so no name tells them apart. Pass a closure
+and it is handed each error:
+
+```php
+$html = $this->renderTemplate('public:account_preferences');
+
+$this->assertSee($html, 'Hide signatures');
+$this->assertNoTemplateErrors(function (array $error)
+{
+	return strpos($error['error'], 'myaddon_') !== false;
+});
+```
+
+Returning true keeps the error, so the assertion fails on it. The keys are XenForo's own:
+
+| key | |
+|---|---|
+| `template` | the template that was rendering, as `type:title` |
+| `error` | the message, led by the PHP error constant in brackets |
+| `type` | that constant as an int |
+| `file` | the compiled template file |
+| `line` | the line in it |
+
+**A string is always a template name, never called.** `header`, `compact` and `link` are PHP
+functions as well as plausible template names, so the form decides this rather than whether the
+value happens to be callable - pass a closure to filter by anything else. Anything that is neither
+a string, a list of strings nor a closure is refused.
 
 A failure message of your own goes after the filter, and is prefixed to the failure.
 
