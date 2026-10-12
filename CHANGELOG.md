@@ -1,6 +1,6 @@
 # Changelog
 
-## 5.23.0 (unreleased)
+## 5.23.0 (2026-10-12)
 
 * a `REQUEST_METHOD` value in `$server` is refused rather than ignored, by `dispatch()`,
   `dispatchWithoutCsrfToken()` and `callAction()`. The request method comes from the `$method`
