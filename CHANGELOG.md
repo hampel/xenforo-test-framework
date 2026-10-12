@@ -1,5 +1,15 @@
 # Changelog
 
+## 5.24.1 (unreleased)
+
+* docs: `renderTemplateWithoutModification()` names the way to pair it with a dispatch - pass the
+  reply's own parameters, which is what `renderReply()` renders the template with, so the two
+  renders differ by the modification and nothing else
+* docs: `createUserAccount()` says that saving a user is the most contended write this package
+  makes and that a transaction does not make it reliable. Two tests creating users against one
+  database can deadlock, naming `xf_user_group_relation`; the mechanism and the alternatives were
+  already under `UsesDatabaseTransactions`, where a reader meets them only after the failure
+
 ## 5.24.0 (2026-10-12)
 
 * rendered templates are given a style. `$xf.style` was null in every render, because only a real

@@ -378,6 +378,14 @@ user group until the test says otherwise - see `actingAs` above for why an asser
 member being refused something needs `setVisitorPermissions($user, [])` rather than an empty
 argument.
 
+**Saving a user is the most contended write this package makes, and the transaction does not make
+it reliable.** XenForo rewrites the user's group memberships, which locks an index gap, so two
+tests creating users against one database can deadlock - reliably fine against a forum nothing else
+writes to, intermittent against a shared development install, and the failure names
+`xf_user_group_relation` rather than anything here. `UsesDatabaseTransactions` below has the
+mechanism. Where a test needs a visitor rather than a row, `actingAsMember()` writes nothing at
+all; where it needs an account that already exists, updating one takes no such lock.
+
 ##### Parameters:
 
 * `username` - optional - a unique one is generated when not given
@@ -1198,6 +1206,18 @@ $without = $this->renderTemplateWithoutModification('myaddon_preferences_hint');
 $this->assertSee($with, 'Hide adverts');
 $this->assertDontSee($without, 'Hide adverts');
 ```
+
+**To pair it with a dispatch, pass the reply's own parameters:**
+
+```php
+$reply = $this->dispatch('account/preferences');
+
+$with = $this->renderReply($reply);
+$without = $this->renderTemplateWithoutModification('myaddon_preferences', $reply->getParams());
+```
+
+That is what `renderReply()` renders the template with, so the two renders differ by the
+modification and nothing else.
 
 **Nothing is written.** The template's text is read, the other modifications are applied to it by
 XenForo's own repository, and the result is compiled and rendered in memory - so the forum's

@@ -349,6 +349,10 @@ trait InteractsWithTemplates
 	 * was never applying is identical to a render missing one that was - and the assertion a test
 	 * writes afterwards would pass for the wrong reason.
 	 *
+	 * **To pair it with a dispatch, hand it the reply's own parameters** -
+	 * `renderTemplateWithoutModification($key, $reply->getParams())`. That is what renderReply()
+	 * renders the template with, so the two renders differ by the modification and nothing else.
+	 *
 	 * @param string $modificationKey - the modification to leave out, as
 	 *                                  assertTemplateModificationApplied() takes it
 	 * @param array $params - template parameters, as renderTemplate() takes them

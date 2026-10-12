@@ -203,6 +203,14 @@ trait InteractsWithEntityManager
 	 *
 	 * The rows are real, so call it from a test class using UsesDatabaseTransactions.
 	 *
+	 * **Saving a user is also the most contended write this package makes**, and a transaction does
+	 * not make it reliable: XenForo rewrites the user's group memberships, which locks the index gap
+	 * above the last row, so two tests creating users against one database can deadlock. Against a
+	 * forum nothing else writes to this never happens; against a shared development install it is
+	 * intermittent, and the failure names `xf_user_group_relation` rather than anything here.
+	 * UsesDatabaseTransactions in DOCS.md has the mechanism and what to do instead - where a test
+	 * needs a visitor rather than a row, `actingAsMember()` writes nothing at all.
+	 *
 	 * Not called `createMember`: three add-on suites define a method of that name already, and a
 	 * trait method cannot be shadowed by an incompatible one without a fatal at class load.
 	 *
