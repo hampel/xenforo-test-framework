@@ -466,7 +466,10 @@ trait InteractsWithTemplates
 		$templater = $this->app()->templater();
 		$compiled = $this->app()->templateCompiler()->compile($text);
 
-		$file = tempnam(sys_get_temp_dir(), 'xftest') . '.php';
+		// tempnam() creates the file, so this writes to that same path rather than appending an
+		// extension to the name - include() does not care about the extension, and a suffixed path
+		// would leave the created file behind on every call
+		$file = tempnam(sys_get_temp_dir(), 'xftpl');
 		file_put_contents($file, "<?php\n" . $compiled . ";\n");
 
 		try

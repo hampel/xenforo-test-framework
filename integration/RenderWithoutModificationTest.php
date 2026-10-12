@@ -127,6 +127,34 @@ class RenderWithoutModificationTest extends TestCase
 		$this->assertSame($before, $after, 'the modification-free template was left in the cache');
 	}
 
+	/**
+	 * The compiled template goes through a temporary file, and tempnam() creates the file it names
+	 * - so writing to a path with an extension appended leaves the created one behind on every
+	 * call. This counts them.
+	 */
+	public function test_no_temporary_file_is_left_behind()
+	{
+		$modification = $this->applyingModification();
+
+		if (!$modification)
+		{
+			$this->markTestSkipped('This forum has no applying public template modification.');
+		}
+
+		$this->fakesErrors();
+
+		$pattern = sys_get_temp_dir() . '/xftpl*';
+		$before = count((array) glob($pattern));
+
+		$this->renderTemplateWithoutModification($modification['modification_key']);
+
+		$this->assertCount(
+			$before,
+			(array) glob($pattern),
+			'a temporary file was left in ' . sys_get_temp_dir()
+		);
+	}
+
 	public function test_an_unknown_modification_key_is_refused()
 	{
 		$this->expectException(\LogicException::class);
