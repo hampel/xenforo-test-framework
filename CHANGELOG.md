@@ -1,5 +1,13 @@
 # Changelog
 
+## 5.23.1 (unreleased)
+
+* docs: the upgrade note for 5.23.0's `REQUEST_METHOD` refusal names the three helpers it applies
+  to, and no longer offers a search for the key as the way to find affected tests. Building an
+  `XF\Http\Request` and swapping it into the container is unaffected, and there the key is how the
+  method gets set - so the search finds tests that are correct and must be left alone, and the
+  remedy it gave would have removed the method from them
+
 ## 5.23.0 (2026-10-12)
 
 * a `REQUEST_METHOD` value in `$server` is refused rather than ignored, by `dispatch()`,

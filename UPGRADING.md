@@ -10,16 +10,30 @@ Most releases need nothing beyond `composer update`. `CHANGELOG.md` lists everyt
 Five refusals, each of which can only turn red a test that was already not checking what it looked
 like it checked.
 
-**A `REQUEST_METHOD` value in `$server` now throws.** It never had any effect - the method comes
+**A `REQUEST_METHOD` value in `$server` now throws, in `dispatch()`,
+`dispatchWithoutCsrfToken()` and `callAction()`.** It never had any effect there - the method comes
 from the `$method` argument - so a test passing one was sending a different method from the one it
-named. Move the value to `$method`:
+named. Move the value to `$method`. A `GET` test that was passing `'POST'` this way becomes a real
+`POST`, which reaches the CSRF check and the action behind it; use `dispatchWithoutCsrfToken()`
+where sending no token is the point.
 
-```bash
-git grep -n "REQUEST_METHOD" tests/
+**Only those three helpers are affected, and a search for the key finds a pattern that must be
+left alone.** Building an `XF\Http\Request` yourself and swapping it into the container is the
+other way to give a controller or a service a request, and there `REQUEST_METHOD` in the server
+array is exactly how the method gets set - `Request::getRequestMethod()` reads it. Such a test has no
+`$method` argument to move the value to, and removing the key would leave it with no method at all:
+
+```php
+// untouched by this release - the key is load-bearing here
+$this->swap('request', new Request($this->app()->inputFilterer(), [], [], [], [
+    'REQUEST_METHOD' => 'POST',
+]));
 ```
 
-A `GET` test that was passing `'POST'` this way becomes a real `POST`, which reaches the CSRF check
-and the action behind it. Use `dispatchWithoutCsrfToken()` where sending no token is the point.
+So `git grep -n REQUEST_METHOD tests/` answers the wrong question: on the suites checked here every
+hit was that pattern and none was a case this refusal governs. What tells them apart is whether the
+value is going to one of the three helpers. Run the suite - the refusal names the helper it came
+from.
 
 **`assertNoUnresolvedPhrases()` now reads the page parameters too.** A suite can go red here, and
 the key it reports is a phrase that genuinely came out unresolved in a `<xf:title>`,
