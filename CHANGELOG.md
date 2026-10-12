@@ -1,6 +1,6 @@
 # Changelog
 
-## 5.24.0 (unreleased)
+## 5.24.0 (2026-10-12)
 
 * `assertExceptionLogged()` and `assertExceptionNotLogged()` name their second parameter `$filter`
   rather than `$callback`, which described only one of the forms it accepts. The value and its
