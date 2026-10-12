@@ -22,6 +22,17 @@ protected $addonsToLoad = [];
 `$addonsToLoad` lists the add-on ids to load. Name your own and nothing else on the forum is
 loaded. Leave it empty to load every installed add-on.
 
+**An id that matches no installed add-on is ignored, not refused.** The filter keeps the installed
+add-ons whose ids are named, so an id naming nothing simply matches nothing - which is how to ask
+for no add-ons at all, with a list holding one id you know is not there:
+
+```php
+protected $addonsToLoad = ['None/None'];
+```
+
+A misspelled id behaves the same way, so an add-on silently not loading is worth checking against
+the ids in the control panel's add-on list.
+
 Naming ids in `$addonsToLoad` filters three things:
 
 * **Composer autoloading** - only the named add-ons' autoloaders are registered
@@ -30,12 +41,39 @@ Naming ids in `$addonsToLoad` filters three things:
 
 Nothing else is filtered: the forum's database, options, phrases and templates are the real ones.
 
+**Content type handlers are the ones to know about, because they fail inside XenForo's own code.**
+The handlers come from `xf_content_type_field` in the database, so every installed add-on's are
+registered whatever `$addonsToLoad` says. Core then walks them, reaches a handler belonging to an
+add-on this test did not load, and that handler calls a method the unapplied class extension was
+going to add:
+
+```text
+Error: Call to undefined method XF\Entity\User::hasResourceCategoryPermission()
+```
+
+The message names neither isolation nor the add-on it came from. Reaching it needs an operation that
+iterates every content type - a search with no type given is the usual one - so the remedy is the
+test's: narrow the operation to the content types the add-on owns, or name in `$addonsToLoad` the
+add-ons whose content types the test reaches.
+
 **It cannot remove a class extension that has already been resolved in this process.** XenForo caches
 each resolution and aliases an XFCP proxy for it, and a proxy cannot be undeclared - so once any test
 has resolved an extended class, an application booted later with a narrower `$addonsToLoad` still
 gets the extended one, and with it any column the extension added to an entity structure. A test
 asserting that an extension is *absent* therefore passes on its own and exercises the extension in a
 full run. `requireClassNotExtended()` is the guard for such a test.
+
+**It cannot add one either, which is the same cache from the other side.** Once a class has been
+resolved under one list, an application booted later with a wider `$addonsToLoad` still gets the
+class resolved the first time - the extension is registered, but the proxy it needs is a
+`class_alias()` PHP cannot declare twice. So a test class naming more add-ons than its siblings gets
+those extensions only when it happens to run first, and when it does not the failure is a call to a
+method that is not there rather than anything naming the list.
+
+**Which is why the list belongs to the suite rather than to a test class.** Name every add-on whose
+class extensions or content types any of your tests reach, identically in every class - a base
+`TestCase` of your own is the place for it - and neither of these is order-dependent any more.
+
 **Your own add-on's listeners do run**, including while the container builds something your test is
 not otherwise interested in - so a mock standing in for one subsystem may still need expectations
 for whatever your listeners ask of it.
@@ -533,6 +571,23 @@ Without them, `REMOTE_ADDR` is `127.0.0.1` and the user agent and referrer are e
   `HTTP_X_FORWARDED_FOR` and `HTTP_CLIENT_IP`.
 * On XenForo 2.3 `getFromSearch()` always returns an empty string: search referrals are not
   detected, whatever the referrer.
+
+**A reply's contents follow the forum's own configuration, not just the test's fixtures.** A thread
+list coming back short is the likeliest instance: a forum carries `list_date_limit_days`, and where
+it is set `XF\Pub\Controller\ForumController` limits the finder to threads whose `last_post_date`
+falls inside that many days - so a fixture thread with an older last post is filtered out by the
+forum rather than by anything the test did. The limit lifts per request:
+
+```php
+$reply = $this->dispatch('forums/announcements.1/', 'public', ['no_date_limit' => 1]);
+```
+
+It is a field on each forum rather than a board option, so the same test can pass against one forum
+on an install and fail against another.
+
+Note the trailing slash. A public controller compares the url it would build against the url the
+request carries, and a forum's canonical route has one - so `dispatch('forums/announcements.1')`
+is answered with a redirect to `forums/announcements.1/` rather than with the page.
 
 ### dispatchWithoutCsrfToken
 Dispatch a route sending no CSRF token, for asserting that XenForo's check refuses. Takes the same
@@ -3075,7 +3130,9 @@ that owns it.** XenForo loads every add-on's command classes simply to list them
 suite loads these classes, so nothing else notices.
 
 `assertConsoleCommandsLoad()` walks the add-on's `Cli/Command` the way XenForo does, recursively,
-turning each `.php` file into a class name by its path. It returns the command classes it checked.
+turning each `.php` file into a class name by its path. **It returns the classes XenForo would
+list as commands, which is fewer than it loaded** - the skips below are loaded and left out, so
+an assertion over the whole list counts the commands rather than the files.
 
 **It skips what XenForo's runner skips**, so the layout core itself uses is not a failure: an
 abstract base beside the commands - core has `XF\Cli\Command\AbstractCommand` - a trait or

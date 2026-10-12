@@ -97,7 +97,8 @@ trait InteractsWithCommands
 	 *
 	 * @param string|null $addOnId - defaults to the add-on the test class isolates, when it names one
 	 *
-	 * @return string[] the class names checked
+	 * @return string[] the classes XenForo would list as commands, which is not every class the
+	 *                  walk loaded - what the runner skips is skipped here too and left out
 	 */
 	protected function assertConsoleCommandsLoad($addOnId = null)
 	{

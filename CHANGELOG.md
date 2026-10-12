@@ -31,6 +31,25 @@
   fourth, while `assertSeeText()` and `assertDontSeeText()` take no flag at all - so a value in the
   wrong slot is answered with that assertion's own argument list rather than with a description of
   it
+* docs: `assertConsoleCommandsLoad()` says what it returns - the classes XenForo would list as
+  commands, which is fewer than the walk loaded. A file the runner skips, such as an abstract base
+  beside the commands or a class that is not a Symfony `Command`, is loaded and left out of the
+  list, so an assertion over the whole list counts commands rather than files
+* docs: add-on isolation does not filter content type handlers. They come from the database, so
+  every installed add-on's are registered whatever `$addonsToLoad` names, and an operation that
+  iterates every content type reaches a handler whose class extension was not applied. It fails
+  inside XenForo's own code with `Call to undefined method`, naming neither isolation nor the
+  add-on - narrow the operation, or name the add-ons whose content types the test reaches
+* docs: `$addonsToLoad` cannot add a class extension to a class already resolved in the process,
+  as well as being unable to remove one. A test class naming more add-ons than its siblings gets
+  those extensions only when it happens to run first, so the list belongs to the whole suite rather
+  than to a test class
+* docs: an id in `$addonsToLoad` that matches no installed add-on is ignored rather than refused,
+  which is how to ask for no add-ons at all
+* docs: `dispatch()` notes that a reply follows the forum's own configuration as well as the test's
+  fixtures - a forum's `list_date_limit_days` keeps older threads out of its thread list, and
+  `no_date_limit` in the input lifts it - and that a forum's canonical route carries a trailing
+  slash
 
 ## 5.24.1 (2026-10-12)
 
