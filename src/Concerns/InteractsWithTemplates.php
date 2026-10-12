@@ -290,9 +290,25 @@ trait InteractsWithTemplates
 	 * Pair this with an assertion that the text you expect IS present - output that never rendered
 	 * carries no unresolved key either.
 	 *
+	 * **A prefix matches a key that ends exactly at it**, which is the shape of every key XenForo
+	 * structures for you: an option is `option.<optionId>`, its explanation
+	 * `option_explain.<optionId>`, an option group's title `option_group.<groupId>` and its
+	 * description `option_group_description.<groupId>`, and a permission
+	 * `permission.<permissionId>`. The add-on's own id comes last in all of them, so a key is
+	 * often the prefix and nothing more. A dotted segment in front of the prefix is reported as
+	 * part of the key, so what the failure names is what you can search for.
+	 *
+	 * **The bare add-on prefix is the wrong argument for an admin option page.** With development
+	 * mode on, XenForo displays each option's id beside its title as ordinary text, so every
+	 * option on the page is reported whether or not its phrase resolved. Pass the keys instead -
+	 * `['option.myaddon_thing', 'option_explain.myaddon_thing']` - or assert on the page's own
+	 * phrases by value. The ids are displayed only in development mode, so a bare prefix there
+	 * passes on one install and fails on another.
+	 *
 	 * @param string $html
-	 * @param string|string[] $prefix - your add-on's phrase prefix, eg `myaddon_`, or several of
-	 *                                 them where an older one survives a renaming
+	 * @param string|string[] $prefix - your add-on's phrase prefix, eg `myaddon_`, a whole phrase
+	 *                                 key, or several of either where an older prefix survives a
+	 *                                 renaming
 	 * @param string|null $message - prefixed to the failure, which goes on naming the keys and the
 	 *                                surface each came from
 	 *
@@ -310,7 +326,16 @@ trait InteractsWithTemplates
 			// renaming a phrase loses any customisation of it - so the old ones are permanent
 			foreach ((array) $prefix AS $onePrefix)
 			{
-				preg_match_all('/\b' . preg_quote($onePrefix, '/') . '[a-z0-9_]+/i', $subject, $matches);
+				// the key can end exactly at the prefix, because XenForo's structured keys put the
+				// add-on's own id last - an option group's title is `option_group.<groupId>`. And
+				// a dotted segment in front of the prefix is part of the key rather than context,
+				// so it is matched too: a reader handed only the tail cannot grep for it. The
+				// segment has to be identifier-shaped, which is what a phrase key's is.
+				preg_match_all(
+					'/\b(?:[a-z_][a-z0-9_]*\.)?' . preg_quote($onePrefix, '/') . '[a-z0-9_]*/i',
+					$subject,
+					$matches
+				);
 
 				foreach ($matches[0] AS $key)
 				{

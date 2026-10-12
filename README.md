@@ -453,8 +453,14 @@ and `renderReply` renders the template a dispatched reply named, with `assertSee
 `assertDontSeeText` and `assertSeeInOrder` to assert on the output
 * `assertTemplateModificationApplied` asserts that a template modification has applied, using its apply count
 * `renderTemplateWithoutModification` renders a template with one of its modifications left out, so a test can show
-the markup it asserts on is that modification's work, without disabling it for every other suite on the forum
+the markup it asserts on is that modification's work, without disabling it for every other suite on the forum. To
+pair it with a dispatch, hand it the reply's own parameters - `renderTemplateWithoutModification($key,
+$reply->getParams())` - which is what `renderReply` renders the template with, so the two renders differ by the
+modification and nothing else
 * `assertNoTemplateErrors` asserts that nothing the test rendered raised an error
+* `assertNoUnresolvedPhrases` asserts that none of your add-on's phrases came out as its own key, which is what
+XenForo renders for a phrase it cannot find. It takes a prefix or a whole phrase key, and searches the text the page
+displays and the page parameters the render set
 * `pageParam` reads back what a rendered template set with `<xf:title>` and friends, which never appear in the
 template's own output
 * `setVisitorAdminPermissions` grants admin permissions to a built visitor

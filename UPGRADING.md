@@ -5,6 +5,44 @@ Most releases need nothing beyond `composer update`. `CHANGELOG.md` lists everyt
 
 `tests/TestCase.php` is copied into your add-on, so a change to it has to be merged by hand.
 
+## 5.25.0
+
+**`assertNoUnresolvedPhrases()` now catches a phrase key that ends exactly at the prefix**, so a
+suite that has one goes red where it used to pass. That is exposure rather than a regression: every
+key XenForo structures for an add-on puts the add-on's own id last - `option.<optionId>`,
+`option_group.<groupId>`, `permission.<permissionId>` - so if your id is your prefix, those keys
+were never being checked.
+
+**No grep finds the affected suites**, because the condition is in rendered output rather than in a
+call site. Run the suite; the failure names the key.
+
+**One new false positive comes with it, on the admin option page.** With development mode on,
+XenForo displays each option's id as ordinary text, so a bare prefix over that page now reports
+every option whose id is the prefix, whether or not its phrase resolved. Tell the two apart by
+whether the phrase's text is on the page as well:
+
+```php
+// the phrase resolved - its text is there - so a report of its key is the option id
+$this->assertSee($html, 'Hide signatures');
+```
+
+The remedy is to pass the keys rather than the prefix:
+
+```php
+$this->assertNoUnresolvedPhrases($html, [
+	'option.myaddon_hide_signatures',
+	'option_explain.myaddon_hide_signatures',
+]);
+```
+
+The ids are displayed only in development mode, so a bare prefix over that page passes on an
+install with development off and fails on one with it on - worth changing even where it is green
+today.
+
+**The key the failure names has changed shape.** A dotted segment in front of the prefix is now
+part of it, so a failure reads `option_explain.myaddon_thing` where it used to read
+`myaddon_thing`. A test asserting on the failure message itself wants the fuller string.
+
 ## 5.24.0
 
 **Rendered templates now have a style, so a render can produce more markup than it did.** `$xf.style`

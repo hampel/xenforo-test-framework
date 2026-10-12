@@ -1075,7 +1075,7 @@ for a phrase it cannot find.
 ##### Parameters:
 
 * `html`
-* `prefix` - your add-on's phrase prefix, eg `myaddon_`, or a list of them
+* `prefix` - your add-on's phrase prefix, eg `myaddon_`, a whole phrase key, or a list of either
 * `message` - optional
 
 ##### Example:
@@ -1109,6 +1109,39 @@ about both renders.
 
 **Pair it with an assertion that the text you expect is present.** Output that never rendered
 carries no unresolved key either.
+
+**A prefix matches a key that ends exactly at it.** That is the shape of every key XenForo
+structures for you, because the add-on's own id comes last:
+
+| the phrase | its key |
+|---|---|
+| an option's title | `option.<optionId>` |
+| an option's explanation | `option_explain.<optionId>` |
+| an option group's title | `option_group.<groupId>` |
+| an option group's description | `option_group_description.<groupId>` |
+| a permission | `permission.<permissionId>` |
+
+So where the id is the add-on's prefix, the key is the prefix and nothing more. A dotted segment in
+front of the prefix is reported as part of the key, so what the failure names is what you can
+search the add-on for.
+
+**The bare prefix is the wrong argument for an admin option page.** With development mode on,
+XenForo displays each option's id beside its title as ordinary text, so every option on the page is
+reported whether or not its phrase resolved. Pass the keys:
+
+```php
+$reply = $this->dispatch('options/groups/myaddon/', 'admin');
+$html = $this->renderReply($reply);
+
+$this->assertSee($html, 'Hide signatures');
+$this->assertNoUnresolvedPhrases($html, [
+	'option.myaddon_hide_signatures',
+	'option_explain.myaddon_hide_signatures',
+]);
+```
+
+The ids are displayed only in development mode, so a bare prefix there passes on an install with
+development off and fails on one with it on.
 
 **More than one prefix is allowed**, for an add-on whose older phrases predate its naming
 convention - renaming a phrase loses any customisation of it, so the old names are permanent:

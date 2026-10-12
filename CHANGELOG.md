@@ -1,5 +1,20 @@
 # Changelog
 
+## 5.25.0 (unreleased)
+
+* `assertNoUnresolvedPhrases()` reports a phrase key that ends at the prefix it was given. Every
+  key XenForo structures for an add-on puts the add-on's own id last - an option group's title is
+  `option_group.<groupId>` - so a key is often the prefix and nothing more, and those were passing
+  silently. A dotted segment in front of the prefix is now reported as part of the key, so the
+  failure names a key that can be searched for rather than its tail
+* docs: `assertNoUnresolvedPhrases()` lists the keys XenForo structures and says that the bare
+  add-on prefix is the wrong argument for an admin option page. With development mode on, XenForo
+  displays each option's id as ordinary text, so every option on the page is reported whether or
+  not its phrase resolved - pass the keys instead. The ids are displayed only in development mode,
+  so a bare prefix there passes on one install and fails on another
+* docs: the README names `assertNoUnresolvedPhrases()` in its helper list, and
+  `renderTemplateWithoutModification()` there carries the way to pair it with a dispatch
+
 ## 5.24.1 (2026-10-12)
 
 * docs: `renderTemplateWithoutModification()` names the way to pair it with a dispatch - pass the
