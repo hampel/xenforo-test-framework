@@ -64,24 +64,24 @@ trait InteractsWithErrors
 	 * Assert that an exception of the given class was logged.
 	 *
 	 * @param string $class - the exception class
-	 * @param int|string|callable|null $callback - a count, a string the logged message must contain,
-	 *                                            or a callback given the logged entry. The message
-	 *                                            carries the prefix passed to \XF::logException(),
-	 *                                            so the prefix itself is a string you can match on
+	 * @param int|string|callable|null $filter - a count, a string the logged message must contain,
+	 *                                           or a callback given the logged entry. The message
+	 *                                           carries the prefix passed to \XF::logException(),
+	 *                                           so the prefix itself is a string you can match on
 	 *
 	 * @return void
 	 *
 	 * @throws \Exception
 	 */
-	protected function assertExceptionLogged($class, $callback = null)
+	protected function assertExceptionLogged($class, $filter = null)
 	{
-		if (is_numeric($callback))
+		if (is_numeric($filter))
 		{
-			$this->assertExceptionLoggedTimes($class, $callback);
+			$this->assertExceptionLoggedTimes($class, $filter);
 			return;
 		}
 
-		$loggedExceptions = $this->loggedExceptions($class, $callback);
+		$loggedExceptions = $this->loggedExceptions($class, $filter);
 
 		PHPUnit::assertTrue(
 			count($loggedExceptions) > 0,
@@ -127,17 +127,25 @@ trait InteractsWithErrors
 	}
 
 	/**
-	* Determine if exception was not logged based on a truth-test callback.
-	*
-	* @param string $class
-	* @param  callable|null  $callback
-	* @return void
-	*
-	* @throws \Exception
-	*/
-	protected function assertExceptionNotLogged($class, $callback = null)
+	 * Assert that no exception of the given class was logged.
+	 *
+	 * Unlike assertExceptionLogged(), a count is not accepted here - there is no number of
+	 * exceptions that counts as none - so an int reaches the filter and PHP rejects it as not
+	 * callable. Use assertExceptionLoggedTimes() to assert a count.
+	 *
+	 * @param string $class - the exception class
+	 * @param string|callable|null $filter - a string the logged message must contain, or a callback
+	 *                                       given the logged entry. Narrowing the assertion this
+	 *                                       way asserts that no exception of that class MATCHING
+	 *                                       the filter was logged, not that none was logged at all
+	 *
+	 * @return void
+	 *
+	 * @throws \Exception
+	 */
+	protected function assertExceptionNotLogged($class, $filter = null)
 	{
-		$loggedExceptions = $this->loggedExceptions($class, $callback);
+		$loggedExceptions = $this->loggedExceptions($class, $filter);
 
 		PHPUnit::assertTrue(
 			count($loggedExceptions) === 0,
@@ -195,42 +203,42 @@ trait InteractsWithErrors
 	}
 
 	/**
-	 * Get all of the logged exceptions matching a truth-test callback.
+	 * Get all of the logged exceptions matching the given filter.
 	 *
 	 * @param string $class
-	 * @param  callable|null  $callback
+	 * @param string|callable|null $filter
 	 * @return array
 	 *
 	 * @throws \Exception
 	 */
-	private function loggedExceptions($class, $callback = null)
+	private function loggedExceptions($class, $filter = null)
 	{
 		if (! $this->hasLoggedException($class))
 		{
 			return [];
 		}
 
-		if (is_string($callback))
+		if (is_string($filter))
 		{
 			// the common case is the house rule that every logged message starts with the add-on's
 			// prefix, which reads badly as a closure
-			$needle = $callback;
-			$callback = function (array $logged) use ($needle)
+			$needle = $filter;
+			$filter = function (array $logged) use ($needle)
 			{
 				return strpos($logged['message'], $needle) !== false;
 			};
 		}
 
-		$callback = $callback ?: function ()
+		$filter = $filter ?: function ()
 		{
 			return true;
 		};
 
 		$loggedExceptions = $this->exceptionsOf($class);
 
-		return array_filter($loggedExceptions, function ($exception) use ($callback)
+		return array_filter($loggedExceptions, function ($exception) use ($filter)
 		{
-			return $callback($exception);
+			return $filter($exception);
 		});
 	}
 

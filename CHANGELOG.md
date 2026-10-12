@@ -1,5 +1,15 @@
 # Changelog
 
+## 5.24.0 (unreleased)
+
+* `assertExceptionLogged()` and `assertExceptionNotLogged()` name their second parameter `$filter`
+  rather than `$callback`, which described only one of the forms it accepts. The value and its
+  forms are unchanged, and a positional call is unaffected; a call passing it by name must be
+  updated
+* `assertExceptionNotLogged()` is documented as taking a string the logged message must contain as
+  well as a callback. Narrowing it denies only the exceptions matching the filter rather than all
+  of that class, and a count is not accepted there - use `assertExceptionLoggedTimes()`
+
 ## 5.23.1 (2026-10-12)
 
 * docs: the upgrade note for 5.23.0's `REQUEST_METHOD` refusal names the three helpers it applies

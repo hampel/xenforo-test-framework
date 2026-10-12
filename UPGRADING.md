@@ -5,6 +5,21 @@ Most releases need nothing beyond `composer update`. `CHANGELOG.md` lists everyt
 
 `tests/TestCase.php` is copied into your add-on, so a change to it has to be merged by hand.
 
+## 5.24.0
+
+`assertExceptionLogged()` and `assertExceptionNotLogged()` renamed their second parameter from
+`$callback` to `$filter`. **A positional call needs nothing** - the value, its forms and the
+behaviour are all unchanged - so for nearly every suite this release is a `composer update`.
+
+Only a call that passes the argument **by name** is affected, and it cannot fail quietly: PHP
+refuses it with `Error: Unknown named parameter $callback`. To find them ahead of the failure:
+
+```bash
+grep -rnE 'assertException(Not)?Logged\([^)]*callback:' tests/
+```
+
+Change `callback:` to `filter:` in anything it lists.
+
 ## 5.23.0
 
 Five refusals, each of which can only turn red a test that was already not checking what it looked

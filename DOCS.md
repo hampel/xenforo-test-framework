@@ -1940,7 +1940,8 @@ none
 * `assertExceptionLogged` - takes the exception class, and optionally a count, a string the logged
   message must contain, or a callback
 * `assertExceptionLoggedTimes`
-* `assertExceptionNotLogged`
+* `assertExceptionNotLogged` - takes the exception class, and optionally a string or a callback,
+  which narrows what it denies
 * `assertNoExceptionsLogged`
 
 **The string form matches the message that was logged, prefix included.**
@@ -1948,6 +1949,11 @@ none
 message, so `assertExceptionLogged($class, 'MyAddon: ')` asserts the prefix and
 `assertExceptionLogged($class, 'smtp is down')` asserts the exception. It is a substring match,
 anywhere in the message.
+
+**A string or a callback given to `assertExceptionNotLogged()` narrows what is denied**, so it
+asserts that no exception of that class matching the filter was logged - not that none was logged
+at all. A count is not accepted there, since no number of exceptions amounts to none; use
+`assertExceptionLoggedTimes()` for a count.
 
 **A callback is handed the logged entry, not the throwable.** It is an array, whose useful keys are
 `message` (including any prefix the caller added), `exception_type`, `filename`, `line` and
