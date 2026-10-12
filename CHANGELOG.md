@@ -1,6 +1,6 @@
 # Changelog
 
-## 5.24.1 (unreleased)
+## 5.24.1 (2026-10-12)
 
 * docs: `renderTemplateWithoutModification()` names the way to pair it with a dispatch - pass the
   reply's own parameters, which is what `renderReply()` renders the template with, so the two
