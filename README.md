@@ -447,6 +447,10 @@ from the database
 access checks in `preDispatch()` run
 * `callAction` calls a controller action directly with a `POST`, for testing saves, toggles and deletes. It skips
 `preDispatch()`, so pair it with `dispatch` to test access checks
+* `followRedirect` dispatches the route a redirect reply points at, so a test of a save can go on to assert what the
+page the user lands on shows. It reads the route type out of the url, which is the part worth not hand-rolling - the
+control panel has its own script, the api sits behind a prefix on the public one, and the friendly-urls option changes
+the public and api forms but not the admin one
 * `actingAsApiKey` runs api dispatches as a given api key, and restores `\XF::$apiKey` afterwards
 * `renderTemplate` renders a template to HTML with no web server, `renderMacro` renders one macro out of a template,
 and `renderReply` renders the template a dispatched reply named, with `assertSee`, `assertDontSee`, `assertSeeText`,

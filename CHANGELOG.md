@@ -50,6 +50,12 @@
   fixtures - a forum's `list_date_limit_days` keeps older threads out of its thread list, and
   `no_date_limit` in the input lifts it - and that a forum's canonical route carries a trailing
   slash
+* `followRedirect()` dispatches the route a redirect reply points at and returns the reply, so a
+  test of a save can assert what the page the user lands on shows rather than stopping at the
+  redirect. The route type is read from the url: the control panel has its own script, the api is
+  routed through the public one behind a prefix, and link building honours the friendly-urls option
+  for the public and api routers but not the admin one. One hop, as a `GET`; a url pointing at
+  another host is refused
 * docs: `renderTemplateWithoutModification()` says what still differs from a `renderReply()` of the
   same template - `$xf.reply`, which describes the page, comes from the reply and this renders
   without one. Compare against `renderTemplate()` where the template reads it

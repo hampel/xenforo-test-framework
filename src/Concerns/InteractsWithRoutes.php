@@ -211,6 +211,118 @@ trait InteractsWithRoutes
 	}
 
 	/**
+	 * Dispatch the route a redirect reply points at, and return the reply that produced.
+	 *
+	 * A controller answers a save, a toggle or a canonical url correction with a redirect, which
+	 * says nothing about what the next page shows - so a test that asserts only the redirect stops
+	 * one step short of what the user would see. This takes the step: it reads the url off the
+	 * reply, works out which route and which router it names, and dispatches it.
+	 *
+	 * **The route type comes from the url, not from the dispatch that produced the redirect.** The
+	 * forum serves the control panel from its own script and the api behind a prefix on the public
+	 * one, and link building honours the friendly-urls option for the public and api routers but
+	 * not the admin one - so all six shapes have to be read rather than assumed:
+	 *
+	 * | | friendly urls off | friendly urls on |
+	 * |---|---|---|
+	 * | public | `/index.php?notices&page=2` | `/notices?page=2` |
+	 * | admin | `/admin.php?notices/&page=2` | `/admin.php?notices/&page=2` |
+	 * | api | `/index.php?api/notices&page=2` | `/api/notices?page=2` |
+	 *
+	 * Either with the board's own scheme and host in front, which is what a canonical url carries.
+	 *
+	 * **One hop, as a GET.** A redirect is followed with a GET whatever method produced it, and a
+	 * reply that is itself a redirect comes back as one for the test to assert on or follow again.
+	 *
+	 * @param AbstractReply $reply - the redirect to follow
+	 * @param array $server - request server values for the new request, as dispatch() takes them
+	 *
+	 * @return AbstractReply
+	 */
+	protected function followRedirect(AbstractReply $reply, array $server = [])
+	{
+		PHPUnit::assertInstanceOf(
+			Redirect::class,
+			$reply,
+			$this->replyFailure($reply, 'only a redirect reply has a url to follow')
+		);
+
+		/** @var Redirect $reply */
+		[$type, $routePath, $input] = $this->parseRedirectUrl($reply->getUrl());
+
+		return $this->dispatch($routePath, $type, $input, $server);
+	}
+
+	/**
+	 * Take a redirect's url apart into the route type, the route path and the input.
+	 *
+	 * The reverse of buildDispatchRequest(), which is why the two belong in one file: anything
+	 * that changes the url a dispatch carries changes what this has to read.
+	 *
+	 * @param string $url
+	 *
+	 * @return array{0: string, 1: string, 2: array}
+	 */
+	private function parseRedirectUrl($url)
+	{
+		$parts = parse_url((string) $url);
+
+		if ($parts === false)
+		{
+			throw new \LogicException("Could not read the redirect's url: '$url'");
+		}
+
+		$board = parse_url((string) $this->app()->options()['boardUrl']) ?: [];
+
+		if (isset($parts['host']) && $parts['host'] !== ($board['host'] ?? null))
+		{
+			throw new \LogicException(
+				"The redirect points at '" . $parts['host'] . "', which is not this forum - there is"
+				. ' no route to dispatch. Assert the url with assertReplyIsRedirect() instead.'
+			);
+		}
+
+		$path = $parts['path'] ?? '/';
+		$base = rtrim($board['path'] ?? '', '/');
+
+		// a forum served from a subdirectory has that in front of every url it builds
+		if ($base !== '' && strpos($path, $base) === 0)
+		{
+			$path = substr($path, strlen($base));
+		}
+
+		$query = $parts['query'] ?? '';
+
+		if ($path === '/admin.php' || $path === '/index.php')
+		{
+			// the script carries the route in its query string, ahead of the input - so the first
+			// '&' is the boundary, and an index link has no query at all
+			[$routed, $queryString] = array_pad(explode('&', $query, 2), 2, '');
+
+			$type = $path === '/admin.php' ? 'admin' : 'public';
+		}
+		else
+		{
+			// the friendly form: the route is the path, so the whole query is input
+			$routed = ltrim($path, '/');
+			$queryString = $query;
+			$type = 'public';
+		}
+
+		if ($type === 'public' && ($routed === 'api' || strpos($routed, 'api/') === 0))
+		{
+			// the api is routed through the public script behind this prefix, either way round
+			$type = 'api';
+			$routed = substr($routed, 4);
+		}
+
+		$input = [];
+		parse_str($queryString, $input);
+
+		return [$type, $routed, $input];
+	}
+
+	/**
 	 * Call one controller action directly, with a POST request by default.
 	 *
 	 * The action runs **without preDispatch()**, so neither the CSRF check nor the controller's

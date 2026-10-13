@@ -588,6 +588,8 @@ on an install and fail against another.
 Note the trailing slash. A public controller compares the url it would build against the url the
 request carries, and a forum's canonical route has one - so `dispatch('forums/announcements.1')`
 is answered with a redirect to `forums/announcements.1/` rather than with the page.
+`followRedirect()` is the other way to reach it, and it works whatever the canonical form turns
+out to be.
 
 ### dispatchWithoutCsrfToken
 Dispatch a route sending no CSRF token, for asserting that XenForo's check refuses. Takes the same
@@ -844,6 +846,67 @@ foreach ($routes AS $route)
 	$this->assertReplyIsError($this->dispatch($route, 'admin'), 403, null, $route);
 }
 ```
+
+### followRedirect
+Dispatch the route a redirect reply points at, and return the reply that produced.
+
+A controller answers a save, a toggle or a canonical url correction with a redirect, which says
+nothing about what the next page shows - so a test that asserts only the redirect stops one step
+short of what a user would see.
+
+##### Parameters:
+
+* `reply` - the redirect to follow. Anything else fails, naming what it got
+* `server` - optional - request server values for the new request, as `dispatch()` takes them
+
+##### Example:
+
+```php
+$admin = $this->actingAsMember(['is_admin' => true]);
+$this->setVisitorAdminPermissions($admin, ['notice' => true]);
+
+$reply = $this->callAction('XF:Notice', 'save', 'admin', [
+    'title' => 'My new notice',
+    'message' => 'Hello',
+    'active' => 1,
+    'notice_type' => 'block',
+    'display_style' => 'primary',
+]);
+$this->assertReplyIsRedirect($reply);
+
+$list = $this->followRedirect($reply);
+
+$this->assertReplyTemplate($list, 'notice_list');
+$this->assertSee($this->renderReply($list), 'My new notice');
+```
+
+**The visitor needs whatever the followed route requires**, which `callAction()` did not: it skips
+`preDispatch()`, and this does not - the follow is an ordinary `dispatch()`. So a save tested
+through `callAction()` with no permissions set up succeeds and then the follow is refused with a
+403, which is the controller working rather than the helper failing.
+
+**The route type comes from the url, not from the dispatch that produced the redirect.** That is
+the work this does for you: the forum serves the control panel from its own script and the api
+behind a prefix on the public one, and link building honours the *Use full friendly URLs* option
+for the public and api routers but not the admin one. All six shapes are read:
+
+| | friendly urls off | friendly urls on |
+|---|---|---|
+| public | `/index.php?notices&page=2` | `/notices?page=2` |
+| admin | `/admin.php?notices/&page=2` | `/admin.php?notices/&page=2` |
+| api | `/index.php?api/notices&page=2` | `/api/notices?page=2` |
+
+Either form may carry the board's scheme and host in front, which is what a canonical url does, and
+the query that is not the route becomes the input the followed dispatch sends.
+
+**One hop, as a `GET`.** A redirect is followed with a GET whatever method produced it, and a reply
+that is itself a redirect comes back as one - assert it, or follow it again.
+
+A fragment is ignored. A controller commonly appends one - `#__1602`, to scroll to the row it just
+saved - and it is no part of the route.
+
+A redirect pointing at another host is refused: there is no route to dispatch, so assert the url
+with `assertReplyIsRedirect()` instead.
 
 ### actingAsApiKey
 Run api dispatches as a given api key.
