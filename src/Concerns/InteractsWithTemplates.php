@@ -609,6 +609,43 @@ trait InteractsWithTemplates
 			return;
 		}
 
+		$data = $this->buildGlobalTemplateData($templater, $reply);
+		$templater->addDefaultParam('xf', $data);
+		$this->installedGlobalTemplateData = $data;
+	}
+
+	/**
+	 * The `xf` template parameter, as a render would see it.
+	 *
+	 * Reach for this to assert on what a `templater_global_data` listener of yours contributed.
+	 * XenForo fires that event from inside `getGlobalTemplateData()`, so reading the result proves
+	 * the listener is registered with the class, method and signature XenForo will actually call -
+	 * which calling the listener's method directly cannot.
+	 *
+	 * **Call it rather than `XF::app()->getGlobalTemplateData()`.** That method reads the style off
+	 * the templater, which only a real request otherwise sets, so called directly it answers
+	 * `style => null` - and a template handed that logs an error and renders nothing for the block
+	 * that reads it. This installs the style first, exactly as a render does.
+	 *
+	 * @param AbstractReply|null $reply - as XenForo passes one while rendering a reply
+	 *
+	 * @return array
+	 */
+	protected function globalTemplateData(?AbstractReply $reply = null)
+	{
+		return $this->buildGlobalTemplateData($this->app()->templater(), $reply);
+	}
+
+	/**
+	 * Build the `xf` parameter, with the style a render needs installed first.
+	 *
+	 * @param Templater $templater
+	 * @param AbstractReply|null $reply
+	 *
+	 * @return array
+	 */
+	private function buildGlobalTemplateData(Templater $templater, ?AbstractReply $reply)
+	{
 		// before the global data is built, because getGlobalTemplateData() reads the style off the
 		// templater and a null one reaches every template as $xf.style
 		$this->installTemplaterStyle($templater);
@@ -617,9 +654,7 @@ trait InteractsWithTemplates
 		// or Api application there, and getGlobalTemplateData() fires templater_global_data with
 		// whichever application built it - which is what a listener gated on the app type reads.
 		// Without a stand-in installed the two are the same object.
-		$data = \XF::app()->getGlobalTemplateData($reply);
-		$templater->addDefaultParam('xf', $data);
-		$this->installedGlobalTemplateData = $data;
+		return \XF::app()->getGlobalTemplateData($reply);
 	}
 
 	/**

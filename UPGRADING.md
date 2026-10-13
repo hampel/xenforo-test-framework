@@ -43,6 +43,9 @@ today.
 part of it, so a failure reads `option_explain.myaddon_thing` where it used to read
 `myaddon_thing`. A test asserting on the failure message itself wants the fuller string.
 
+**If one of your test classes already defines a `globalTemplateData()` method, rename it**:
+`TestCase` now has a protected method of that name.
+
 **A command name carrying whitespace or braces is now refused**, so a suite running such a command
 goes red. The command still runs on the command line, which is why nothing caught it: Symfony
 validates a command name against colons and nothing else, so an argument placeholder written into

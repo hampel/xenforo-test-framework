@@ -50,6 +50,12 @@
   fixtures - a forum's `list_date_limit_days` keeps older threads out of its thread list, and
   `no_date_limit` in the input lifts it - and that a forum's canonical route carries a trailing
   slash
+* `globalTemplateData()` hands back the `xf` template parameter a render would see, so a test can
+  assert on what a `templater_global_data` listener of yours contributed. XenForo fires that event
+  from inside `getGlobalTemplateData()`, which is why nothing else shows that the listener is
+  registered with the class, method and signature XenForo calls. Passing a reply adds the `reply`
+  entry describing the page. Calling XenForo's method directly instead answers `style => null`,
+  which is the state a template reading `$xf.style` logs an error for
 * `runConsoleCommand()`, `assertConsoleCommandLoads()` and `assertConsoleCommandsLoad()` refuse a
   command name carrying whitespace or braces. Symfony validates a command name against colons and
   nothing else, so a name with an argument placeholder written into it is accepted and the command

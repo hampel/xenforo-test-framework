@@ -1008,6 +1008,41 @@ $this->assertSame('Welcome to the board', $this->pageParam('pageTitle'));
 Returns `null` if the render did not set it. Each render can overwrite the values, so read the one
 you want before rendering something else.
 
+### globalTemplateData
+The `xf` template parameter as a render would see it - `$xf.options`, `$xf.visitor`, `$xf.style`
+and the rest.
+
+**Reach for it to assert on what a `templater_global_data` listener of yours contributed.** XenForo
+fires that event from inside `XF\App::getGlobalTemplateData()`, so this is what proves the listener
+is registered with the class, method and signature XenForo will actually call - which calling the
+listener's own method cannot.
+
+##### Parameters:
+
+* `reply` - optional - a reply, as XenForo passes one while rendering a page. It adds `reply` to
+  the data, carrying the `controller` short name, `action`, `section`, `containerKey`,
+  `contentKey`, and `view` and `template` for a view. Without one there is no `reply` key at all
+
+##### Example:
+
+```php
+$this->setAppClassType('public');
+
+$data = $this->globalTemplateData();
+
+$this->assertSame('on', $data['myaddon_banner'], 'the listener should have added this');
+```
+
+**Call this rather than `$this->app()->getGlobalTemplateData()`.** That method reads the style off
+the templater, and only a real request otherwise sets one - so called directly it answers
+`style => null`, which is the state a template reading `$xf.style` logs an error for. This installs
+the style first, exactly as a render does, which means it also leaves the style in place for a
+render that follows.
+
+Pair it with `setAppClassType()` where the listener is gated on the application type: the event
+fires with whichever application built the data, so a listener checking
+`$app instanceof \XF\Pub\App` needs one of those in place.
+
 ### assertNoTemplateErrors
 Assert that no template this test rendered raised an error. That covers a BB code render too, since
 a tag rendering through a template goes to the same templater.

@@ -464,6 +464,9 @@ XenForo renders for a phrase it cannot find. It takes a prefix or a whole phrase
 displays and the page parameters the render set
 * `pageParam` reads back what a rendered template set with `<xf:title>` and friends, which never appear in the
 template's own output
+* `globalTemplateData` hands back the `xf` parameter a render sees, which is how a test asserts on what a
+`templater_global_data` listener of yours contributed - the event fires from inside XenForo's own method, so nothing
+else proves the listener is registered the way XenForo will call it
 * `renderRawReply` and `renderJsonReply` render a reply whose view builds its own output rather than naming a
 template - a file download shaped in `renderRaw()`, or an endpoint shaping its response in `renderJson()`. The first
 returns the `XF\Http\Response` with the body set, the second the decoded JSON document
