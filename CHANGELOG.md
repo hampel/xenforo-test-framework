@@ -1,6 +1,6 @@
 # Changelog
 
-## 5.25.0 (unreleased)
+## 5.25.0 (2026-10-13)
 
 * `assertNoUnresolvedPhrases()` reports a phrase key that ends at the prefix it was given. Every
   key XenForo structures for an add-on puts the add-on's own id last - an option group's title is
