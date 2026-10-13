@@ -63,16 +63,29 @@ gets the extended one, and with it any column the extension added to an entity s
 asserting that an extension is *absent* therefore passes on its own and exercises the extension in a
 full run. `requireClassNotExtended()` is the guard for such a test.
 
-**It cannot add one either, which is the same cache from the other side.** Once a class has been
-resolved under one list, an application booted later with a wider `$addonsToLoad` still gets the
-class resolved the first time - the extension is registered, but the proxy it needs is a
-`class_alias()` PHP cannot declare twice. So a test class naming more add-ons than its siblings gets
-those extensions only when it happens to run first, and when it does not the failure is a call to a
-method that is not there rather than anything naming the list.
+**It cannot add one either, which is the same cache from the other side - and that case is now
+refused rather than silent.** Once a class has been resolved under one list, an application booted
+later with a wider `$addonsToLoad` still gets the class resolved the first time: the extension is
+registered, but the proxy it needs is a `class_alias()` PHP cannot declare twice. So a test class
+naming more add-ons than its siblings gets those extensions only when it happens to run first.
+Rather than let it exercise XenForo's own class with the extension's methods missing, `setUp()`
+refuses, naming the class and the extension that will not reach it:
+
+```text
+A class extension the add-ons this suite loads register cannot be applied, because the class was
+already resolved in this run under a list that did not have it:
+
+    XF\Entity\User is not extended by XFRM\XF\Entity\User
+```
+
+Such a class passes on its own and is refused in a full run, which is the condition rather than a
+defect in the test - so the message is read as *this suite needs one list*, not as *this test is
+wrong*. Only widening is refused; narrowing is the case above, which a test can want.
 
 **Which is why the list belongs to the suite rather than to a test class.** Name every add-on whose
-class extensions or content types any of your tests reach, identically in every class - a base
-`TestCase` of your own is the place for it - and neither of these is order-dependent any more.
+class extensions or content types any of your tests reach, identically in every class - your own
+`tests/TestCase.php` is the place for it - and neither of these is order-dependent any more. That
+one list is also the remedy for the content type handlers above, so it answers both.
 
 **Your own add-on's listeners do run**, including while the container builds something your test is
 not otherwise interested in - so a mock standing in for one subsystem may still need expectations

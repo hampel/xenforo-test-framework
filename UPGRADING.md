@@ -46,6 +46,34 @@ part of it, so a failure reads `option_explain.myaddon_thing` where it used to r
 **If one of your test classes already defines a `followRedirect()` or `globalTemplateData()`
 method, rename it**: `TestCase` now has protected methods of those names.
 
+**A suite whose test classes declare different `$addonsToLoad` lists can go red**, where one class
+names an add-on that extends a class another class has already resolved. That test class was
+getting the extension only when it happened to run first; the rest of the time it exercised
+XenForo's own class with the extension's methods missing, and failed somewhere inside XenForo with
+a `Call to undefined method` - or passed, if nothing it asserted needed the extension. `setUp()`
+now refuses instead, naming the class and the extension:
+
+```text
+    XF\Entity\User is not extended by XFRM\XF\Entity\User
+```
+
+**Declare one list for the whole suite**, in `tests/TestCase.php`, naming every add-on whose class
+extensions or content types any of your tests reach:
+
+```php
+protected $addonsToLoad = ['MyVendor/MyAddOn', 'XFRM'];
+```
+
+A grep lists the declarations, and for most suites there should be exactly one:
+
+```bash
+grep -rn 'protected \$addonsToLoad' tests/
+```
+
+Running one such class on its own still passes, so the refusal is about the suite rather than
+about that class. Only widening is refused - a list that cannot *remove* an extension already
+resolved is unchanged, and `requireClassNotExtended()` is still what a test asserting on that uses.
+
 **A command name carrying whitespace or braces is now refused**, so a suite running such a command
 goes red. The command still runs on the command line, which is why nothing caught it: Symfony
 validates a command name against colons and nothing else, so an argument placeholder written into

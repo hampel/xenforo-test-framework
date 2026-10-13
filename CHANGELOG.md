@@ -50,6 +50,14 @@
   fixtures - a forum's `list_date_limit_days` keeps older threads out of its thread list, and
   `no_date_limit` in the input lifts it - and that a forum's canonical route carries a trailing
   slash
+* A test class whose `$addonsToLoad` would extend a class the run has already resolved is now
+  refused in `setUp()`, naming the class and the extension that will not reach it. The resolution
+  is cached for the whole process and the proxy XenForo aliases to reach an extension is a
+  `class_alias()` PHP cannot declare twice, so such a class got those extensions only when it
+  happened to run first and otherwise exercised XenForo's own class with the extension's methods
+  missing. Declare one `$addonsToLoad` for the whole suite. Only widening is refused; a list that
+  cannot *remove* an already-resolved extension is unchanged, and `requireClassNotExtended()`
+  stays the guard for a test that asserts on that
 * `followRedirect()` dispatches the route a redirect reply points at and returns the reply, so a
   test of a save can assert what the page the user lands on shows rather than stopping at the
   redirect. The route type is read from the url: the control panel has its own script, the api is

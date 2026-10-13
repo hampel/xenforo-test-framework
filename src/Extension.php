@@ -21,6 +21,15 @@ class Extension extends BaseExtension
 	protected static $globalProxiedClasses = [];
 
 	/**
+	 * The class extensions that were in force when each class in $globalExtensionMap was resolved,
+	 * keyed the same way. Kept in lockstep with that map, so an entry here means the resolution
+	 * beside it was produced with exactly these extensions.
+	 *
+	 * @var array<string, string[]>
+	 */
+	protected static $globalExtensionsApplied = [];
+
+	/**
 	 * Classes a test extended at runtime, forgotten at the end of that test so the next one resolves
 	 * the base class again.
 	 *
@@ -188,7 +197,48 @@ class Extension extends BaseExtension
 		self::$globalExtensionMap[$key] = $extended;
 		self::$globalInverseExtensionMap[$extended] = $key;
 
+		// what produced that resolution, so a later Extension carrying more extensions for this
+		// class can be told that they will not be applied - see extensionsThatCannotApply()
+		self::$globalExtensionsApplied[$key] = $this->classExtensions[$key] ?? [];
+
 		return $extended;
+	}
+
+	/**
+	 * Class extensions in this Extension's list that cannot be applied, because the class has
+	 * already been resolved in this process with fewer of them.
+	 *
+	 * **The mirror of the documented case where `$addonsToLoad` cannot remove an extension**, and
+	 * it has the same cause: the resolution is cached in the static map above and the proxy
+	 * XenForo aliased to reach it is a `class_alias()` PHP cannot declare twice. So the first
+	 * resolution in a run is the one every later test gets, whatever list the later test booted.
+	 *
+	 * Only the widening direction is reported. Narrowing is the documented case, a test can want
+	 * it deliberately, and `requireClassNotExtended()` is what a test asserting on it uses.
+	 *
+	 * @return array<string, string[]> - base class => the extensions that will not apply to it
+	 */
+	public function extensionsThatCannotApply()
+	{
+		$cannot = [];
+
+		foreach ($this->classExtensions AS $class => $toClasses)
+		{
+			if (!array_key_exists($class, self::$globalExtensionsApplied))
+			{
+				// never resolved in this process, so this list is the one that will decide it
+				continue;
+			}
+
+			$missing = array_values(array_diff($toClasses, self::$globalExtensionsApplied[$class]));
+
+			if ($missing)
+			{
+				$cannot[$class] = $missing;
+			}
+		}
+
+		return $cannot;
 	}
 
 	/**
@@ -223,7 +273,13 @@ class Extension extends BaseExtension
 
 		self::$classExtensionsAddedByTest[$key] = true;
 
-		unset(self::$globalExtensionMap[$key], self::$globalInverseExtensionMap[$key]);
+		unset(
+			self::$globalExtensionMap[$key],
+			self::$globalInverseExtensionMap[$key],
+			// in lockstep with the map: a record left behind without a resolution beside it would
+			// have extensionsThatCannotApply() refuse a class that is about to be resolved afresh
+			self::$globalExtensionsApplied[$key]
+		);
 
 		// XF keeps its own map per instance, and it cached the unextended class just the same
 		unset($this->extensionMap[$key], $this->extensionMap[ltrim((string) $class, '\\')]);
@@ -249,7 +305,7 @@ class Extension extends BaseExtension
 		{
 			$extended = self::$globalExtensionMap[$key] ?? null;
 
-			unset(self::$globalExtensionMap[$key]);
+			unset(self::$globalExtensionMap[$key], self::$globalExtensionsApplied[$key]);
 
 			if ($extended !== null)
 			{

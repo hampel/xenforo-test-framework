@@ -744,8 +744,9 @@ included. On v4 and earlier it did not filter listeners.
 
 **Content type handlers are not among them**, because they come from the database - so every installed addon's stay
 registered, and an operation that walks every content type can fail inside XenForo's own code. Nor can an extension be
-*added* to a class another test has already resolved, which is why the list is best declared once for the whole suite
-rather than per test class. `DOCS.md` has both, under "Unit Test Configuration".
+*added* to a class another test has already resolved, and a test class whose list would add one is refused in `setUp()`
+rather than quietly exercising XenForo's own class. Both are answered by declaring the list once for the whole suite
+rather than per test class; `DOCS.md` has the detail, under "Unit Test Configuration".
 
 **A note on `failOnRisky`**
 

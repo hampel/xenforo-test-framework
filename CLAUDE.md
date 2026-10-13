@@ -162,7 +162,9 @@ trait method beats an inherited one. `integration/LegacyCreatesApplicationTest.p
 class type with a `public` default, allows manual jobs, and makes `run()` throw. Its `setup()`
 implements **add-on isolation**: when `$addonsToLoad` is non-empty, it filters `addon.composer` down
 to those ids and installs the filtered `extension` before `parent::setup()`.
-`TestCase::setUp()` throws if `$addonsToLoad` is set but the application was booted without it.
+`TestCase::setUp()` throws if `$addonsToLoad` is set but the application was booted without it, and
+again if the list would **extend a class the run has already resolved** — the widening half of the
+cache below, which is order-dependent and otherwise silent.
 
 Everything else works by **swapping container keys**. `Concerns\InteractsWithContainer::swap()` is
 the primitive; `mock()`/`spy()`/`mockFactory()`/`mockService()` wrap it with Mockery. `swap()` also
@@ -193,7 +195,8 @@ container closure reads it.
 `Hampel\Testing\TestCase` composes the `Concerns\*` traits and drives the lifecycle:
 
 - `setUp()` → `refreshApplication()` (wrapped in output-buffer save/restore, because XenForo boot
-  writes to the buffer), the add-on isolation check, disable the auto job runner, then
+  writes to the buffer), the add-on isolation check, the widening check, disable the auto job
+  runner, then
   `setUpTraits()`.
 - **`setUpTraits()` is an explicit allow-list**, matched by trait name via
   `UsesReflection::classUsesRecursive()`. Only EntityManager, Language, Options, Routes, Time and
@@ -212,6 +215,12 @@ The `src/` classes outside `Concerns/` are the fakes and subclasses that get swa
   **persist across tests in a run**, so a class is not re-extended for every test. Do not make them
   instance state. `Extension::forAddOns()` must key class extensions by
   `\XF::getClassForAlias($from_class)`, as XenForo 2.3's own cache builder does.
+
+  **`$globalExtensionsApplied` records the extension set each resolution was made with, and has to
+  stay in lockstep with `$globalExtensionMap`.** It is what `extensionsThatCannotApply()` compares a
+  later list against. A record left behind after its resolution is cleared makes that check refuse a
+  class that is about to be resolved afresh, which fails every test in a class for nothing — so
+  every `unset()` of a map entry unsets the record beside it.
 - **`Job\Manager` and `Mail\TestTransport`** track queued jobs / sent mail in memory for the
   corresponding `assert*` helpers. Mail queueing is switched off rather than faked, so everything
   goes through `TestTransport`. `enableMailQueue` is a **config.php value, not an option**.

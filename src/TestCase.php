@@ -113,6 +113,7 @@ abstract class TestCase extends BaseTestCase
 		}
 
 		$this->requireAddOnIsolationApplied($this->addonsToLoad, $this->app()->isolatedAddOnIds());
+		$this->requireExtensionsCanApply($this->app()->extension());
 
 		$this->disableAutoJobRunner();
 
@@ -157,6 +158,64 @@ abstract class TestCase extends BaseTestCase
 				. '    return \XF::setupApp(\'Hampel\Testing\App\', '
 				. '[\'xf-addons\' => $this->addonsToLoad]);' . "\n\n"
 				. 'See UPGRADING.md.'
+		);
+	}
+
+	/**
+	 * Refuse a suite whose add-on list would extend a class this run has already resolved.
+	 *
+	 * The mirror of the documented case where `$addonsToLoad` cannot remove an extension. A test
+	 * class naming more add-ons than its siblings gets their class extensions only when it happens
+	 * to run first: the resolution is cached for the whole process, and the proxy XenForo aliased
+	 * to reach it is a `class_alias()` PHP cannot declare twice.
+	 *
+	 * Refused rather than documented alone, because what a test sees instead is XenForo's own class
+	 * with the extension's methods missing - so the failure arrives inside somebody else's code,
+	 * naming neither the add-on nor the list, and it moves with the order the classes ran in.
+	 *
+	 * Only the widening direction. Narrowing is the documented case and a test can want it, which
+	 * is what `requireClassNotExtended()` is for.
+	 *
+	 * @param \XF\Extension $extension - the application's, which is this package's subclass unless
+	 *                                   listeners are switched off in config.php
+	 *
+	 * @return void
+	 */
+	protected function requireExtensionsCanApply($extension)
+	{
+		if (!($extension instanceof Extension))
+		{
+			// enableListeners is off, so nothing here recorded what was applied to what
+			return;
+		}
+
+		$cannot = $extension->extensionsThatCannotApply();
+
+		if (!$cannot)
+		{
+			return;
+		}
+
+		$lines = [];
+
+		foreach ($cannot AS $class => $extensions)
+		{
+			$lines[] = '    ' . $class . ' is not extended by ' . implode(', ', $extensions);
+		}
+
+		throw new \LogicException(
+			'A class extension the add-ons this suite loads register cannot be applied, because the '
+				. 'class was already resolved in this run under a list that did not have it:'
+				. "\n\n" . implode("\n", $lines) . "\n\n"
+				. 'XenForo caches that resolution for the whole process and aliases a proxy class to '
+				. 'reach the extension, which PHP cannot declare twice - so the first resolution in '
+				. 'a run is the one every later test gets. This test class would exercise XenForo\'s '
+				. 'own class with the extension\'s methods missing, and it would pass or fail '
+				. 'depending on which test class ran first.'
+				. "\n\n"
+				. 'Declare one $addonsToLoad for the whole suite, in tests/TestCase.php, naming every '
+				. 'add-on whose class extensions or content types your tests reach - rather than a '
+				. 'different list per test class. See DOCS.md, "Unit Test Configuration".'
 		);
 	}
 
