@@ -137,6 +137,32 @@ class ConsoleCommandTest extends TestCase
 		$this->assertStringContainsString('stopped at the confirmation', $tester->getDisplay());
 	}
 
+	public function test_a_command_name_carrying_a_placeholder_is_refused()
+	{
+		// Symfony accepts the name and the command runs, so nothing here fails without the guard -
+		// see the fixture for what it breaks instead
+		$this->expectException(\LogicException::class);
+		$this->expectExceptionMessage("sets the command name 'probe:placeholder {subject}'");
+
+		$this->runConsoleCommand(Fixtures\CommandDirMalformed\PlaceholderNameCommand::class);
+	}
+
+	public function test_the_refusal_says_where_arguments_are_declared_instead()
+	{
+		try
+		{
+			$this->runConsoleCommand(Fixtures\CommandDirMalformed\PlaceholderNameCommand::class);
+			$this->fail('a command name carrying a placeholder should have been refused');
+		}
+		catch (\LogicException $e)
+		{
+			$this->assertStringContainsString('carries whitespace and braces', $e->getMessage());
+			$this->assertStringContainsString('addArgument()', $e->getMessage());
+			// the consequence, so the reader can tell whether it matters to them
+			$this->assertStringContainsString('ambiguous', $e->getMessage());
+		}
+	}
+
 	public function test_answers_with_interactive_false_are_refused()
 	{
 		$this->expectException(\LogicException::class);

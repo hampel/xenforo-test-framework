@@ -43,6 +43,27 @@ today.
 part of it, so a failure reads `option_explain.myaddon_thing` where it used to read
 `myaddon_thing`. A test asserting on the failure message itself wants the fuller string.
 
+**A command name carrying whitespace or braces is now refused**, so a suite running such a command
+goes red. The command still runs on the command line, which is why nothing caught it: Symfony
+validates a command name against colons and nothing else, so an argument placeholder written into
+`setName()` is accepted. What it breaks is `cmd.php list`, which prints the name as written, and
+reaching the command at all once a second one shares its prefix. Declare the arguments separately:
+
+```php
+$this->setName('myaddon:thing')
+    ->addArgument('subject', InputArgument::REQUIRED);
+```
+
+A grep finds the names written as a literal:
+
+```bash
+grep -rnE "setName\(['\"][^'\"]*[{}[:space:]]" .
+```
+
+**It cannot find a name composed in `configure()`** - `setName('myaddon:' . $this->suffix())` - and
+those are the ones most likely to be wrong, since no one place shows the finished string. Running
+the suite is what finds them.
+
 ## 5.24.0
 
 **Rendered templates now have a style, so a render can produce more markup than it did.** `$xf.style`

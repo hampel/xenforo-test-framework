@@ -2,6 +2,8 @@
 
 namespace Hampel\Testing\Integration;
 
+use PHPUnit\Framework\ExpectationFailedException;
+
 /**
  * The walk behind assertConsoleCommandsLoad(), pointed at fixtures rather than at an installed
  * add-on, so every case XenForo's own runner meets is covered: a command, an abstract base beside
@@ -45,6 +47,18 @@ class CommandWalkTest extends TestCase
 
 		$this->expectException(\LogicException::class);
 		$this->expectExceptionMessage('none declares a class XenForo would list');
+
+		$this->assertConsoleCommandsLoad('Probe/Fixtures');
+	}
+
+	public function test_a_command_name_carrying_a_placeholder_fails_the_walk()
+	{
+		// the walk is where an add-on checks every command it ships, so it is where a name nobody
+		// looked at since configure() was written gets reported
+		$this->fixtureDirectory = 'CommandDirMalformed';
+
+		$this->expectException(ExpectationFailedException::class);
+		$this->expectExceptionMessage("sets the command name 'probe:placeholder {subject}'");
 
 		$this->assertConsoleCommandsLoad('Probe/Fixtures');
 	}

@@ -53,6 +53,16 @@ trait InteractsWithCommands
 			);
 		}
 
+		$problem = $this->commandNameProblem($instance->getName());
+
+		if ($problem !== '')
+		{
+			throw new \LogicException(
+				get_class($instance) . " sets the command name '" . $instance->getName() . "', "
+				. $problem
+			);
+		}
+
 		// setInputs() has to happen before execute(), so the answers cannot be passed through as a
 		// tester option - they are pulled out here and the rest goes to Symfony untouched
 		$inputs = $options['inputs'] ?? null;
@@ -204,6 +214,59 @@ trait InteractsWithCommands
 			$instance->getName(),
 			"'$class' has no name, so it cannot be run - a XenForo command sets one in configure()"
 		);
+
+		$problem = $this->commandNameProblem($instance->getName());
+
+		PHPUnit::assertSame(
+			'',
+			$problem,
+			"'$class' sets the command name '" . $instance->getName() . "', " . $problem
+		);
+	}
+
+	/**
+	 * What is wrong with a command's name, or an empty string if nothing is.
+	 *
+	 * Symfony validates the name with `/^[^\:]++(\:[^\:]++)*$/`, which constrains colons and
+	 * nothing else - so a name carrying an argument placeholder or a space is accepted, and the
+	 * command then runs, which is why nothing catches it. What it breaks is elsewhere:
+	 * `cmd.php list` prints the name verbatim, placeholder and all, and the command is reachable
+	 * only as an abbreviation of itself. Add a second command sharing that prefix - which an
+	 * add-on does by growing - and both become unreachable with
+	 * `Command "..." is ambiguous`.
+	 *
+	 * Whitespace and braces only. A command name is otherwise whatever an add-on wants, and a
+	 * charset rule would refuse names that work.
+	 *
+	 * @param string $name
+	 *
+	 * @return string
+	 */
+	private function commandNameProblem($name)
+	{
+		$problems = [];
+
+		if (preg_match('/\s/', (string) $name))
+		{
+			$problems[] = 'whitespace';
+		}
+
+		if (strpbrk((string) $name, '{}') !== false)
+		{
+			$problems[] = 'braces';
+		}
+
+		if (!$problems)
+		{
+			return '';
+		}
+
+		return 'which carries ' . implode(' and ', $problems) . '. Symfony accepts it and the'
+			. ' command runs, so nothing fails - but `cmd.php list` prints the name as written,'
+			. ' and the command can only be reached as an abbreviation of itself. The moment a'
+			. ' second command shares that prefix, both are refused as ambiguous. Arguments and'
+			. ' options are declared with addArgument() and addOption() in configure(), not'
+			. ' written into the name.';
 	}
 
 	/**

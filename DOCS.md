@@ -3121,6 +3121,28 @@ $this->assertStringContainsString('12 rows updated', $tester->getDisplay());
 The command runs against the booted application, so the fakes and swaps a test installed apply to
 it. A command with no name is refused - XenForo's own commands set one in `configure()`.
 
+##### A name carrying whitespace or braces is refused
+
+**Symfony validates a command name against colons and nothing else**, so a name with an argument
+placeholder written into it - `setName('myaddon:thing {subject}')` - is accepted, and the command
+runs. What it breaks is everything around the command: `cmd.php list` prints the name as written,
+placeholder and all, and the command can only be reached as an abbreviation of itself. Add a second
+command sharing that prefix and both become unreachable, with `Command "myaddon:thing" is
+ambiguous`.
+
+So the name is the command's name, and arguments and options are declared separately:
+
+```php
+protected function configure()
+{
+    $this->setName('myaddon:thing')
+        ->addArgument('subject', InputArgument::REQUIRED);
+}
+```
+
+`assertConsoleCommandsLoad()` checks this for every command an add-on ships, which is where a name
+nobody has looked at since it was written gets reported.
+
 ### assertConsoleCommandsLoad / assertConsoleCommandLoads
 Assert that the console command classes an add-on ships are ones XenForo can load.
 
@@ -3179,6 +3201,10 @@ The walk's order follows the filesystem, so sort both sides if that matters to y
 `assertConsoleCommandLoads($class)` checks one class - it exists, is instantiable, extends Symfony's
 `Command`, and has a name. That mirrors `XF\Cli\Runner::isValidCommandClass()`, which is protected,
 plus the name a listed command needs to be usable.
+
+**A name carrying whitespace or braces fails both of them**, because such a command runs and is
+still broken - see `runConsoleCommand()` above for what it breaks and how to write the name
+instead.
 
 ### setStaticProperty
 Set a static property, restoring what was there when the test finishes.

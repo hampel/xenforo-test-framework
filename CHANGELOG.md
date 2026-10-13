@@ -50,6 +50,12 @@
   fixtures - a forum's `list_date_limit_days` keeps older threads out of its thread list, and
   `no_date_limit` in the input lifts it - and that a forum's canonical route carries a trailing
   slash
+* `runConsoleCommand()`, `assertConsoleCommandLoads()` and `assertConsoleCommandsLoad()` refuse a
+  command name carrying whitespace or braces. Symfony validates a command name against colons and
+  nothing else, so a name with an argument placeholder written into it is accepted and the command
+  runs - but `cmd.php list` prints the name as written, the command is reachable only as an
+  abbreviation of itself, and a second command sharing that prefix makes both ambiguous. Declare
+  arguments and options with `addArgument()` and `addOption()` instead
 
 ## 5.24.1 (2026-10-12)
 
