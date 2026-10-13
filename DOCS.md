@@ -3074,6 +3074,25 @@ core rebuilds cached counters into it as a side effect of saves and deletions a 
 otherwise concerned with - so a transaction and the live forum contend for the same row. See
 `UsesDatabaseTransactions` for the shape of that failure.
 
+**What writes a row is core rebuilding one of its own caches**, from the `_postSave()` or
+`_postDelete()` of a core entity and the repositories those call. So a suite that saves only its
+own add-on's entities, builds its visitors in memory and inserts rows directly may write nothing at
+all, and can measure that by swapping `registry` for a subclass of `XF\DataRegistry` that records
+each `set()` and `delete()` before calling the parent.
+
+**Calling it anyway is still the recommendation**, because the hazard is not a property of the
+suite: the contended row is one the live forum writes, so a suite that writes none today starts
+writing one the first time a test saves a core entity, and nothing in the suite says when that
+happened.
+
+**It intercepts writes; it does not isolate reads.** A key the test never wrote is read from the
+forum's own `xf_data_registry`, as the parameter below says - so an assertion that a registry key
+*exists* passes whether or not the code under test put it there. Assert the value.
+
+Unlike the http, mail and filesystem fakes, this one needs nothing decached: every reader asks the
+container for the registry at the moment it uses it, so a repository or service a test built before
+installing the fake still writes through it.
+
 ##### Parameters:
 
 * `$preLoadData` set to false to disable pre-loading of registry data (data will still be read from database when 

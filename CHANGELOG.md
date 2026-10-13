@@ -50,6 +50,12 @@
   fixtures - a forum's `list_date_limit_days` keeps older threads out of its thread list, and
   `no_date_limit` in the input lifts it - and that a forum's canonical route carries a trailing
   slash
+* docs: `fakesRegistry()` says what actually writes a registry row - core rebuilding one of its own
+  caches, from a core entity's `_postSave()` or `_postDelete()` - so a suite can tell whether the
+  recommendation applies to it, and why calling it anyway is still the recommendation. It also says
+  that the fake intercepts writes without isolating reads, so an assertion that a registry key
+  exists passes whether or not the code under test wrote it, and that nothing needs decaching for
+  it to reach a consumer built earlier
 * A test class whose `$addonsToLoad` would extend a class the run has already resolved is now
   refused in `setUp()`, naming the class and the extension that will not reach it. The resolution
   is cached for the whole process and the proxy XenForo aliases to reach an extension is a
