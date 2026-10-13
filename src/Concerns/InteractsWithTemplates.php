@@ -376,7 +376,12 @@ trait InteractsWithTemplates
 	 *
 	 * **To pair it with a dispatch, hand it the reply's own parameters** -
 	 * `renderTemplateWithoutModification($key, $reply->getParams())`. That is what renderReply()
-	 * renders the template with, so the two renders differ by the modification and nothing else.
+	 * renders the template with, so the template's own parameters are the same on both sides.
+	 *
+	 * One thing still differs: renderReply() passes the reply to getGlobalTemplateData() and this
+	 * does not, so `$xf.reply` - the controller, action and template of the page - is absent here.
+	 * It matters for a template that reads it, which in core is a generated advertising template
+	 * restricted to particular pages.
 	 *
 	 * @param string $modificationKey - the modification to leave out, as
 	 *                                  assertTemplateModificationApplied() takes it

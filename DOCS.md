@@ -1368,8 +1368,15 @@ $with = $this->renderReply($reply);
 $without = $this->renderTemplateWithoutModification('myaddon_preferences', $reply->getParams());
 ```
 
-That is what `renderReply()` renders the template with, so the two renders differ by the
-modification and nothing else.
+That is what `renderReply()` renders the template with, so the template's own parameters are the
+same on both sides.
+
+**One thing still differs: `$xf.reply` is absent here.** `renderReply()` passes the reply on to
+XenForo's global template data, which is where the `reply` entry comes from, and this renders
+without one - so a template reading `$xf.reply.template` sees null rather than the page it came
+from. In core that is a generated advertising template restricted to particular pages; most
+templates never read it. Where yours does, compare it against `renderTemplate()` rather than
+`renderReply()`, so neither side has the entry.
 
 **Nothing is written.** The template's text is read, the other modifications are applied to it by
 XenForo's own repository, and the result is compiled and rendered in memory - so the forum's

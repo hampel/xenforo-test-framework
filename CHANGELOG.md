@@ -50,6 +50,9 @@
   fixtures - a forum's `list_date_limit_days` keeps older threads out of its thread list, and
   `no_date_limit` in the input lifts it - and that a forum's canonical route carries a trailing
   slash
+* docs: `renderTemplateWithoutModification()` says what still differs from a `renderReply()` of the
+  same template - `$xf.reply`, which describes the page, comes from the reply and this renders
+  without one. Compare against `renderTemplate()` where the template reads it
 * `globalTemplateData()` hands back the `xf` template parameter a render would see, so a test can
   assert on what a `templater_global_data` listener of yours contributed. XenForo fires that event
   from inside `getGlobalTemplateData()`, which is why nothing else shows that the listener is

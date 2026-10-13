@@ -456,8 +456,8 @@ its markup stripped and its entities decoded
 * `renderTemplateWithoutModification` renders a template with one of its modifications left out, so a test can show
 the markup it asserts on is that modification's work, without disabling it for every other suite on the forum. To
 pair it with a dispatch, hand it the reply's own parameters - `renderTemplateWithoutModification($key,
-$reply->getParams())` - which is what `renderReply` renders the template with, so the two renders differ by the
-modification and nothing else
+$reply->getParams())` - which is what `renderReply` renders the template with. `$xf.reply` is still absent on this
+side, which matters only for a template that reads it
 * `assertNoTemplateErrors` asserts that nothing the test rendered raised an error
 * `assertNoUnresolvedPhrases` asserts that none of your add-on's phrases came out as its own key, which is what
 XenForo renders for a phrase it cannot find. It takes a prefix or a whole phrase key, and searches the text the page

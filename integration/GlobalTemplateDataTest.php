@@ -2,6 +2,7 @@
 
 namespace Hampel\Testing\Integration;
 
+use Hampel\Testing\Concerns\UsesDatabaseTransactions;
 use XF\Style;
 
 /**
@@ -13,6 +14,8 @@ use XF\Style;
  */
 class GlobalTemplateDataTest extends TestCase
 {
+	use UsesDatabaseTransactions;
+
 	public function test_the_data_carries_a_style_where_xenforos_own_method_does_not()
 	{
 		// the direct call first, and the order is the whole point: once anything has installed the
@@ -68,5 +71,43 @@ class GlobalTemplateDataTest extends TestCase
 		// the short name as the route carries it, not the resolved class
 		$this->assertSame('XF:Tools', $data['reply']['controller']);
 		$this->assertSame('admin_section', $data['reply']['template']);
+	}
+
+	/**
+	 * Which is the one way a renderTemplateWithoutModification() render differs from the
+	 * renderReply() it is compared against: that helper renders through renderTemplate(), which
+	 * passes no reply, so a template reading $xf.reply sees nothing on that side.
+	 */
+	public function test_only_a_render_given_the_reply_sees_what_page_it_is()
+	{
+		$this->fakesErrors();
+
+		$admin = $this->actingAsMember(['is_admin' => true]);
+		$this->setVisitorAdminPermissions($admin, ['option' => true]);
+
+		$reply = $this->dispatch('tools', 'admin');
+
+		$this->createEntity('XF:Template', [
+			'style_id' => 0,
+			'type' => 'admin',
+			'title' => 'zzreplyprobe',
+			'template' => 'TEMPLATE=[{$xf.reply.template}] CONTROLLER=[{$xf.reply.controller}]',
+			'addon_id' => '',
+		]);
+
+		// the dispatched reply names its own template, so it is pointed at this one instead - the
+		// reply's identity is what is being varied here, not the markup
+		$reply->setTemplateName('zzreplyprobe');
+
+		$this->assertSame(
+			'TEMPLATE=[zzreplyprobe] CONTROLLER=[XF:Tools]',
+			$this->renderReply($reply)
+		);
+
+		$this->assertSame(
+			'TEMPLATE=[] CONTROLLER=[]',
+			$this->renderTemplate('admin:zzreplyprobe'),
+			'renderTemplate() passes no reply, so there is no $xf.reply to read'
+		);
 	}
 }
