@@ -200,9 +200,16 @@ trait InteractsWithContainer
 	 * **A subclass counts as applied.** Where another add-on extends the same class, the
 	 * resolution is the most derived class, which descends from this add-on's.
 	 *
-	 * It refuses when the add-on registers no active extension, because an assertion over an empty
-	 * list passes while checking nothing - and says separately when the id matches no installed
-	 * add-on, which is the likelier of the two and reads as the other one otherwise.
+	 * **The add-on's own state is checked before its rows**, because XenForo's extension cache
+	 * filters on both: `whereAddOnActive(['disableProcessing' => true])` as well as the row's own
+	 * active flag. A disabled or mid-upgrade add-on keeps rows with `active = 1` that nothing
+	 * resolves, so reading the rows alone would report every one as a keying failure on an add-on
+	 * that is merely switched off.
+	 *
+	 * So each state that cannot be asserted is refused with its own cause: an id matching no
+	 * installed add-on, an add-on disabled, an add-on part way through an install, and an add-on
+	 * registering no active extension - that last because an assertion over an empty list passes
+	 * while checking nothing.
 	 *
 	 * **It reads the database, so it cannot see an artifact in `_output/class_extensions/` that was
 	 * never imported.** A test that reads that directory instead catches the drift a commit without
@@ -218,6 +225,41 @@ trait InteractsWithContainer
 	{
 		$addOnId = $addOnId ?: $this->soleIsolatedAddOnId('whose class extensions to check');
 
+		// the add-on's own state is checked before its rows, because XenForo's extension cache
+		// filters on both and a row's active flag is not the whole of it: an add-on that is
+		// disabled or mid-upgrade keeps rows with active = 1 that nothing resolves, so reading
+		// the rows alone would report every one of them as a keying failure
+		$addOn = $this->app()->db()->fetchRow(
+			'SELECT addon_id, active, is_processing FROM xf_addon WHERE addon_id = ?',
+			$addOnId
+		);
+
+		if (!$addOn)
+		{
+			throw new \LogicException(
+				"'$addOnId' is not among the installed add-ons on this forum, so it registers no"
+				. ' class extension and this would pass having checked nothing. Check the id.'
+			);
+		}
+
+		if (!$addOn['active'])
+		{
+			throw new \LogicException(
+				"'$addOnId' is installed but disabled, so XenForo leaves its class extensions out"
+				. ' of the extension cache whatever their own active flag says, and none of them'
+				. ' resolve. Enable the add-on, or name one that is enabled.'
+			);
+		}
+
+		if ($addOn['is_processing'])
+		{
+			throw new \LogicException(
+				"'$addOnId' is part way through an install or upgrade, which keeps its class"
+				. ' extensions out of the extension cache in the same way, so none of them resolve.'
+				. ' Let the install finish and run this again.'
+			);
+		}
+
 		$rows = $this->app()->db()->fetchAll(
 			'SELECT from_class, to_class
 				FROM xf_class_extension
@@ -228,21 +270,6 @@ trait InteractsWithContainer
 
 		if (!$rows)
 		{
-			// an id that matches no installed add-on is the likelier of the two, and saying
-			// 'registers no active class extension' of one is true and reads as though it exists
-			$installed = $this->app()->db()->fetchOne(
-				'SELECT addon_id FROM xf_addon WHERE addon_id = ?',
-				$addOnId
-			);
-
-			if (!$installed)
-			{
-				throw new \LogicException(
-					"'$addOnId' is not among the installed add-ons on this forum, so it registers no"
-					. ' class extension and this would pass having checked nothing. Check the id.'
-				);
-			}
-
 			throw new \LogicException(
 				"'$addOnId' is installed and registers no active class extension, so there is"
 				. ' nothing to assert and this would pass having checked nothing. Remove the'

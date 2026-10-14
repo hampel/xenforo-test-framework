@@ -8,9 +8,12 @@
   red, so it passes identically with the extension present and absent. The list comes from the
   database, so it works on an install with no development output; a more derived resolution counts
   as applied, since another add-on extending the same class resolves to its own; and an add-on
-  registering no active extension is refused rather than passing over an empty list, with an id
-  matching no installed add-on refused separately so a typo does not read as an add-on that happens
-  to have none
+  registering no active extension is refused rather than passing over an empty list. Each state
+  that cannot be asserted is refused with its own cause: an id matching no installed add-on, an
+  add-on disabled, an add-on part way through an install, and an add-on registering nothing.
+  XenForo's extension cache filters on the add-on's own state as well as each row's, so a disabled
+  or mid-upgrade add-on keeps active rows that nothing resolves - reading the rows alone would
+  report every one of them as a failure on an add-on that is merely switched off
 * docs: `assertAddOnClassExtensionsApply()` reads `xf_class_extension`, so it does not see an
   artifact in `_output/class_extensions/` that was never imported - the drift a commit without an
   import leaves. A test reading that directory catches what this one cannot, so the two are

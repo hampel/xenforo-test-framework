@@ -24,6 +24,7 @@ class ClassExtensionsApplyTest extends TestCase
 		$base = Fixtures\ExtendableThingJ::class;
 		$extension = Fixtures\Ext\ExtendableThingJ::class;
 
+		$this->givenTheProbeAddOnIsInstalled();
 		$this->givenRegisteredExtension($base, $extension);
 		$this->app()->extension()->addClassExtension($base, $extension);
 
@@ -43,6 +44,7 @@ class ClassExtensionsApplyTest extends TestCase
 
 		// what a second add-on extending the same class produces: the resolution is the most
 		// derived class, and ours is an ancestor of it rather than the answer
+		$this->givenTheProbeAddOnIsInstalled();
 		$this->givenRegisteredExtension($base, $ours);
 		$this->app()->extension()->addClassExtension($base, $ours);
 		$this->app()->extension()->addClassExtension($base, $theirs);
@@ -62,6 +64,7 @@ class ClassExtensionsApplyTest extends TestCase
 
 		// registered in the database and never added to this process, which is exactly the state
 		// a renamed core class leaves an add-on in
+		$this->givenTheProbeAddOnIsInstalled();
 		$this->givenRegisteredExtension($base, $extension);
 
 		try
@@ -87,6 +90,33 @@ class ClassExtensionsApplyTest extends TestCase
 		$this->expectExceptionMessage('is not among the installed add-ons');
 
 		$this->assertAddOnClassExtensionsApply('ZzNobody/NotInstalled');
+	}
+
+	public function test_a_disabled_add_on_is_refused_even_though_its_rows_are_active()
+	{
+		// the confusing case: XenForo's extension cache filters on the add-on's state as well as
+		// the row's, so these rows are active and nothing resolves them. Read without that, the
+		// assertion would report every one as a keying failure on an add-on that is switched off
+		$this->givenTheProbeAddOnIsInstalled(['active' => 0]);
+		$this->givenRegisteredExtension(Fixtures\ExtendableThingK::class, 'ZzProbe\Nope');
+
+		$this->expectException(\LogicException::class);
+		$this->expectExceptionMessage('is installed but disabled');
+
+		$this->assertAddOnClassExtensionsApply(self::PROBE_ADDON);
+	}
+
+	public function test_an_add_on_part_way_through_an_install_is_refused()
+	{
+		// is_processing is the other half of whereAddOnActive(['disableProcessing' => true]), so a
+		// suite run while something is mid-upgrade would otherwise see the same false failure
+		$this->givenTheProbeAddOnIsInstalled(['is_processing' => 1]);
+		$this->givenRegisteredExtension(Fixtures\ExtendableThingK::class, 'ZzProbe\Nope');
+
+		$this->expectException(\LogicException::class);
+		$this->expectExceptionMessage('part way through an install or upgrade');
+
+		$this->assertAddOnClassExtensionsApply(self::PROBE_ADDON);
 	}
 
 	public function test_an_installed_add_on_with_no_active_extension_is_refused_separately()
@@ -125,16 +155,19 @@ class ClassExtensionsApplyTest extends TestCase
 	 * Install the probe add-on, so the refusal can tell a missing add-on from one with no
 	 * extensions. Rolled back with everything else.
 	 *
+	 * @param array $state - overrides for the add-on's own state
+	 *
 	 * @return void
 	 */
-	private function givenTheProbeAddOnIsInstalled()
+	private function givenTheProbeAddOnIsInstalled(array $state = [])
 	{
-		$this->app()->db()->insert('xf_addon', [
+		$this->app()->db()->insert('xf_addon', $state + [
 			'addon_id' => self::PROBE_ADDON,
 			'title' => 'Probe extensions',
 			'version_string' => '1.0.0',
 			'version_id' => 1000070,
 			'active' => 1,
+			'is_processing' => 0,
 		], false, false);
 	}
 
