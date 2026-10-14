@@ -1,6 +1,6 @@
 # Changelog
 
-## 5.25.1 (unreleased)
+## 5.25.1 (2026-10-14)
 
 * `renderReply()` renders a reply whose template name already carries a type, rather than
   prepending the dispatch type and failing. XenForo's standard delete plugin answers with
