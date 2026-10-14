@@ -201,7 +201,13 @@ trait InteractsWithContainer
 	 * resolution is the most derived class, which descends from this add-on's.
 	 *
 	 * It refuses when the add-on registers no active extension, because an assertion over an empty
-	 * list passes while checking nothing.
+	 * list passes while checking nothing - and says separately when the id matches no installed
+	 * add-on, which is the likelier of the two and reads as the other one otherwise.
+	 *
+	 * **It reads the database, so it cannot see an artifact in `_output/class_extensions/` that was
+	 * never imported.** A test that reads that directory instead catches the drift a commit without
+	 * an import leaves, which this does not - so the two are complementary rather than one
+	 * replacing the other.
 	 *
 	 * @param string|null $addOnId - defaults to the add-on $addonsToLoad isolates, when it names one
 	 *
@@ -222,11 +228,26 @@ trait InteractsWithContainer
 
 		if (!$rows)
 		{
+			// an id that matches no installed add-on is the likelier of the two, and saying
+			// 'registers no active class extension' of one is true and reads as though it exists
+			$installed = $this->app()->db()->fetchOne(
+				'SELECT addon_id FROM xf_addon WHERE addon_id = ?',
+				$addOnId
+			);
+
+			if (!$installed)
+			{
+				throw new \LogicException(
+					"'$addOnId' is not among the installed add-ons on this forum, so it registers no"
+					. ' class extension and this would pass having checked nothing. Check the id.'
+				);
+			}
+
 			throw new \LogicException(
-				"'$addOnId' registers no active class extension, so there is nothing to assert and"
-				. ' this would pass having checked nothing. Remove the assertion, or name the add-on'
-				. ' that owns the extensions. An add-on whose extensions are all inactive is the'
-				. ' other way to reach this.'
+				"'$addOnId' is installed and registers no active class extension, so there is"
+				. ' nothing to assert and this would pass having checked nothing. Remove the'
+				. ' assertion, or name the add-on that owns the extensions. An add-on whose'
+				. ' extensions are all inactive is the other way to reach this.'
 			);
 		}
 

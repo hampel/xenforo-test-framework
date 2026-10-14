@@ -8,7 +8,13 @@
   red, so it passes identically with the extension present and absent. The list comes from the
   database, so it works on an install with no development output; a more derived resolution counts
   as applied, since another add-on extending the same class resolves to its own; and an add-on
-  registering no active extension is refused rather than passing over an empty list
+  registering no active extension is refused rather than passing over an empty list, with an id
+  matching no installed add-on refused separately so a typo does not read as an add-on that happens
+  to have none
+* docs: `assertAddOnClassExtensionsApply()` reads `xf_class_extension`, so it does not see an
+  artifact in `_output/class_extensions/` that was never imported - the drift a commit without an
+  import leaves. A test reading that directory catches what this one cannot, so the two are
+  complementary and replacing such a test with this one trades a check away
 
 ## 5.27.0 (2026-10-15)
 

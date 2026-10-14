@@ -79,21 +79,35 @@ class ClassExtensionsApplyTest extends TestCase
 		}
 	}
 
-	public function test_an_add_on_with_no_active_extension_is_refused_rather_than_passing()
+	public function test_an_id_that_matches_no_installed_add_on_says_so()
 	{
+		// the likelier of the two refusals, and saying 'registers no active class extension' of a
+		// typo reads as though the add-on exists and happens to have none
 		$this->expectException(\LogicException::class);
-		$this->expectExceptionMessage('registers no active class extension');
+		$this->expectExceptionMessage('is not among the installed add-ons');
+
+		$this->assertAddOnClassExtensionsApply('ZzNobody/NotInstalled');
+	}
+
+	public function test_an_installed_add_on_with_no_active_extension_is_refused_separately()
+	{
+		$this->givenTheProbeAddOnIsInstalled();
+
+		$this->expectException(\LogicException::class);
+		$this->expectExceptionMessage('is installed and registers no active class extension');
 
 		$this->assertAddOnClassExtensionsApply(self::PROBE_ADDON);
 	}
 
 	public function test_an_inactive_extension_is_not_counted_as_registered()
 	{
+		$this->givenTheProbeAddOnIsInstalled();
+
 		// the other way to reach the refusal: rows exist, none of them active
 		$this->givenRegisteredExtension(Fixtures\ExtendableThingK::class, 'ZzProbe\Nope', false);
 
 		$this->expectException(\LogicException::class);
-		$this->expectExceptionMessage('registers no active class extension');
+		$this->expectExceptionMessage('is installed and registers no active class extension');
 
 		$this->assertAddOnClassExtensionsApply(self::PROBE_ADDON);
 	}
@@ -105,6 +119,23 @@ class ClassExtensionsApplyTest extends TestCase
 
 		// this suite isolates None/None, so there is no single add-on to assume
 		$this->assertAddOnClassExtensionsApply();
+	}
+
+	/**
+	 * Install the probe add-on, so the refusal can tell a missing add-on from one with no
+	 * extensions. Rolled back with everything else.
+	 *
+	 * @return void
+	 */
+	private function givenTheProbeAddOnIsInstalled()
+	{
+		$this->app()->db()->insert('xf_addon', [
+			'addon_id' => self::PROBE_ADDON,
+			'title' => 'Probe extensions',
+			'version_string' => '1.0.0',
+			'version_id' => 1000070,
+			'active' => 1,
+		], false, false);
 	}
 
 	/**

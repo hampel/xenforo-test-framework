@@ -1722,8 +1722,18 @@ public function test_every_class_extension_this_addon_registers_applies()
 **A more derived resolution still counts as applied.** Where another add-on extends the same class,
 the resolution is the most derived class in the chain and yours is an ancestor of it.
 
+**It reads `xf_class_extension`, so it cannot see an artifact in `_output/class_extensions/` that
+was never imported.** That is the drift a merge, or a commit without an import, leaves behind: an
+extension the repository declares and the forum has never registered. A test that reads that
+directory instead catches it, and this one cannot - so **the two are complementary rather than one
+replacing the other.** If your suite has such a test, keep it; replacing it with this one trades a
+drift check away. Which of the two is right depends on the question: the database is what the forum
+actually runs, and the artifact is what your repository promises.
+
 **It refuses when the add-on registers no active extension**, rather than passing over an empty
-list. An add-on whose extensions are all inactive reaches the same refusal.
+list. An add-on whose extensions are all inactive reaches the same refusal, and an id matching no
+installed add-on is refused separately and says so - that one is usually a typo, and the other
+message reads as though the add-on exists.
 
 It returns the class each extension was registered against, mapped to what it resolved to, for a
 test that wants to assert on the set.
