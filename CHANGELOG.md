@@ -1,6 +1,6 @@
 # Changelog
 
-## 5.27.0 (unreleased)
+## 5.27.0 (2026-10-15)
 
 * `describeReply()` is protected rather than private, so a test can use it to see what a reply was.
   It renders each error phrase to its text, which `var_export()` and `print_r()` do not: an error
