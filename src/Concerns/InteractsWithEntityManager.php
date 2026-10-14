@@ -211,6 +211,12 @@ trait InteractsWithEntityManager
 	 * UsesDatabaseTransactions in DOCS.md has the mechanism and what to do instead - where a test
 	 * needs a visitor rather than a row, `actingAsMember()` writes nothing at all.
 	 *
+	 * **The account inherits the forum's `registrationDefaults` option**, because XenForo's own
+	 * option and privacy entities read it while setting their defaults up - eight columns on the
+	 * option record and five on the privacy one. So what a test can assert about a "normal" member
+	 * follows the forum rather than the test; set what it needs on the record afterwards, or change
+	 * the option before creating the account. DOCS.md has both.
+	 *
 	 * Not called `createMember`: three add-on suites define a method of that name already, and a
 	 * trait method cannot be shadowed by an incompatible one without a fatal at class load.
 	 *

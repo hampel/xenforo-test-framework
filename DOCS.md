@@ -363,6 +363,12 @@ the entity but not to act as it.
 $user = $this->buildVisitor(['user_id' => 99, 'username' => 'Built']);
 ```
 
+**These values go in as stored column data rather than through the entity's setters**, which is
+the difference between this and `createUserAccount()`. A column XenForo keeps as a string built
+from an array - `secondary_group_ids`, which is `LIST_COMMA` - is accepted as either the array or
+the stored string, since an array is encoded to the stored form for you. Nothing verifies a value
+here, so a column a setter would reject is set without complaint.
+
 **Each built user gets its own permission combination id**, counting up from 1000000. Permissions
 granted to one built user do not apply to another, and a permission the test never granted is
 denied. Pass `permission_combination_id` yourself to use an existing one:
@@ -428,6 +434,21 @@ The rows are real, so call it from a class using `UsesDatabaseTransactions`.
 user group until the test says otherwise - see `actingAs` above for why an assertion about a
 member being refused something needs `setVisitorPermissions($user, [])` rather than an empty
 argument.
+
+**The account inherits this forum's `registrationDefaults` option.** XenForo's own option and
+privacy entities read it while their defaults are set up, which covers eight columns on the option
+record - `receive_admin_email`, the two watch states and five more - and five on the privacy
+record. So an assertion about what a "normal" member has describes the forum under test rather
+than the test. Set what the test needs afterwards:
+
+```php
+$user = $this->createUserAccount();
+$user->Option->receive_admin_email = true;
+$user->Option->save();
+```
+
+Or change the option with `setOption('registrationDefaults', $defaults)` before creating the
+account, which covers every account the test then creates.
 
 **Saving a user is the most contended write this package makes, and the transaction does not make
 it reliable.** XenForo rewrites the user's group memberships, which locks an index gap, so two

@@ -4,6 +4,7 @@ namespace Hampel\Testing\Concerns;
 
 use XF\Entity\Admin;
 use XF\Entity\User;
+use XF\Mvc\Entity\Entity;
 use XF\Repository\UserRepository;
 
 trait InteractsWithVisitor
@@ -222,13 +223,20 @@ trait InteractsWithVisitor
 	 * getPermissionCombinationId() returns the guest combination for those, so a user built as
 	 * 'moderated' shares permissions with guests exactly as it would in production.
 	 *
-	 * @param array $values
+	 * **The values go in as stored column data rather than through the entity's setters**, which is
+	 * the difference between this and createUserAccount(). An array given for a column XenForo
+	 * stores as a string, such as the LIST_COMMA secondary_group_ids, is encoded to the stored form
+	 * here, so either shape is accepted. Nothing verifies a value on this path.
+	 *
+	 * @param array $values - column => value, in either the stored form or the entity's
 	 * @param string|null $username
 	 *
 	 * @return User
 	 */
 	protected function buildVisitor(array $values = [], $username = null)
 	{
+		$values = $this->encodeVisitorValues($values);
+
 		$values += [
 			'permission_combination_id' => self::PERMISSION_COMBINATION_BASE + $this->builtVisitorCount++,
 		];
@@ -258,6 +266,46 @@ trait InteractsWithVisitor
 		$user->hydrateRelation('Admin', null);
 
 		return $user;
+	}
+
+	/**
+	 * Encode the values a caller gave for the form XenForo stores them in.
+	 *
+	 * These values go into the guest user's data as if they had come from the database - so a
+	 * column XenForo keeps as a string built from an array, such as the LIST_COMMA
+	 * `secondary_group_ids`, wants the stored string and not the array. Given the array, nothing
+	 * complains until something reads the column back, and the failure is a TypeError inside
+	 * XenForo's value formatter naming neither the column nor this helper.
+	 *
+	 * XenForo's own encoder is used, which is what getGuestUser() does with a column's declared
+	 * default one branch away. It is not idempotent - encoding a LIST_COMMA value that is already
+	 * a string is a TypeError in its own right - so only an array is encoded, and a caller passing
+	 * the stored form is left alone.
+	 *
+	 * @param array $values
+	 *
+	 * @return array
+	 */
+	private function encodeVisitorValues(array $values)
+	{
+		$em = $this->app()->em();
+		$structure = $em->getEntityStructure(User::class);
+		$formatter = $em->getValueFormatter();
+
+		foreach ($values AS $name => $value)
+		{
+			$type = $structure->columns[$name]['type'] ?? null;
+
+			// LIST_ARRAY has no encoded form and XenForo throws rather than inventing one
+			if (!is_array($value) || $type === null || $type === Entity::LIST_ARRAY)
+			{
+				continue;
+			}
+
+			$values[$name] = $formatter->encodeValueForSource($type, $value);
+		}
+
+		return $values;
 	}
 
 	private function rememberVisitor()

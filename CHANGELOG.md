@@ -1,5 +1,19 @@
 # Changelog
 
+## 5.25.2 (unreleased)
+
+* `buildVisitor()`, and so `actingAsMember()` and the rest, accepts an array for a column XenForo
+  stores as a string built from one - `secondary_group_ids`, which is `LIST_COMMA`. These values go
+  in as stored column data, so the array used to reach the entity unencoded and the first read of
+  the column was a `TypeError` inside XenForo's value formatter, naming neither the column nor the
+  helper. The stored string is still accepted and is unchanged
+* docs: `buildVisitor()` says its values go in as stored column data rather than through the
+  entity's setters, which is what differs from `createUserAccount()`, and that nothing verifies a
+  value on that path
+* docs: `createUserAccount()` says the account inherits the forum's `registrationDefaults` option -
+  eight columns on the option record and five on the privacy one - so what a test can assert about
+  a "normal" member follows the forum under test. Both ways to set what the test needs are given
+
 ## 5.25.1 (2026-10-14)
 
 * `renderReply()` renders a reply whose template name already carries a type, rather than

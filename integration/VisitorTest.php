@@ -85,4 +85,28 @@ class VisitorTest extends TestCase
 		$this->actingAs($user);
 		$this->assertSame(99, \XF::visitor()->user_id);
 	}
+
+	public function test_a_list_column_can_be_given_as_an_array()
+	{
+		// secondary_group_ids is LIST_COMMA, so the form XenForo stores is a string - and these
+		// values go in as if they had come from the database. Given the array, the failure used to
+		// arrive as a TypeError inside XenForo's value formatter on the first read of the column.
+		$member = $this->actingAsMember(['secondary_group_ids' => [7, 8]]);
+
+		$this->assertSame([7, 8], $member->secondary_group_ids);
+		$this->assertTrue($member->isMemberOf(7));
+		$this->assertTrue($member->isMemberOf(8));
+		$this->assertFalse($member->isMemberOf(9));
+	}
+
+	public function test_a_list_column_given_in_its_stored_form_is_left_alone()
+	{
+		// the shape that worked before arrays were encoded, so it goes on working: XenForo's
+		// encoder is not idempotent and encoding this again would be a TypeError of its own
+		$member = $this->actingAsMember(['secondary_group_ids' => '7,8']);
+
+		$this->assertSame([7, 8], $member->secondary_group_ids);
+		$this->assertTrue($member->isMemberOf(7));
+		$this->assertFalse($member->isMemberOf(9));
+	}
 }
