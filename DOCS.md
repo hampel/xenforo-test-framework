@@ -977,6 +977,11 @@ change what a second render produces.
 with the parameters it passed. Call it in the same test that dispatched, since the template type
 comes from the dispatch.
 
+**A reply whose template name already carries a type is rendered as named.** XenForo's standard
+delete plugin answers with `public:delete_confirm` for an admin controller as well as a public one,
+because the control panel reuses that template, so the dispatch type is not prepended to a name
+that has one.
+
 **The `xf` parameter is set as it is for a page** - `$xf.options`, `$xf.visitor`, `$xf.time`,
 `$xf.app` and the rest, from `getGlobalTemplateData()`. It is rebuilt for every render, so
 `$xf.visitor` is whoever `actingAs()` set. An `xf` parameter the test adds to the templater itself

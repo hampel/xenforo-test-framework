@@ -1,5 +1,14 @@
 # Changelog
 
+## 5.25.1 (unreleased)
+
+* `renderReply()` renders a reply whose template name already carries a type, rather than
+  prepending the dispatch type and failing. XenForo's standard delete plugin answers with
+  `public:delete_confirm` for an admin controller as well as a public one, because the control
+  panel reuses that template - so an admin delete confirmation was refused with
+  `Template name 'public:delete_confirm' contains invalid characters`, which named nothing about
+  the type. A bare name still takes its type from the dispatch
+
 ## 5.25.0 (2026-10-13)
 
 * `assertNoUnresolvedPhrases()` reports a phrase key that ends at the prefix it was given. Every

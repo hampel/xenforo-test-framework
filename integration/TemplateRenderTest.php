@@ -45,6 +45,31 @@ class TemplateRenderTest extends TestCase
 		$this->assertNotSame('', $html);
 	}
 
+	public function test_a_reply_whose_template_name_carries_its_type_is_rendered_as_named()
+	{
+		$this->fakesRegistry();
+		$this->actingAsAdministrator(['notice' => true]);
+
+		$notice = $this->createEntity('XF:Notice', [
+			'title' => 'delete type probe',
+			'message' => 'probe',
+			'notice_type' => 'block',
+			'display_style' => 'primary',
+		]);
+
+		// core's standard delete plugin names this template 'public:delete_confirm' whichever app
+		// type asked for it, because the control panel reuses the public template - so the name the
+		// reply carries already has a type on it while the dispatch type is admin. There is no
+		// admin:delete_confirm, so prepending or replacing the type both fail to render.
+		$reply = $this->dispatch('notices/' . $notice->notice_id . '/delete', 'admin');
+		$this->assertReplyTemplate($reply, 'public:delete_confirm');
+
+		$html = $this->renderReply($reply);
+
+		$this->assertSee($html, 'Please confirm that you want to delete the following');
+		$this->assertSee($html, 'delete type probe');
+	}
+
 	public function test_a_template_without_its_type_is_refused()
 	{
 		// the wrong type renders as an empty string rather than failing, so it is not guessed

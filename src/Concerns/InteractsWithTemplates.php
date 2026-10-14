@@ -903,8 +903,13 @@ trait InteractsWithTemplates
 	/**
 	 * Render the template a dispatched reply named, with the parameters it passed.
 	 *
-	 * The reply carries a bare template name; the type comes from the app class type dispatch()
-	 * swapped in, so call this after a dispatch rather than before one.
+	 * A reply usually carries a bare template name, and the type then comes from the app class type
+	 * dispatch() swapped in - so call this after a dispatch rather than before one.
+	 *
+	 * **A name that already carries a type is rendered as named.** Core's standard delete plugin
+	 * answers with 'public:delete_confirm' for an admin controller as well as a public one, because
+	 * the control panel reuses that template, so the dispatch type is not prepended to a name that
+	 * has one.
 	 *
 	 * This renders the **template**, not the page: there is no navigation, header or footer
 	 * around it, because those come from the Pub and Admin app classes rather than from the
@@ -930,11 +935,17 @@ trait InteractsWithTemplates
 			);
 		}
 
-		return $this->renderWithGlobalData(
-			self::TEMPLATE_TYPES[$classType] . ':' . $reply->getTemplateName(),
-			$reply->getParams(),
-			$reply
-		);
+		$templateName = $reply->getTemplateName();
+
+		// a reply can name its template with the type already on it, and core does: the standard
+		// delete plugin answers 'public:delete_confirm' for an admin controller as well as a public
+		// one, because the control panel reuses that template. So the type is prepended to a bare
+		// name only, which is the rule the rest of this trait already follows.
+		$template = strpos($templateName, ':') === false
+			? self::TEMPLATE_TYPES[$classType] . ':' . $templateName
+			: $templateName;
+
+		return $this->renderWithGlobalData($template, $reply->getParams(), $reply);
 	}
 
 	/**
