@@ -854,6 +854,24 @@ $this->assertReplyIsRedirect($this->dispatch('help/terms'), null, 'permanent');
 **Assert the error text when more than one guard can refuse with the same code.** A test asserting
 only a 403 passes whichever guard refused. `replyErrors($reply)` returns the messages as plain text.
 
+**Never `var_export()` or `print_r()` a reply, a phrase, or `$reply->getErrors()`.** An error
+reply's errors are `XF\Phrase` objects; a phrase holds the language, the language holds the
+database adapter, and the adapter holds its own configuration - so dumping one prints **the
+database password and user in plain text**, into the test output and from there into a build log.
+One phrase is enough, and `print_r()` reaches it too. XenForo does not redact the adapter.
+
+Everything this framework hands you is already text, so the safe routes are the ordinary ones:
+
+| to see | use |
+|---|---|
+| what the reply was, in one line | `describeReply($reply)` |
+| the error messages | `replyErrors($reply)` |
+| the rendered page | `renderReply($reply)` and `textOf()` |
+
+The assertions compare text for the same reason, so their own failures are safe to paste. If you
+write your own assertion over errors, compare the strings `replyErrors()` gives you rather than the
+objects behind them - a PHPUnit failure prints the values it compared.
+
 **Assert a redirect's `type`, not its code.** `getResponseCode()` is `200` for every redirect reply;
 the renderer later sends a 301 for permanent and a 303 for temporary.
 

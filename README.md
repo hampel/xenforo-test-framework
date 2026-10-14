@@ -450,7 +450,9 @@ from the database
 `assertReplyIsView`, `assertReplyTemplate`, `assertReplyViewClass`, `assertReplyParam`, `replyParam`,
 `assertReplyIsRedirect`, `assertReplyIsError`, `assertReplyIsMessage`, `assertReplyIsApiResult`, `replyApiResult` and
 `replyErrors` to assert against it. Parameters the route reads are passed as the third argument, and the controller's
-access checks in `preDispatch()` run
+access checks in `preDispatch()` run. `describeReply` summarises a reply in one line - reach for it rather than
+`var_export`, which on a reply's errors reaches a phrase, the language and the database adapter's configuration,
+password included
 * `callAction` calls a controller action directly with a `POST`, for testing saves, toggles and deletes. It skips
 `preDispatch()`, so pair it with `dispatch` to test access checks
 * `followRedirect` dispatches the route a redirect reply points at, so a test of a save can go on to assert what the

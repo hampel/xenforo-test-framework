@@ -1086,14 +1086,20 @@ trait InteractsWithRoutes
 	}
 
 	/**
-	 * What the reply actually was, for a failure message. A dispatch that went wrong usually
-	 * produces an error reply whose text says why, and that text is the useful part.
+	 * What the reply actually was, as one line. A dispatch that went wrong usually produces an
+	 * error reply whose text says why, and that text is the useful part.
+	 *
+	 * **Reach for this rather than var_export() or print_r() on a reply.** Every error an error
+	 * reply carries is usually an XF\Phrase, and a phrase holds the language, which holds the
+	 * database adapter, which holds its own configuration - so dumping one prints the database
+	 * password into the test output, and from there into a build log. This renders each error to
+	 * its text instead, which is also what replyErrors() returns.
 	 *
 	 * @param AbstractReply $reply
 	 *
 	 * @return string
 	 */
-	private function describeReply(AbstractReply $reply)
+	protected function describeReply(AbstractReply $reply)
 	{
 		// a redirect's code is not its own - the renderer picks 301 or 303 from the type later -
 		// so printing getResponseCode()'s 200 beside it would be the misreading this avoids

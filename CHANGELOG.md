@@ -1,5 +1,16 @@
 # Changelog
 
+## 5.27.0 (unreleased)
+
+* `describeReply()` is protected rather than private, so a test can use it to see what a reply was.
+  It renders each error phrase to its text, which `var_export()` and `print_r()` do not: an error
+  reply's errors are `XF\Phrase` objects, and a phrase reaches the language, the database adapter
+  and the adapter's configuration - so dumping one prints the database password and user in plain
+  text, into the test output and from there into a build log. One phrase is enough
+* docs: the reply assertions carry that hazard and the safe routes - `describeReply()`,
+  `replyErrors()` and rendering - and note that the assertions compare text, so their own failures
+  are safe to paste
+
 ## 5.26.0 (2026-10-14)
 
 * `recordsLog($key)` records what an add-on logs through a PSR-3 logger of its own, instead of

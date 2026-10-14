@@ -5,6 +5,15 @@ Most releases need nothing beyond `composer update`. `CHANGELOG.md` lists everyt
 
 `tests/TestCase.php` is copied into your add-on, so a change to it has to be merged by hand.
 
+## 5.27.0
+
+Nothing to do. If one of your test classes already defines a `describeReply()` method, rename it:
+`TestCase` now has a protected method of that name, where it was private before.
+
+```bash
+grep -rnE 'function describeReply\(' tests/
+```
+
 ## 5.26.0
 
 Nothing to do. This release adds protected methods to `TestCase`, and a test class that already
