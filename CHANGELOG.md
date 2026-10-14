@@ -1,6 +1,6 @@
 # Changelog
 
-## 5.28.0 (unreleased)
+## 5.28.0 (2026-10-15)
 
 * `assertAddOnClassExtensionsApply()` asserts that every class extension an add-on registers
   actually applies. One that does not is silent - XenForo's own class runs, the add-on's code in
