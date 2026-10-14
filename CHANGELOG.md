@@ -1,6 +1,6 @@
 # Changelog
 
-## 5.26.0 (unreleased)
+## 5.26.0 (2026-10-14)
 
 * `recordsLog($key)` records what an add-on logs through a PSR-3 logger of its own, instead of
   writing it. `fakesLogger()` covers XenForo's moderator log; this is for an add-on that puts a
