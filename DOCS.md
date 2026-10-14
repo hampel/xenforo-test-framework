@@ -2963,6 +2963,72 @@ class LoggerTest extends TestCase
 }	
 ```
 
+### recordsLog
+Record what your add-on logs through a PSR-3 logger of its own, instead of writing it.
+
+`fakesLogger()` above covers XenForo's moderator log. This is for the other kind: an add-on that
+puts a `Psr\Log\LoggerInterface` in the container under a key of its own - bound to another add-on's
+channel, or to a `NullLogger` when that add-on is absent - and logs through that. Nothing else here
+can see what reached it.
+
+**The container key is yours, so it has to be given.** The framework cannot know it.
+
+##### Parameters:
+
+* `key` - the container key your add-on keeps its logger under, eg `myaddon.log`
+
+##### Assertions available:
+
+* `assertLogged` - takes an optional level, and an optional string the message must contain or a
+  closure given the whole entry
+* `assertNotLogged` - the same arguments, asserting that nothing matching was logged
+* `assertNothingLogged` - asserts that nothing at all was logged
+* `getLogRecords` - every entry, in order
+* `getLogRecorder` - the recorder itself
+
+**An entry is `level`, `message` and `context`.** The message is recorded as your code passed it,
+with its `{placeholder}` braces intact, and the values that would fill them are in `context` - so a
+test asserts on what the code asked to be logged rather than on an interpolated string. Match on the
+context with a closure.
+
+**A string filter is always matched against the message and never called**, whatever it spells, so
+pass a closure to filter on anything else.
+
+**Omit the key on the assertions when the test installed one recorder**, which is the usual case.
+With two installed they refuse rather than picking one, and `getLogRecords($key)` takes the key.
+
+##### Example:
+
+```php
+<?php namespace Tests\Unit;
+
+use Tests\TestCase;
+
+class ApiFailureTest extends TestCase
+{
+	public function test_a_refused_request_is_logged_without_the_token()
+	{
+		$this->recordsLog('myaddon.log');
+
+		// execute some test code which logs through the container's logger
+		...
+
+		$this->assertLogged('error', 'refused');
+		$this->assertLogged('error', function (array $entry) {
+			return $entry['context']['status'] === 403;
+		});
+
+		// and the credential did not go into it
+		$this->assertNotLogged(null, $apiToken);
+	}
+}
+```
+
+**A swap does not reach a logger something already holds.** `recordsLog()` replaces the container
+entry, so code that resolves the key after it is called gets the recorder - but a service built
+earlier in the test holds whatever it was handed. Install the recorder before the code under test
+resolves it, which for a service built in the test body means first.
+
 Refer to the `Hampel\Testing\Concerns\InteractsWithLogger` trait for full details of available moderator log validation 
 functions.
 
@@ -3074,6 +3140,36 @@ class MailTest extends TestCase
 
 Refer to the `Hampel\Testing\Concerns\InteractsWithMail` trait for full details of available mail validation 
 functions.
+
+### createTempDirectory
+Create an empty temporary directory to write into, and have the framework remove it.
+
+Somewhere for a test that writes files - an export, an attachment, a cache file - to put them
+without touching the forum. The path is absolute and inside the system temporary directory, and it
+is removed when the test finishes whether the test passed, failed or errored, so **a test needs no
+`tearDown()` of its own**. That is the point of it.
+
+**Reach for this rather than pairing `File::getTempDir()` with `File::deleteDirectory()`
+yourself.** `deleteDirectory()` resolves a relative or empty path against the XenForo root, so a
+cleanup holding a path that was never assigned deletes the installation - and a `tearDown()` runs
+even when `setUp()` threw before assigning it. `UsesDatabaseTransactions` above has the mechanism.
+
+##### Parameters:
+
+* `prefix` - optional - so the directory is recognisable while a test is running
+
+##### Example:
+
+```php
+$dir = $this->createTempDirectory();
+
+$this->app()->service('MyVendor\MyAddOn:Exporter')->writeTo($dir);
+
+$this->assertFileExists($dir . '/export.csv');
+```
+
+Nothing it removes can be outside the system temporary directory: the removal refuses any path that
+does not resolve inside there, so the forum is unreachable however the path was arrived at.
 
 ### setConfig
 Set a value in the application config - the values from `config.php`. **These are not options**:

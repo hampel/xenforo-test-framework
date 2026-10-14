@@ -23,10 +23,12 @@ abstract class TestCase extends BaseTestCase
 	use Concerns\InteractsWithLogger;
 	use Concerns\InteractsWithMail;
 	use Concerns\InteractsWithOptions;
+	use Concerns\InteractsWithPsrLog;
 	use Concerns\InteractsWithRegistry;
 	use Concerns\InteractsWithRequest;
 	use Concerns\InteractsWithRoutes;
 	use Concerns\InteractsWithSimpleCache;
+	use Concerns\InteractsWithTempFiles;
 	use Concerns\InteractsWithTemplates;
 	use Concerns\InteractsWithTime;
 	use Concerns\InteractsWithVisitor;
@@ -317,6 +319,10 @@ abstract class TestCase extends BaseTestCase
 	 */
 	protected function tearDown(): void
 	{
+		// first, and outside the check for an application, so a test that failed during boot still
+		// has anything it created removed
+		$this->removeTempDirectories();
+
 		if ($this->app)
 		{
 			foreach ($this->beforeApplicationDestroyedCallbacks AS $callback)

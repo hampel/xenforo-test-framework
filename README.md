@@ -422,6 +422,8 @@ We also have fake systems which log interactions with the subsystem and then all
 * `fakesHttp` - and `fakesHttpByUrl`, which picks the response by request URL rather than by the
 order the calls happen in
 * `fakesEvents` - records the code events your addon fires and stops them reaching any listener
+* `recordsLog` - records what your addon logs through a PSR-3 logger of its own, rather than
+through XenForo's moderator log
 
 Finally, we have some special helper functions for specific purposes:
 
@@ -435,6 +437,10 @@ Carbon library), so that we can test functions that rely on time intervals or co
 filesystem and avoid side effects. This one needs `league/flysystem-memory: ^1.0` in your own `require-dev`, which
 Composer will not install without the advisory note in the installation section below
 * `setConfig` sets a value in `config.php`
+* `createTempDirectory` gives you an empty directory to write into, absolute and inside the system
+temporary directory, and removes it when the test finishes - so a test needs no cleanup of its own.
+Reach for it rather than pairing `File::getTempDir()` with `File::deleteDirectory()` by hand, which
+resolves a relative or empty path against your XenForo root
 * `actingAs`, `actingAsMember` and `actingAsGuest` run the code under test as a given visitor, with
 `setVisitorPermissions` and `setVisitorContentPermissions` granting permissions in memory rather than reading them
 from the database

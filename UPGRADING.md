@@ -7,13 +7,12 @@ Most releases need nothing beyond `composer update`. `CHANGELOG.md` lists everyt
 
 ## 5.26.0
 
-Nothing to do. If one of your test classes already defines a `getLoggedMessages()` or an
-`assertNothingLoggedContains()` method, rename it: `TestCase` now has a protected method of each
-name, and a test class cannot redeclare one with a narrower visibility or an incompatible
-signature without a fatal at class load.
+Nothing to do. This release adds protected methods to `TestCase`, and a test class that already
+defines one of these names has to rename it - a trait method cannot be redeclared with a narrower
+visibility or an incompatible signature without a fatal at class load.
 
 ```bash
-grep -rnE 'function (getLoggedMessages|assertNothingLoggedContains)\(' tests/
+grep -rnE 'function (getLoggedMessages|assertNothingLoggedContains|recordsLog|getLogRecorder|getLogRecords|assertLogged|assertNotLogged|assertNothingLogged|createTempDirectory|removeTempDirectories)\(' tests/
 ```
 
 An array passed to `buildVisitor()` or `actingAsMember()` for a column XenForo stores as a string -

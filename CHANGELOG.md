@@ -2,6 +2,18 @@
 
 ## 5.26.0 (unreleased)
 
+* `recordsLog($key)` records what an add-on logs through a PSR-3 logger of its own, instead of
+  writing it. `fakesLogger()` covers XenForo's moderator log; this is for an add-on that puts a
+  `Psr\Log\LoggerInterface` in the container under a key of its own, which nothing here could see
+  into. `assertLogged()`, `assertNotLogged()` and `assertNothingLogged()` assert against it, with an
+  optional level and either a string the message must contain or a closure given the whole entry;
+  `getLogRecords()` and `getLogRecorder()` read it. An entry is `level`, `message` and `context`,
+  with the message as the code passed it and its `{placeholder}` braces intact
+* `createTempDirectory()` creates an empty directory for a test to write into and removes it when
+  the test finishes, so a test needs no `tearDown()` of its own. The path is absolute and inside the
+  system temporary directory, and the removal refuses any path that does not resolve inside there -
+  so it cannot reach the forum. Reach for it rather than pairing `File::getTempDir()` with
+  `File::deleteDirectory()`, which resolves a relative or empty path against the XenForo root
 * `assertNothingLoggedContains($needle)` asserts that no logged message contains the given text -
   for keeping a credential, a token or a user's data out of the log, where the per-message
   assertions need a message the test cannot predict. Errors and exceptions are both read, since an
