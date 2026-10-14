@@ -15,6 +15,12 @@ visibility or an incompatible signature without a fatal at class load.
 grep -rnE 'function (getLoggedMessages|assertNothingLoggedContains|recordsLog|getLogRecorder|getLogRecords|assertLogged|assertNotLogged|assertNothingLogged|createTempDirectory|removeTempDirectories)\(' tests/
 ```
 
+A read-only or auto-increment column passed to `makeEntity()`, `createEntity()` or
+`createUserAccount()` is now refused by the framework rather than by XenForo, so the message names
+the `setTrusted()` call to make instead of `forceSet`. Such a call already failed, so nothing goes
+from passing to failing - but a test asserting on the old `InvalidArgumentException` now sees a
+`LogicException`.
+
 An array passed to `buildVisitor()` or `actingAsMember()` for a column XenForo stores as a string -
 `secondary_group_ids` - is now encoded rather than reaching the entity as an array. The stored
 string form is unchanged, so a suite passing either shape needs nothing.
@@ -77,6 +83,11 @@ extensions or content types any of your tests reach:
 ```php
 protected $addonsToLoad = ['MyVendor/MyAddOn', 'XFRM'];
 ```
+
+Naming an add-on that vendors its own PHPUnit is the one case to think about: booting it registers
+its Composer autoloader, which puts a second PHPUnit on XenForo's class loader. XenForo's own
+add-ons do not, so `XFRM` and `XFMG` are free; a sibling of yours may. The README's section on
+running a suite inside a forum has the symptoms.
 
 A grep lists the declarations, and for most suites there should be exactly one:
 
@@ -385,8 +396,28 @@ return \XF::setupApp('Hampel\Testing\App', ['xf-addons' => $this->addonsToLoad])
 ```
 
 **Add-on isolation now filters code event listeners.** With `$addonsToLoad` set, listeners belonging
-to other add-ons, `app_setup` included, no longer run. If a test fails after upgrading because
-something another add-on set up is missing, add that add-on to `$addonsToLoad`.
+to other add-ons, `app_setup` included, no longer run.
+
+**The symptom is not always a failure, and that half is worth checking deliberately.** A test that
+fails names itself. What does not is a suite with an *optional* integration - an add-on that uses
+another add-on's container entry when it is there and falls back when it is not. Before this
+release that entry was always registered, because `app_setup` ran for every installed add-on
+whatever `$addonsToLoad` said, so **present** was the default; now **absent** is. So a workaround
+that forced the fallback becomes dead code that still passes, a test that simulates the other
+add-on being absent simulates nothing, and the present branch loses its only coverage - with
+nothing going red. **A green suite after upgrading is consistent with having stopped testing half
+of an optional integration.** Check which branch each such test now exercises.
+
+**Adding the other add-on to `$addonsToLoad` is the obvious remedy and is often unsafe.** Booting
+it registers its Composer autoloader, so an add-on that vendors its own PHPUnit puts a second copy
+on XenForo's class loader mid-run - two patch versions apart is enough to break the run, and most
+add-ons vendor one. Where what your code reads is the other add-on's container entry, test your own
+side of it instead: call your `app_setup` listener yourself, with a stand-in for that entry in the
+container, and assert what your listener asked of it. That covers the decision your add-on owns
+rather than the other add-on's behaviour.
+
+Note a swap in the test body is too late to change that decision: `app_setup` fires while the
+application boots, which is before the test method runs.
 
 **A half-upgraded scaffold now fails.** If `tests/TestCase.php` sets `$addonsToLoad` and
 `tests/CreatesApplication.php` does not pass it to `XF::setupApp()`, every test errors with:

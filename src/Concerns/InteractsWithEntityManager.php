@@ -125,11 +125,76 @@ trait InteractsWithEntityManager
 
 		if ($values)
 		{
+			$this->requireColumnsAreSettable($entity, $values, $shortName);
 			$entity->bulkSet($values);
 			$this->requireValuesWereSet($entity, $values, $shortName);
 		}
 
 		return $entity;
+	}
+
+	/**
+	 * Refuse a value for a column an ordinary set cannot touch.
+	 *
+	 * XenForo throws out of bulkSet() for a read-only or auto-increment column, and its message
+	 * names forceSet - an option this framework does not surface, and not the one to reach for.
+	 * setTrusted() is how a test sets such a column, and wanting a fixture to carry a particular id
+	 * is a legitimate reason to.
+	 *
+	 * Refused rather than set trusted automatically: read-only means something on columns that are
+	 * not primary keys, so a test overriding one should say so rather than have it done quietly.
+	 *
+	 * @param Entity $entity
+	 * @param array $values
+	 * @param string $shortName
+	 *
+	 * @return void
+	 */
+	private function requireColumnsAreSettable(Entity $entity, array $values, $shortName)
+	{
+		$columns = $entity->structure()->columns;
+		$refused = [];
+
+		foreach (array_keys($values) AS $column)
+		{
+			if (!isset($columns[$column]))
+			{
+				// an unknown column is XenForo's to refuse, with a message that already says so
+				continue;
+			}
+
+			if (!empty($columns[$column]['readOnly']) || !empty($columns[$column]['autoIncrement']))
+			{
+				$refused[] = $column;
+			}
+		}
+
+		if (!$refused)
+		{
+			return;
+		}
+
+		$names = implode(' and ', array_map(function ($column)
+		{
+			return "'$column'";
+		}, $refused));
+
+		$calls = implode(' ', array_map(function ($column) use ($values)
+		{
+			return '$entity->setTrusted(' . var_export($column, true) . ', '
+				. var_export($values[$column], true) . ');';
+		}, $refused));
+
+		$remaining = array_diff_key($values, array_fill_keys($refused, true));
+
+		throw new \LogicException(
+			"$shortName declares $names read-only or auto-increment, so an ordinary set cannot"
+			. ' touch ' . (count($refused) === 1 ? 'it' : 'them') . '. Leave '
+			. (count($refused) === 1 ? 'it' : 'them') . ' out of the values'
+			. ($remaining ? ' - makeEntity() takes the rest as it is -' : '')
+			. ' and set ' . (count($refused) === 1 ? 'it' : 'them') . ' on the entity afterwards: '
+			. $calls
+		);
 	}
 
 	/**
@@ -239,6 +304,8 @@ trait InteractsWithEntityManager
 
 		$user = $repository->setupBaseUser();
 		$unique = $username ?: 'member' . substr(md5(uniqid('', true)), 0, 8);
+
+		$this->requireColumnsAreSettable($user, $values, 'XF:User');
 
 		$user->bulkSet($values + [
 			'username' => $unique,

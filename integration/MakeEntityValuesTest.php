@@ -62,4 +62,58 @@ class MakeEntityValuesTest extends TestCase
 
 		$this->assertSame('Probe', $user->username);
 	}
+
+	public function test_an_auto_increment_column_is_refused_with_the_call_that_sets_it()
+	{
+		try
+		{
+			$this->makeEntity('XF:User', ['user_id' => 42, 'username' => 'Probe']);
+			$this->fail('an auto-increment column should have been refused');
+		}
+		catch (\LogicException $e)
+		{
+			$this->assertStringContainsString("'user_id'", $e->getMessage());
+			$this->assertStringContainsString('read-only or auto-increment', $e->getMessage());
+
+			// the remedy the message prints, which the next test runs
+			$this->assertStringContainsString(
+				"\$entity->setTrusted('user_id', 42);",
+				$e->getMessage()
+			);
+		}
+	}
+
+	public function test_the_remedy_the_refusal_prints_works()
+	{
+		$user = $this->makeEntity('XF:User', ['username' => 'Probe']);
+		$user->setTrusted('user_id', 42);
+
+		$this->assertSame(42, $user->user_id);
+		$this->assertSame('Probe', $user->username);
+	}
+
+	public function test_createEntity_refuses_it_too_without_writing_anything()
+	{
+		$this->expectException(\LogicException::class);
+		$this->expectExceptionMessage('read-only or auto-increment');
+
+		$this->createEntity('XF:Notice', ['notice_id' => 9001, 'title' => 'Probe']);
+	}
+
+	public function test_createUserAccount_refuses_it_as_well()
+	{
+		$this->expectException(\LogicException::class);
+		$this->expectExceptionMessage("'user_id'");
+
+		$this->createUserAccount('probebob', ['user_id' => 42]);
+	}
+
+	public function test_an_ordinary_column_is_unaffected()
+	{
+		// the guard must not narrow what already worked
+		$user = $this->makeEntity('XF:User', ['username' => 'Probe', 'user_state' => 'moderated']);
+
+		$this->assertSame('Probe', $user->username);
+		$this->assertSame('moderated', $user->user_state);
+	}
 }

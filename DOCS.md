@@ -2093,13 +2093,23 @@ otherwise the class fails to load with `Access level to ... must be protected`.
 
 ##### Setting an id on an unsaved entity
 
-A primary key is usually a read-only column, so passing one in `values` throws
-`Column 'node_id' is read only, can only be set with forceSet`. Use XenForo's `setTrusted()`:
+A primary key is an auto-increment column, so an ordinary set cannot touch it. Passing one in
+`values` is refused, with the call that sets it:
+
+```text
+XF:User declares 'user_id' read-only or auto-increment, so an ordinary set cannot touch it. Leave
+it out of the values - makeEntity() takes the rest as it is - and set it on the entity afterwards:
+$entity->setTrusted('user_id', 42);
+```
 
 ```php
 $user = $this->makeEntity('XF:User', ['username' => 'Alice']);
 $user->setTrusted('user_id', 42);
 ```
+
+The same applies to any column XenForo declares read-only, and to `createEntity()` and
+`createUserAccount()`, which take their values the same way. Left to XenForo the message names
+`forceSet`, which is not the option to reach for.
 
 **`makeEntity()` refuses a value that did not land.** XenForo verifies many columns as they are
 set rather than at save time - a unique key already in use, an email that is not one, a username
@@ -2615,6 +2625,22 @@ $this->runConsoleCommand(MyAddOnCommand::class);
 // the same command again, with the responses queued afresh
 $this->fakesHttp([$account, $fields]);
 $this->runConsoleCommand(MyAddOnCommand::class, ['--strict' => true]);
+```
+
+**An empty queue is worth installing in `setUp()`, so a request no test expected fails instead of
+leaving the machine.** With `fakesHttp([])` in place a stray call raises
+`OutOfBoundsException: Mock queue is empty`, naming itself, where without any fake it reaches the
+real endpoint with whatever credentials the forum's options hold. Install the responses a test does
+expect over the top, which the paragraph above covers:
+
+```php
+protected function setUp(): void
+{
+    parent::setUp();
+
+    // nothing in this suite may reach the network unless a test says so
+    $this->fakesHttp([]);
+}
 ```
 
 Changing fake kind within a test works the same way, so a `fakesHttpByUrl()` after a `fakesHttp()`
@@ -3223,6 +3249,17 @@ setOptions:
 setOption:
 * `key`
 * `value`
+
+**An option whose value is an array is replaced whole, not merged.** XenForo keeps a group of
+sub-options as one option, so setting two of them leaves the rest absent and the code under test
+fails on an undefined array key rather than on anything the test is about - `registrationDefaults`
+on a stock install holds fifteen, and naming one drops fourteen. Merge over what the forum has
+when only one sub-option is the point:
+
+```php
+$this->setOption('registrationDefaults', ['receive_admin_email' => true]
+    + (array) $this->app()->options()->registrationDefaults);
+```
 
 ##### Example: 
 

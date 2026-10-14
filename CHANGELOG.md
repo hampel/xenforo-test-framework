@@ -14,6 +14,23 @@
   system temporary directory, and the removal refuses any path that does not resolve inside there -
   so it cannot reach the forum. Reach for it rather than pairing `File::getTempDir()` with
   `File::deleteDirectory()`, which resolves a relative or empty path against the XenForo root
+* `makeEntity()`, `createEntity()` and `createUserAccount()` refuse a value for a read-only or
+  auto-increment column themselves, naming the `setTrusted()` call that sets it. Such a call already
+  failed, with XenForo's own message naming `forceSet` - an option this framework does not surface
+  and not the one to reach for
+* docs: `UPGRADING.md`'s 5.0.0 entry says that listener filtering can take coverage away without
+  anything failing. A suite with an optional integration with another add-on was testing the
+  present branch by default before that release and the absent branch after it, so a workaround
+  that forced the fallback becomes dead code that still passes and the present branch loses its
+  only coverage - a green suite after upgrading is consistent with having stopped testing half of
+  it. Adding the other add-on to `$addonsToLoad` is named as often unsafe, since booting one that
+  vendors its own PHPUnit puts a second copy on XenForo's class loader
+* docs: `setOption()` says that an option whose value is an array is replaced whole rather than
+  merged, so naming two sub-options leaves the rest absent and the code under test fails on an
+  undefined array key. `registrationDefaults` holds fifteen on a stock install
+* docs: `fakesHttp()` recommends installing an empty queue in `setUp()`, so a request no test
+  expected is refused with `Mock queue is empty` rather than reaching the real endpoint with
+  whatever credentials the forum holds
 * `assertNothingLoggedContains($needle)` asserts that no logged message contains the given text -
   for keeping a credential, a token or a user's data out of the log, where the per-message
   assertions need a message the test cannot predict. Errors and exceptions are both read, since an
