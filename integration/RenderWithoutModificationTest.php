@@ -2,6 +2,8 @@
 
 namespace Hampel\Testing\Integration;
 
+use Hampel\Testing\Concerns\UsesDatabaseTransactions;
+
 /**
  * A test that asserts a template modification put something on the page needs the other half:
  * the same render without it. These read what the forum has, so the happy path skips on an
@@ -9,6 +11,10 @@ namespace Hampel\Testing\Integration;
  */
 class RenderWithoutModificationTest extends TestCase
 {
+	// the template and modification one test creates are real rows, so they are rolled back rather
+	// than left on the forum - without this the class leaks a pair per run
+	use UsesDatabaseTransactions;
+
 	/**
 	 * An enabled modification that is actually applying, with the template it modifies.
 	 *
@@ -31,76 +37,54 @@ class RenderWithoutModificationTest extends TestCase
 		return $row ?: null;
 	}
 
+	/**
+	 * The template and the modification are this test's own, because a forum's own modification is
+	 * not a subject this can assert on: whether leaving one out changes a standalone render depends
+	 * on which modification the install happens to have, and on a forum whose first applying
+	 * modification edits a branch that needs page parameters the two renders are identical. The
+	 * test then fails with nothing wrong. Measured on a fresh install, where it did.
+	 */
 	public function test_leaving_a_modification_out_changes_the_render()
 	{
-		$modification = $this->applyingModification();
-
-		if (!$modification)
-		{
-			$this->markTestSkipped(
-				'This forum has no enabled public template modification that applies, so there is'
-				. ' nothing to leave out.'
-			);
-		}
-
 		$this->fakesErrors();
 
-		$name = $modification['type'] . ':' . $modification['template'];
+		$title = 'zzwithoutmod_' . substr(md5(uniqid('', true)), 0, 6);
+		$key = 'zzwithoutmod_' . substr(md5(uniqid('', true)), 0, 6);
 
-		$with = $this->renderTemplate($name);
-		$without = $this->renderTemplateWithoutModification($modification['modification_key']);
+		$this->createEntity('XF:Template', [
+			'style_id' => 0,
+			'type' => 'public',
+			'title' => $title,
+			'template' => '<div>ORIGINAL_MARKER</div>',
+			'addon_id' => '',
+		]);
 
-		$this->assertNotSame(
-			$with,
-			$without,
-			"leaving {$modification['modification_key']} out of {$name} changed nothing"
-		);
+		$this->createEntity('XF:TemplateModification', [
+			'type' => 'public',
+			'template' => $title,
+			'modification_key' => $key,
+			'description' => 'leaves a marker this test can see',
+			'execution_order' => 10,
+			'enabled' => true,
+			'action' => 'str_replace',
+			'find' => 'ORIGINAL_MARKER',
+			'replace' => 'MODIFIED_MARKER',
+			'addon_id' => '',
+		]);
 
-		// and the pair DOCS recommends, on markup derived from the two renders rather than
-		// hard-coded, so it holds on any forum: something the modification put there
-		$needle = $this->longestLineOnlyIn($with, $without);
+		$with = $this->renderTemplate('public:' . $title);
+		$without = $this->renderTemplateWithoutModification($key);
 
-		if ($needle !== null)
-		{
-			$this->assertSee($with, $needle, false);
-			$this->assertDontSee($without, $needle, false);
-		}
+		$this->assertNotSame($with, $without, "leaving $key out of public:$title changed nothing");
+
+		// the pair DOCS recommends, and the positive half is what says the modification applied
+		// at all rather than the comparison passing because one render failed
+		$this->assertSee($with, 'MODIFIED_MARKER', false);
+		$this->assertDontSee($with, 'ORIGINAL_MARKER', false);
+		$this->assertSee($without, 'ORIGINAL_MARKER', false);
+		$this->assertDontSee($without, 'MODIFIED_MARKER', false);
 	}
 
-	/**
-	 * The longest worthwhile line present in one render and absent from the other.
-	 *
-	 * @param string $present
-	 * @param string $absent
-	 *
-	 * @return string|null
-	 */
-	private function longestLineOnlyIn($present, $absent)
-	{
-		$candidates = [];
-
-		foreach (explode("\n", $present) AS $line)
-		{
-			$line = trim($line);
-
-			if (strlen($line) >= 12 && strpos($absent, $line) === false)
-			{
-				$candidates[] = $line;
-			}
-		}
-
-		if (!$candidates)
-		{
-			return null;
-		}
-
-		usort($candidates, function ($a, $b)
-		{
-			return strlen($b) <=> strlen($a);
-		});
-
-		return $candidates[0];
-	}
 
 	/**
 	 * The injected template is removed afterwards, so the next render of the same template in the

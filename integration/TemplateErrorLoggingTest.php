@@ -15,15 +15,13 @@ class TemplateErrorLoggingTest extends TestCase
 {
 	use UsesDatabaseTransactions;
 
-	/** a core template that cannot render cleanly without a visitor, so it errors and carries on */
-	private const ERRORING_TEMPLATE = 'public:account_preferences';
-
 	public function test_fakes_errors_keeps_template_errors_out_of_the_error_log()
 	{
 		$this->fakesErrors();
+		$template = $this->givenATemplateThatErrors();
 
 		$before = $this->errorLogRows();
-		$html = $this->renderTemplate(self::ERRORING_TEMPLATE);
+		$html = $this->renderTemplate($template);
 		$after = $this->errorLogRows();
 
 		$this->assertSame($before, $after, 'fakesErrors() should keep the rows out of xf_error_log');
@@ -36,8 +34,10 @@ class TemplateErrorLoggingTest extends TestCase
 
 	public function test_without_the_fake_the_rows_really_are_written()
 	{
+		$template = $this->givenATemplateThatErrors();
+
 		$before = $this->errorLogRows();
-		$this->renderTemplate(self::ERRORING_TEMPLATE);
+		$this->renderTemplate($template);
 		$after = $this->errorLogRows();
 
 		$this->assertGreaterThan(
@@ -45,6 +45,34 @@ class TemplateErrorLoggingTest extends TestCase
 			$after,
 			'the control: without fakesErrors() a template error reaches the real logger'
 		);
+	}
+
+	/**
+	 * A template of this test's own that raises a template error when rendered.
+	 *
+	 * This used to render a core template, on the belief that it could not render cleanly without
+	 * a visitor. It renders cleanly: on a forum with no third-party template modifications it
+	 * raises nothing at all, and the errors that made this test pass were other add-ons' - a
+	 * modification reading a column its own entity extension declares, which isolation leaves
+	 * absent. So the test asserted its own premise only on one long-lived install.
+	 *
+	 * @return string - the type:title to render
+	 */
+	private function givenATemplateThatErrors()
+	{
+		$title = 'zzerrorlog_' . substr(md5(uniqid('', true)), 0, 6);
+
+		$this->createEntity('XF:Template', [
+			'style_id' => 0,
+			'type' => 'public',
+			'title' => $title,
+			// XenForo only allows a template to call a method whose name reads as an accessor
+			// (XF\Util\Php::nameIndicatesReadOnly), so the identifier goes after a `get_`
+			'template' => '<div>{{ $nope.get_zzerrorlog_marker() }}</div>',
+			'addon_id' => '',
+		]);
+
+		return 'public:' . $title;
 	}
 
 	/**

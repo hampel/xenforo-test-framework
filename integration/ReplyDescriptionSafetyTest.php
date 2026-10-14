@@ -69,7 +69,12 @@ class ReplyDescriptionSafetyTest extends TestCase
 	}
 
 	/**
-	 * The credentials that must not appear, read from the forum's own configuration.
+	 * The credentials that must not appear, read from the running application.
+	 *
+	 * Asked of the application rather than read out of src/config.php, which is not reliably a
+	 * plain $config script - a container image generates one that reads differently, and including
+	 * it raised a warning XenForo's handler turned into a failed test. This is also the config
+	 * XenForo actually resolved, so it is the credential genuinely reachable through a dump.
 	 *
 	 * Skips rather than passes when there is nothing to look for: a forum configured without a
 	 * password would make every assertion above vacuous.
@@ -78,12 +83,11 @@ class ReplyDescriptionSafetyTest extends TestCase
 	 */
 	private function forbiddenInOutput()
 	{
-		$config = [];
-		include $this->rootDir . '/src/config.php';
+		$db = $this->app()->config('db');
 
 		$secrets = array_filter([
-			'database password' => (string) ($config['db']['password'] ?? ''),
-			'database user' => (string) ($config['db']['username'] ?? ''),
+			'database password' => (string) ($db['password'] ?? ''),
+			'database user' => (string) ($db['username'] ?? ''),
 		]);
 
 		if (!$secrets)
