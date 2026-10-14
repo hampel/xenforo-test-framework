@@ -1,5 +1,15 @@
 # Changelog
 
+## 5.28.0 (unreleased)
+
+* `assertAddOnClassExtensionsApply()` asserts that every class extension an add-on registers
+  actually applies. One that does not is silent - XenForo's own class runs, the add-on's code in
+  the extension never executes, and a suite with no test on the extended class has nothing to go
+  red, so it passes identically with the extension present and absent. The list comes from the
+  database, so it works on an install with no development output; a more derived resolution counts
+  as applied, since another add-on extending the same class resolves to its own; and an add-on
+  registering no active extension is refused rather than passing over an empty list
+
 ## 5.27.0 (2026-10-15)
 
 * `describeReply()` is protected rather than private, so a test can use it to see what a reply was.

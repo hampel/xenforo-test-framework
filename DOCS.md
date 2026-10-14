@@ -1688,6 +1688,46 @@ or reach for `mock()` instead.
 
 Like `swap()`, a spy does not reach anything already built from the key it replaces.
 
+### assertAddOnClassExtensionsApply
+Assert that every class extension your add-on registers actually applies.
+
+**An extension that does not apply is silent.** XenForo's own class runs, your code in the
+extension never executes, and a suite with no test on the extended class has nothing to go red -
+so the same suite passes with the extension present and with it absent, and a green run is
+evidence of neither.
+
+**It passes on a current release, and that is what it is for.** This reads the extensions from the
+database and resolves each one the way XenForo does, so an extension registered against a pre-2.3
+class name still applies today. What it guards is the future: a XenForo release that renames or
+removes a class one of your extensions targets takes that extension out of service silently, and so
+would a regression in how the framework keys them. Either becomes a failure here instead of code
+that has quietly stopped running.
+
+The list comes from the database rather than from `_output/`, so it works on an install with no
+development output as well as on a development one.
+
+##### Parameters:
+
+* `addOnId` - optional - defaults to the add-on `$addonsToLoad` isolates, when it names exactly one
+
+##### Example:
+
+```php
+public function test_every_class_extension_this_addon_registers_applies()
+{
+    $this->assertAddOnClassExtensionsApply();
+}
+```
+
+**A more derived resolution still counts as applied.** Where another add-on extends the same class,
+the resolution is the most derived class in the chain and yours is an ancestor of it.
+
+**It refuses when the add-on registers no active extension**, rather than passing over an empty
+list. An add-on whose extensions are all inactive reaches the same refusal.
+
+It returns the class each extension was registered against, mapped to what it resolved to, for a
+test that wants to assert on the set.
+
 ### requireClassNotExtended
 Skip the test unless the given class resolves unextended, for a test whose point is that an add-on's
 extension is absent.

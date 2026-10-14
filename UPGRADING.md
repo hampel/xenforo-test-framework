@@ -5,6 +5,24 @@ Most releases need nothing beyond `composer update`. `CHANGELOG.md` lists everyt
 
 `tests/TestCase.php` is copied into your add-on, so a change to it has to be merged by hand.
 
+## 5.28.0
+
+Nothing to do. If one of your test classes already defines an `assertAddOnClassExtensionsApply()`
+method, rename it: `TestCase` now has a protected method of that name.
+
+```bash
+grep -rnE 'function assertAddOnClassExtensionsApply\(' tests/
+```
+
+Worth adding to a suite that isolates one add-on, as a single test:
+
+```php
+$this->assertAddOnClassExtensionsApply();
+```
+
+It passes today. It exists so that a XenForo release which renames or removes a class one of your
+extensions targets turns that into a failure rather than into code that quietly stops running.
+
 ## 5.27.0
 
 Nothing to do. If one of your test classes already defines a `describeReply()` method, rename it:

@@ -3,6 +3,7 @@
 namespace Hampel\Testing\Concerns;
 
 use Closure;
+use PHPUnit\Framework\Assert as PHPUnit;
 use XF\SubContainer\AbstractSubContainer;
 
 trait InteractsWithContainer
@@ -177,5 +178,116 @@ trait InteractsWithContainer
 				. " test - vendor/bin/phpunit --filter $shortName"
 			);
 		}
+	}
+
+	/**
+	 * Assert that every class extension the add-on registers actually applies.
+	 *
+	 * An extension that does not apply is silent: XenForo's own class runs, the add-on's code
+	 * never executes, and a suite with no test on the extended class has nothing to go red. A
+	 * suite can pass identically with the extension present and absent, so a green run says
+	 * nothing either way - which is the whole reason to assert it.
+	 *
+	 * **This passes on a current release, and that is the point.** The resolution is keyed the way
+	 * XenForo keys it, so an extension registered against a pre-2.3 class name still applies. What
+	 * this guards is the future: a XenForo release that renames or removes a class an extension
+	 * targets takes that extension out silently, and so would a regression in how the framework
+	 * keys them. Either turns into a failure here rather than into code that quietly stops running.
+	 *
+	 * The list comes from the database, which is what XenForo itself resolves from, so this works
+	 * on an install with no development output as well as on a development one.
+	 *
+	 * **A subclass counts as applied.** Where another add-on extends the same class, the
+	 * resolution is the most derived class, which descends from this add-on's.
+	 *
+	 * It refuses when the add-on registers no active extension, because an assertion over an empty
+	 * list passes while checking nothing.
+	 *
+	 * @param string|null $addOnId - defaults to the add-on $addonsToLoad isolates, when it names one
+	 *
+	 * @return array<string, string> - the class each extension was registered against, mapped to
+	 *                                 what it resolved to
+	 */
+	protected function assertAddOnClassExtensionsApply($addOnId = null)
+	{
+		$addOnId = $addOnId ?: $this->soleIsolatedAddOnId('whose class extensions to check');
+
+		$rows = $this->app()->db()->fetchAll(
+			'SELECT from_class, to_class
+				FROM xf_class_extension
+				WHERE addon_id = ? AND active = 1
+				ORDER BY from_class',
+			$addOnId
+		);
+
+		if (!$rows)
+		{
+			throw new \LogicException(
+				"'$addOnId' registers no active class extension, so there is nothing to assert and"
+				. ' this would pass having checked nothing. Remove the assertion, or name the add-on'
+				. ' that owns the extensions. An add-on whose extensions are all inactive is the'
+				. ' other way to reach this.'
+			);
+		}
+
+		$applied = [];
+		$absent = [];
+
+		foreach ($rows AS $row)
+		{
+			// extendClass() is the resolution path XenForo uses. Never class_exists() the
+			// to_class to check it: that autoloads the extension outside the resolution path,
+			// where the XFCP_ proxy it extends has not been declared, and is a fatal
+			$resolved = $this->app()->extendClass($row['from_class']);
+
+			if ($resolved === $row['to_class'] || is_subclass_of($resolved, $row['to_class']))
+			{
+				$applied[$row['from_class']] = $resolved;
+			}
+			else
+			{
+				$absent[] = $row['from_class'] . ' resolves to ' . $resolved
+					. ', so ' . $row['to_class'] . ' never runs';
+			}
+		}
+
+		PHPUnit::assertSame(
+			[],
+			$absent,
+			"These class extensions of '$addOnId' are registered and do not apply, so XenForo's own"
+			. ' class runs instead and the add-on code they hold never executes'
+		);
+
+		return $applied;
+	}
+
+	/**
+	 * The one add-on $addonsToLoad names, for a helper that acts on the add-on under test.
+	 *
+	 * Lives here rather than beside either caller because both the console-command walk and the
+	 * class-extension assertion need it, and a suite isolating exactly one add-on is the usual
+	 * shape.
+	 *
+	 * @param string $purpose - completes 'Name the add-on ...', so each caller's refusal says what
+	 *                          it wanted the id for
+	 *
+	 * @return string
+	 */
+	private function soleIsolatedAddOnId($purpose)
+	{
+		$ids = array_values(array_filter($this->app()->isolatedAddOnIds(), function ($id)
+		{
+			return $id !== 'None/None';
+		}));
+
+		if (count($ids) !== 1)
+		{
+			throw new \LogicException(
+				"Name the add-on $purpose: \$addonsToLoad names "
+				. (count($ids) ? count($ids) . ' add-ons' : 'none') . ', so there is no single one to assume.'
+			);
+		}
+
+		return $ids[0];
 	}
 }

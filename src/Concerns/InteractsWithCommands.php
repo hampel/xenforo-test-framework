@@ -112,7 +112,7 @@ trait InteractsWithCommands
 	 */
 	protected function assertConsoleCommandsLoad($addOnId = null)
 	{
-		$addOnId = $addOnId ?: $this->soleIsolatedAddOnId();
+		$addOnId = $addOnId ?: $this->soleIsolatedAddOnId('whose commands to check');
 		[$path, $classBase] = $this->addOnCommandLocation($addOnId);
 
 		if (!is_dir($path))
@@ -315,26 +315,5 @@ trait InteractsWithCommands
 				$e
 			);
 		}
-	}
-
-	/**
-	 * @return string
-	 */
-	private function soleIsolatedAddOnId()
-	{
-		$ids = array_values(array_filter($this->app()->isolatedAddOnIds(), function ($id)
-		{
-			return $id !== 'None/None';
-		}));
-
-		if (count($ids) !== 1)
-		{
-			throw new \LogicException(
-				'Name the add-on whose commands to check: $addonsToLoad names '
-				. (count($ids) ? count($ids) . ' add-ons' : 'none') . ', so there is no single one to assume.'
-			);
-		}
-
-		return $ids[0];
 	}
 }

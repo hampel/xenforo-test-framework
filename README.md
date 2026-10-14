@@ -437,6 +437,9 @@ Carbon library), so that we can test functions that rely on time intervals or co
 filesystem and avoid side effects. This one needs `league/flysystem-memory: ^1.0` in your own `require-dev`, which
 Composer will not install without the advisory note in the installation section below
 * `setConfig` sets a value in `config.php`
+* `assertAddOnClassExtensionsApply` asserts that every class extension your addon registers actually
+applies. One that does not is silent - XenForo's own class runs and your code never does - and a suite
+with no test on the extended class has nothing to go red, so it passes either way
 * `createTempDirectory` gives you an empty directory to write into, absolute and inside the system
 temporary directory, and removes it when the test finishes - so a test needs no cleanup of its own.
 Reach for it rather than pairing `File::getTempDir()` with `File::deleteDirectory()` by hand, which
