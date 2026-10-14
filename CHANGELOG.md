@@ -17,6 +17,16 @@
 * docs: `buildVisitor()` says its values go in as stored column data rather than through the
   entity's setters, which is what differs from `createUserAccount()`, and that nothing verifies a
   value on that path
+* docs: `dispatch()` says that a non-`GET` admin dispatch writes a real `xf_admin_log` row, from
+  XenForo's own admin controller, for anything that is not a `GET` or a `HEAD` and does not answer
+  with a `Reroute`. The row carries the route path and the input the test sent, of which only
+  `_xfToken` and keys containing `password` are masked, and a class extension on the admin log
+  repository runs with it. `UsesDatabaseTransactions` rolls the row back
+* docs: `UsesDatabaseTransactions` says that a `tearDown()` which cleans up runs even when `setUp()`
+  threw, so it has to check what it is about to act on - and that
+  `XF\Util\File::deleteDirectory()` resolves a relative or empty path against the XenForo root, so
+  an unset property reaches it as the forum root and deletes the installation. The guard to write
+  instead is given
 * docs: `createUserAccount()` says the account inherits the forum's `registrationDefaults` option -
   eight columns on the option record and five on the privacy one - so what a test can assert about
   a "normal" member follows the forum under test. Both ways to set what the test needs are given

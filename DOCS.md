@@ -554,6 +554,17 @@ by `dispatch()`, `dispatchWithoutCsrfToken()` and `callAction()` alike, because 
 the CSRF token is minted according to the `method` argument, so a `POST` smuggled through `$server`
 would be sent without one and answered with a 400.
 
+**A non-`GET` admin dispatch writes a real `xf_admin_log` row.** XenForo's own admin controller
+logs the request from `postDispatchType()`, for anything that is not a `GET` or a `HEAD` and does
+not answer with a `Reroute`, so it happens for every admin controller rather than for particular
+actions. The row carries the route path and **the input the test sent**, of which only `_xfToken`
+and keys containing `password` are masked. A class extension on the admin log repository runs with
+it.
+
+Use `UsesDatabaseTransactions` for a class that dispatches admin writes - measured, the row is
+rolled back with everything else. A visitor whose `user_id` is 0 writes nothing, but
+`actingAsAdministrator()` and `actingAsMember()` default to 1.
+
 **The response code says which layer refused.** Dispatch such an endpoint with a `GET` and its own
 `assertPostOnly()` answers 405 - which is itself evidence that `preDispatch()` let the request
 through. Remove one of the overrides and the same dispatch returns 403 from that check instead, so
@@ -1795,6 +1806,29 @@ protected function setUp(): void
 protected function tearDown(): void
 {
     $this->app()->db()->query('DROP TABLE IF EXISTS xf_probe_source');
+
+    parent::tearDown();
+}
+```
+
+**A `tearDown()` that cleans up runs even when `setUp()` threw**, which is before the property
+holding what to clean up was assigned. So it has to check what it is about to act on rather than
+assume `setUp()` finished.
+
+**That is dangerous with `XF\Util\File::deleteDirectory()`, which resolves a relative or empty path
+against the XenForo root.** `canonicalizePath()` returns the path unchanged only when it starts
+with `/`, a backslash or a drive letter, and otherwise prefixes `\XF::getRootDirectory()` - so an
+unset property reaches it as an empty path, resolves to the forum root, and the whole installation
+is deleted recursively. The readable, directory and writable checks in front of it all pass for the
+root. Hold an absolute path, and refuse to delete anything that is not one:
+
+```php
+protected function tearDown(): void
+{
+    if ($this->tempDir !== null && strpos($this->tempDir, '/') === 0 && is_dir($this->tempDir))
+    {
+        \XF\Util\File::deleteDirectory($this->tempDir);
+    }
 
     parent::tearDown();
 }
