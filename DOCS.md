@@ -2326,6 +2326,27 @@ $this->assertExceptionLogged(TransportException::class, function (array $entry)
 * `assertErrorLogged` - takes an optional message; omit it to assert that any error was logged
 * `assertErrorNotLogged` - takes an optional message; omit it to assert that no error was logged
 * `assertNoErrorsLogged`
+* `assertNothingLoggedContains` - takes the text that must not appear in any logged message
+
+**`assertNothingLoggedContains($needle)` is for the assertion the others cannot express**: that a
+credential, a token or a user's data did not reach the log, whatever else was logged. The
+per-message assertions need the message, and the point here is not knowing what the message would
+be. It reads errors and exceptions alike, since an error is recorded as an `\ErrorException` entry.
+
+```php
+$this->fakesErrors();
+
+// the positive half, so the assertion below examined a message rather than an empty log
+$this->assertExceptionLogged(TransportException::class);
+$this->assertNothingLoggedContains($apiToken);
+```
+
+**Pair it with an assertion that something was logged**, as above. A run that logged nothing
+contains the text either, so on its own it passes without having examined anything. An empty needle
+is refused, since an empty value is found in every message.
+
+**`getLoggedMessages()` returns the message of everything logged**, in order and with each caller's
+prefix, for a test that wants to assert on the set rather than on one entry.
 
 ##### Example: 
 

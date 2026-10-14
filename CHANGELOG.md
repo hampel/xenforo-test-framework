@@ -1,7 +1,14 @@
 # Changelog
 
-## 5.25.2 (unreleased)
+## 5.26.0 (unreleased)
 
+* `assertNothingLoggedContains($needle)` asserts that no logged message contains the given text -
+  for keeping a credential, a token or a user's data out of the log, where the per-message
+  assertions need a message the test cannot predict. Errors and exceptions are both read, since an
+  error is recorded as an `\ErrorException` entry. Pair it with an assertion that something was
+  logged: a run that logged nothing contains the text either. An empty needle is refused
+* `getLoggedMessages()` returns the message of everything logged, in order and with each caller's
+  prefix, for a test that asserts on the set rather than on one entry
 * `buildVisitor()`, and so `actingAsMember()` and the rest, accepts an array for a column XenForo
   stores as a string built from one - `secondary_group_ids`, which is `LIST_COMMA`. These values go
   in as stored column data, so the array used to reach the entity unencoded and the first read of

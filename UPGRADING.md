@@ -5,6 +5,21 @@ Most releases need nothing beyond `composer update`. `CHANGELOG.md` lists everyt
 
 `tests/TestCase.php` is copied into your add-on, so a change to it has to be merged by hand.
 
+## 5.26.0
+
+Nothing to do. If one of your test classes already defines a `getLoggedMessages()` or an
+`assertNothingLoggedContains()` method, rename it: `TestCase` now has a protected method of each
+name, and a test class cannot redeclare one with a narrower visibility or an incompatible
+signature without a fatal at class load.
+
+```bash
+grep -rnE 'function (getLoggedMessages|assertNothingLoggedContains)\(' tests/
+```
+
+An array passed to `buildVisitor()` or `actingAsMember()` for a column XenForo stores as a string -
+`secondary_group_ids` - is now encoded rather than reaching the entity as an array. The stored
+string form is unchanged, so a suite passing either shape needs nothing.
+
 ## 5.25.0
 
 **`assertNoUnresolvedPhrases()` now catches a phrase key that ends exactly at the prefix**, so a

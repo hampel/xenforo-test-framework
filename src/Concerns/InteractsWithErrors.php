@@ -61,6 +61,27 @@ trait InteractsWithErrors
 	}
 
 	/**
+	 * The message of everything logged, in the order it was logged.
+	 *
+	 * assertErrorLogged() matches a whole message and assertExceptionLogged() takes a class, so a
+	 * test asking what reached the log at all had to map getExceptions() by hand. Errors are
+	 * recorded as \ErrorException entries, so they are in here too.
+	 *
+	 * Each message carries the prefix passed to \XF::logException(), as the logged row does.
+	 *
+	 * @return string[]
+	 *
+	 * @throws \Exception
+	 */
+	protected function getLoggedMessages()
+	{
+		return array_values(array_map(function (array $exception)
+		{
+			return $exception['message'];
+		}, $this->getExceptions()));
+	}
+
+	/**
 	 * Assert that an exception of the given class was logged.
 	 *
 	 * @param string $class - the exception class
@@ -199,6 +220,71 @@ trait InteractsWithErrors
 		PHPUnit::assertTrue(
 			count($loggedErrors) === 0,
 			"Unexpected error was logged."
+		);
+	}
+
+	/**
+	 * Assert that nothing logged contains the given text.
+	 *
+	 * For the assertion the others cannot express: that a credential, a token or a user's data did
+	 * not reach the log, whatever else was logged. The per-message assertions need the message, and
+	 * the point here is not knowing what the message would be.
+	 *
+	 * **Pair it with an assertion that something was logged**, or with one about the code path that
+	 * logs: a run that logged nothing contains the text either, so on its own this passes without
+	 * having examined anything.
+	 *
+	 * @param string $needle - the text that must not appear in any logged message
+	 * @param string|null $message - prefixed to the failure
+	 *
+	 * @return void
+	 *
+	 * @throws \Exception
+	 */
+	protected function assertNothingLoggedContains($needle, $message = null)
+	{
+		$this->requireLogNeedle($needle);
+
+		$found = array_values(array_filter(
+			$this->getLoggedMessages(),
+			function ($logged) use ($needle)
+			{
+				return strpos($logged, (string) $needle) !== false;
+			}
+		));
+
+		$describe = 'these logged messages contain ' . var_export((string) $needle, true);
+
+		PHPUnit::assertSame(
+			[],
+			$found,
+			$message === null || $message === '' ? $describe : "$message - $describe"
+		);
+	}
+
+	/**
+	 * Refuse a needle that makes the assertion meaningless.
+	 *
+	 * strpos() finds an empty value at position 0 of anything, so an empty needle is contained in
+	 * every message that was logged and in none that was not - the result describes whether
+	 * anything was logged rather than whether the text appeared.
+	 *
+	 * @param mixed $needle
+	 *
+	 * @return void
+	 */
+	private function requireLogNeedle($needle)
+	{
+		if (is_string($needle) && $needle !== '')
+		{
+			return;
+		}
+
+		throw new \LogicException(
+			'assertNothingLoggedContains() takes the text that must not appear in a logged message,'
+			. ' and was given ' . (is_string($needle) ? 'an empty string' : get_debug_type($needle))
+			. '. An empty value is found at position 0 of anything, so the assertion would report'
+			. ' whether anything was logged at all rather than whether the text appeared.'
 		);
 	}
 

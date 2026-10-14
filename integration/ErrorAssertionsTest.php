@@ -2,6 +2,8 @@
 
 namespace Hampel\Testing\Integration;
 
+use PHPUnit\Framework\ExpectationFailedException;
+
 /**
  * assertExceptionLogged() takes its filter as an optional second argument, so
  * assertErrorLogged() reads as though its message is optional too. It was not, and omitting it
@@ -52,5 +54,67 @@ class ErrorAssertionsTest extends TestCase
 		\XF::logException(new \RuntimeException('smtp is down'), false, 'MyAddon: ');
 
 		$this->assertExceptionNotLogged(\RuntimeException::class, 'SomeoneElse: ');
+	}
+
+	public function test_the_messages_of_everything_logged_are_readable()
+	{
+		$this->fakesErrors();
+
+		$this->app()->error()->logError('first thing');
+		\XF::logException(new \RuntimeException('second thing'), false, 'MyAddon: ');
+
+		// the prefix is part of the message, as it is in the logged row
+		$this->assertSame(
+			['first thing', 'MyAddon: second thing'],
+			$this->getLoggedMessages()
+		);
+	}
+
+	public function test_text_absent_from_every_logged_message_is_asserted()
+	{
+		$this->fakesErrors();
+
+		\XF::logException(new \RuntimeException('refused by the api'), false, 'MyAddon: ');
+
+		// the positive half: something was logged, so the assertion below examined a message
+		$this->assertExceptionLogged(\RuntimeException::class);
+		$this->assertNothingLoggedContains('hunter2');
+	}
+
+	public function test_text_present_in_a_logged_message_fails_the_assertion()
+	{
+		$this->fakesErrors();
+
+		\XF::logException(new \RuntimeException('token hunter2 was refused'), false, 'MyAddon: ');
+
+		try
+		{
+			$this->assertNothingLoggedContains('hunter2');
+			$this->fail('a logged message containing the text should have failed the assertion');
+		}
+		catch (ExpectationFailedException $e)
+		{
+			// the needle is named in the message; the offending message itself is the asserted
+			// value, so it reaches the reader through PHPUnit's own comparison and a caller's
+			// failure message cannot hide it
+			$this->assertStringContainsString("'hunter2'", $e->getMessage());
+
+			$comparison = $e->getComparisonFailure();
+			$this->assertNotNull($comparison, 'the offending messages are the compared value');
+			$this->assertStringContainsString(
+				'hunter2 was refused',
+				print_r($comparison->getActual(), true)
+			);
+		}
+	}
+
+	public function test_an_empty_needle_is_refused()
+	{
+		$this->fakesErrors();
+
+		$this->expectException(\LogicException::class);
+		$this->expectExceptionMessage('found at position 0 of anything');
+
+		$this->assertNothingLoggedContains('');
 	}
 }
