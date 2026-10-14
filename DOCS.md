@@ -777,9 +777,12 @@ and read it.
 * `message` - optional - a failure message, as every reply assertion takes
 
 **`assertReplyParam()` has no expected-value argument, and `assertReplyParamSame()` is the one that
-compares.** Three arguments to `assertReplyParam()` is a failure message, and a value passed there is
-refused: nothing would compare it, so the assertion would pass whatever the reply held. The four
-argument positions of `assertReplyParamSame()` are what make the two roles unmistakable.
+compares.** Three arguments to `assertReplyParam()` is a failure message. A **non-string** there is
+refused, since nothing would compare it and the assertion would pass whatever the reply held - but a
+**string cannot be told apart from a message and is taken as one**, so
+`assertReplyParam($reply, 'subject', 'October news')` asserts no more than that the key exists.
+Compare a value with `assertReplyParamSame()`, whose four argument positions make the two roles
+unmistakable.
 
 ##### Example:
 

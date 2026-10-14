@@ -17,6 +17,10 @@
 * docs: `buildVisitor()` says its values go in as stored column data rather than through the
   entity's setters, which is what differs from `createUserAccount()`, and that nothing verifies a
   value on that path
+* docs: `assertReplyParam()` says that only a **non-string** third argument is refused. A string
+  cannot be told apart from a failure message and is taken as one, so
+  `assertReplyParam($reply, 'key', 'a value')` asserts no more than that the key exists - the
+  previous wording said any value there was refused
 * docs: `dispatch()` says that a non-`GET` admin dispatch writes a real `xf_admin_log` row, from
   XenForo's own admin controller, for anything that is not a `GET` or a `HEAD` and does not answer
   with a `Reroute`. The row carries the route path and the input the test sent, of which only
