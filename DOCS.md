@@ -1093,6 +1093,14 @@ $this->assertDontSee($action, 'Delete for ever');
 `assertNoUnresolvedPhrases()` needs no such handling: it reads these four parameters itself, so the
 call that is given the HTML covers them too.
 
+**A render on a development forum shared with other add-ons raises other add-ons' errors, and
+writes them to the forum's `xf_error_log`.** Template modifications belong to the install rather
+than to `$addonsToLoad`, so a core template carries every installed add-on's, and a sibling's
+modification reading a column its own entity extension declares warns on a page that is faultless
+in a browser. Call `fakesErrors()` before the render to keep the rows out of the forum - they stay
+available to the assertions - and see `assertNoTemplateErrors()` for which of those errors your
+add-on can honestly assert on.
+
 ### renderMacro
 Render one macro from a template, with the arguments a caller would pass it - for a macro your
 add-on adds, or where rendering the whole template would need parameters the test does not have.
@@ -1250,6 +1258,41 @@ value happens to be callable - pass a closure to filter by anything else. Anythi
 a string, a list of strings nor a closure is refused.
 
 A failure message of your own goes after the filter, and is prefixed to the failure.
+
+**Your own modification's errors show up in other add-ons' suites rather than in yours.** Under
+isolation your entity extension resolves, so a modification of yours reading a column it declares
+renders cleanly in your own tests - while in a suite that does not load your add-on, the same
+modification raises on the same page. Measured on one core page: a bare render answers one error
+with the add-on isolated and two with `['None/None']`, the extra one being the isolated add-on's
+own. So a clean render in your suite is not evidence that your modification is clean in somebody
+else's, and the errors you see are usually not the ones you are answerable for.
+
+**What an add-on can honestly claim on a shared forum is that none of the logged messages is its
+own**, which is weaker than asserting there were none and is the strongest thing that is true.
+Asserting zero errors fails your suite for a sibling's defect, on this forum and not on another:
+
+```php
+private function assertNoErrorsFromThisAddOn()
+{
+	$ours = [];
+
+	foreach ($this->getLoggedMessages() AS $message)
+	{
+		if (stripos($message, 'myaddon') !== false)
+		{
+			$ours[] = $message;
+		}
+	}
+
+	$this->assertSame([], $ours);
+}
+```
+
+Two things to know before relying on it. **One template error reads as two logged messages** -
+`getLoggedMessages()` returns the errors and the exceptions, and a template error is recorded as
+both - so a count from it is not a count of errors. And it only works where your add-on's prefix
+appears in the message, which for a template error it does, because the getter or template name
+carries it; an add-on whose errors would not name it needs something else.
 
 ### assertSee / assertDontSee / assertSeeInOrder
 Assert on rendered output.

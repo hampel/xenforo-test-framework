@@ -8,6 +8,15 @@
   negative-assertion pairing and the unit-versus-feature split, and it still advised against
   writing feature tests, which the framework has supported since 5.15.0. The README's section 13
   links to it, and `README.md`'s documentation section now lists every published document
+* docs: `renderTemplate()` says that a render on a forum shared with other add-ons raises their
+  errors and writes them to `xf_error_log`, and points at `fakesErrors()` - the mechanism was
+  documented from `assertNoTemplateErrors()`'s side only, which is not where a reader of
+  `renderTemplate()` meets it
+* docs: `assertNoTemplateErrors()` says that an add-on's own modification raises in other add-ons'
+  suites rather than in its own, since under isolation its entity extension resolves - so a clean
+  render is not evidence the modification is clean elsewhere. It gives the assertion that is true
+  on a shared forum, that none of the logged messages is the add-on's own, and notes that one
+  template error reads as two logged messages
 
 ## 5.28.0 (2026-10-15)
 
