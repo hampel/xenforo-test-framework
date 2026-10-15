@@ -269,8 +269,12 @@ the logging by default.
 
 ## Documentation
 
-- `README.md` — the tutorial: theory, installation, `build.json` cleanup, limitations, testing tips.
+- `README.md` — the tutorial: theory, installation, `build.json` cleanup, limitations.
 - `DOCS.md` — the API reference, one `###` section per public helper.
+- `TIPS.md` — writing testable code, and what to reach for instead of mocking XenForo. **The only
+  copy.** The README carried these as its section 13 until 2026-10-15 and the two had drifted — the
+  README's was missing four tips and still told a reader not to write feature tests, which 5.15.0
+  made ordinary. Section 13 is now a link; do not restore the text there.
 - `UPGRADING.md` — what a consumer must do, per version.
 
 All are published. **A new or changed helper needs its `DOCS.md` section updated in the same

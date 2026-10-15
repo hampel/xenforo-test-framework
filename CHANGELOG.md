@@ -1,5 +1,14 @@
 # Changelog
 
+## 5.28.1 (unreleased)
+
+* docs: the testing tips are their own document, `TIPS.md`, and ship with the package. They were
+  section 13 of the README, where they had drifted from the copy published alongside the resource
+  page: the README's was missing the console-command assertion, the entity-double `get()` rule, the
+  negative-assertion pairing and the unit-versus-feature split, and it still advised against
+  writing feature tests, which the framework has supported since 5.15.0. The README's section 13
+  links to it, and `README.md`'s documentation section now lists every published document
+
 ## 5.28.0 (2026-10-15)
 
 * `assertAddOnClassExtensionsApply()` asserts that every class extension an add-on registers
