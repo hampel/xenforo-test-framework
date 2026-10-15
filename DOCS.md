@@ -1290,9 +1290,12 @@ private function assertNoErrorsFromThisAddOn()
 
 Two things to know before relying on it. **One template error reads as two logged messages** -
 `getLoggedMessages()` returns the errors and the exceptions, and a template error is recorded as
-both - so a count from it is not a count of errors. And it only works where your add-on's prefix
-appears in the message, which for a template error it does, because the getter or template name
-carries it; an add-on whose errors would not name it needs something else.
+both. **The two differ in their text**, one carrying XenForo's `Template error:` prefix and the
+other naming the entity, so deduplicating them does not collapse the pair: a reader who suspects
+double counting and reaches for `array_unique()` gets two and concludes there were two errors.
+Match on content, never on a count. And the filter only works where your add-on's prefix appears in
+the message, which for a template error it does, because the getter or template name carries it; an
+add-on whose errors would not name it needs something else.
 
 ### assertSee / assertDontSee / assertSeeInOrder
 Assert on rendered output.

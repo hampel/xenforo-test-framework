@@ -15,8 +15,9 @@
 * docs: `assertNoTemplateErrors()` says that an add-on's own modification raises in other add-ons'
   suites rather than in its own, since under isolation its entity extension resolves - so a clean
   render is not evidence the modification is clean elsewhere. It gives the assertion that is true
-  on a shared forum, that none of the logged messages is the add-on's own, and notes that one
-  template error reads as two logged messages
+  on a shared forum, that none of the logged messages is the add-on's own. It also notes that one
+  template error reads as two logged messages whose text differs, so a count from
+  `getLoggedMessages()` is not a count of errors and deduplicating them does not make it one
 
 ## 5.28.0 (2026-10-15)
 
