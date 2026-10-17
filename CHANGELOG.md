@@ -1,6 +1,6 @@
 # Changelog
 
-## 5.30.0 (unreleased)
+## 5.30.0 (2026-10-17)
 
 * `createNodeFixture()`, `createNodeTreeFixture()` and `createThreadFixture()` create forum content
   without rebuilding the forum's node tree. Saving an `XF:Node` the ordinary way schedules a
