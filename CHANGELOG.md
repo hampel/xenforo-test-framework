@@ -1,7 +1,35 @@
 # Changelog
 
-## 5.28.1 (unreleased)
+## 5.29.0 (unreleased)
 
+* `assertAddOnTemplateModificationsApply()` asserts that every template modification an add-on
+  registers still applies. One whose `find` stops matching is silent - XenForo records it with
+  status `ok` and an apply count of zero, so nothing fails and the markup it inserts is absent from
+  every render. An id matching no installed add-on, an add-on that is disabled, and an add-on
+  registering no enabled modification are each refused rather than passing over an empty list. The
+  add-on must be enabled but need not be idle: XenForo gathers modifications with no
+  `disableProcessing` option, so one part way through an install still has its modifications
+  applied, unlike its class extensions. It reads the database, so a modification edited in
+  `_output/template_modifications/` and never imported is invisible to it
+* `sideNavHtml()` and `sidebarHtml()` read back what a render contributed through `<xf:sidenav>` and
+  `<xf:sidebar>`. Both compile to a write into the templater rather than to markup, so what they
+  produce is in neither the rendered output nor the page parameters, and XenForo's account pages
+  build their whole sidebar that way - an add-on adding a link there previously had nothing to
+  assert on. Both accumulate across renders within one test, as the page parameters do
+* `assertNoUnresolvedPhrases()` searches the side navigation and the sidebar as well as the
+  rendered output and the page parameters, and the failure names which surface each key came from.
+  A key that failed to resolve inside `<xf:sidenav>` is in no other surface, so a search of the
+  rendered output alone passed having checked nothing
+* docs: `actingAsMember()` says that its default `user_id` of 1 is the owner on most forums for
+  reading as well as for display - anything fetching rows keyed by the visitor's id answers with
+  the owner's records, so a test asserting it found none fails on a forum where the owner has one.
+  It gives the id to pass instead
+* docs: `setVisitorContentPermissions()` says that a test counting queries cannot see per-node
+  permission loading for the ids it set, since they are in the permission cache already and
+  XenForo returns before querying - so a query-count assertion over those ids cannot notice code
+  that stopped loading permissions at all
+* docs: `TIPS.md` has what a query count in a test does and does not measure - the two queries the
+  first link built in a test pays for, and the permission loading above
 * docs: the testing tips are their own document, `TIPS.md`, and ship with the package. They were
   section 13 of the README, where they had drifted from the copy published alongside the resource
   page: the README's was missing the console-command assertion, the entity-double `get()` rule, the

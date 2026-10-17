@@ -149,6 +149,40 @@ trait InteractsWithTemplates
 	}
 
 	/**
+	 * The markup a render contributed to the side navigation, as one string.
+	 *
+	 * `<xf:sidenav>` compiles to a write into the templater rather than to markup, so what it
+	 * produces is in neither the rendered HTML nor the page parameters. The account pages build
+	 * their whole sidebar this way, so an add-on adding a link there has nothing to assert on
+	 * without this.
+	 *
+	 * **It accumulates across renders in one test**, as the page parameters do, so a test
+	 * rendering twice sees both renders' blocks. XenForo keeps them keyed by block; where a test
+	 * needs to know which block a string came from, read
+	 * `$this->app()->templater()->getSideNavHtml()` for the array.
+	 *
+	 * @return string
+	 */
+	protected function sideNavHtml()
+	{
+		return implode('', $this->app()->templater()->getSideNavHtml());
+	}
+
+	/**
+	 * The markup a render contributed to the sidebar, as one string.
+	 *
+	 * `<xf:sidebar>` behaves as `<xf:sidenav>` does - see `sideNavHtml()`, including that it
+	 * accumulates across renders. The array is on
+	 * `$this->app()->templater()->getSidebarHtml()`.
+	 *
+	 * @return string
+	 */
+	protected function sidebarHtml()
+	{
+		return implode('', $this->app()->templater()->getSidebarHtml());
+	}
+
+	/**
 	 * Render a reply through the JSON renderer and return the decoded document.
 	 *
 	 * For an endpoint whose view shapes its own response in renderJson(). renderRawReply() cannot
@@ -317,7 +351,8 @@ trait InteractsWithTemplates
 	protected function assertNoUnresolvedPhrases($html, $prefix, $message = null)
 	{
 		$surfaces = ['the rendered output' => $this->displayedTextOf($html)]
-			+ $this->renderedPageParams();
+			+ $this->renderedPageParams()
+			+ $this->renderedNavSurfaces();
 		$found = [];
 
 		foreach ($surfaces AS $surface => $subject)
@@ -576,6 +611,23 @@ trait InteractsWithTemplates
 	 *
 	 * @return array - description => value
 	 */
+	private function renderedNavSurfaces()
+	{
+		$surfaces = [];
+
+		foreach (['side navigation' => 'getSideNavHtml', 'sidebar' => 'getSidebarHtml'] AS $name => $method)
+		{
+			$html = implode('', $this->app()->templater()->$method());
+
+			if ($html !== '')
+			{
+				$surfaces["the $name"] = $this->displayedTextOf($html);
+			}
+		}
+
+		return $surfaces;
+	}
+
 	private function renderedPageParams()
 	{
 		$surfaces = [];
@@ -946,6 +998,106 @@ trait InteractsWithTemplates
 			: $templateName;
 
 		return $this->renderWithGlobalData($template, $reply->getParams(), $reply);
+	}
+
+	/**
+	 * Assert that every template modification the add-on registers still applies.
+	 *
+	 * A modification whose `find` no longer matches is silent: XenForo logs it with status `ok`
+	 * and an apply count of zero, so nothing fails and the markup it inserts is simply absent. A
+	 * suite with no assertion on that markup passes identically either way, which is the same
+	 * shape as a class extension that stops applying.
+	 *
+	 * **The add-on must be enabled, but not idle.** XenForo gathers modifications with
+	 * `whereAddOnActive()` and no `disableProcessing` option, so a disabled add-on's are excluded
+	 * while one part way through an install still has its applied - the opposite of the extension
+	 * cache, which checks both. So a disabled add-on is refused here and a mid-install one is not.
+	 *
+	 * Reads what the forum has, so an edit to `_output/template_modifications/` that was never
+	 * imported is invisible to this - a test globbing that directory catches the drift a commit
+	 * without an import leaves, and the two are worth having together.
+	 *
+	 * @param string|null $addOnId - defaults to the add-on $addonsToLoad isolates, when it names one
+	 *
+	 * @return array<string, int> - each modification key, mapped to the number of times it applied
+	 */
+	protected function assertAddOnTemplateModificationsApply($addOnId = null)
+	{
+		$addOnId = $addOnId ?: $this->soleIsolatedAddOnId('whose template modifications to check');
+
+		$db = $this->app()->db();
+
+		$addOn = $db->fetchRow('SELECT addon_id, active FROM xf_addon WHERE addon_id = ?', $addOnId);
+
+		if (!$addOn)
+		{
+			throw new \LogicException(
+				"'$addOnId' is not among the installed add-ons on this forum, so it registers no"
+				. ' template modification and this would pass having checked nothing. Check the id.'
+			);
+		}
+
+		if (!$addOn['active'])
+		{
+			throw new \LogicException(
+				"'$addOnId' is installed but disabled, so XenForo leaves its template modifications"
+				. ' out of every render and none of them apply. Enable the add-on, or name one that'
+				. ' is enabled.'
+			);
+		}
+
+		$modifications = $db->fetchAll(
+			'SELECT modification_key, type, template
+				FROM xf_template_modification
+				WHERE addon_id = ? AND enabled = 1
+				ORDER BY modification_key',
+			$addOnId
+		);
+
+		if (!$modifications)
+		{
+			throw new \LogicException(
+				"'$addOnId' is installed and registers no enabled template modification, so there is"
+				. ' nothing to assert and this would pass having checked nothing. Remove the'
+				. ' assertion, or name the add-on that owns the modifications. An add-on whose'
+				. ' modifications are all disabled is the other way to reach this.'
+			);
+		}
+
+		$applied = [];
+		$absent = [];
+
+		foreach ($modifications AS $modification)
+		{
+			// the log carries a row per template a modification was applied to, so the count has
+			// to be summed; status is 'ok' whether or not the find matched anything
+			$count = (int) $db->fetchOne(
+				'SELECT SUM(l.apply_count)
+					FROM xf_template_modification_log AS l
+					INNER JOIN xf_template_modification AS m ON (m.modification_id = l.modification_id)
+					WHERE m.modification_key = ?',
+				$modification['modification_key']
+			);
+
+			if ($count > 0)
+			{
+				$applied[$modification['modification_key']] = $count;
+			}
+			else
+			{
+				$absent[] = $modification['modification_key'] . ' on ' . $modification['type']
+					. ':' . $modification['template'] . ' applied 0 times, so its find no longer matches';
+			}
+		}
+
+		PHPUnit::assertSame(
+			[],
+			$absent,
+			"These template modifications of '$addOnId' are enabled and apply to nothing, so the"
+			. ' markup they insert is absent from every render'
+		);
+
+		return $applied;
 	}
 
 	/**

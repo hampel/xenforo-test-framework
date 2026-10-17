@@ -468,6 +468,9 @@ and `renderReply` renders the template a dispatched reply named, with `assertSee
 `assertDontSeeText` and `assertSeeInOrder` to assert on the output, and `textOf` to read that output back with
 its markup stripped and its entities decoded
 * `assertTemplateModificationApplied` asserts that a template modification has applied, using its apply count
+* `assertAddOnTemplateModificationsApply` asserts that every template modification your add-on registers still
+applies, which a suite with no assertion on the markup they insert cannot otherwise notice - XenForo records a
+modification whose find stops matching as `ok` with an apply count of zero
 * `renderTemplateWithoutModification` renders a template with one of its modifications left out, so a test can show
 the markup it asserts on is that modification's work, without disabling it for every other suite on the forum. To
 pair it with a dispatch, hand it the reply's own parameters - `renderTemplateWithoutModification($key,
@@ -476,9 +479,12 @@ side, which matters only for a template that reads it
 * `assertNoTemplateErrors` asserts that nothing the test rendered raised an error
 * `assertNoUnresolvedPhrases` asserts that none of your add-on's phrases came out as its own key, which is what
 XenForo renders for a phrase it cannot find. It takes a prefix or a whole phrase key, and searches the text the page
-displays and the page parameters the render set
+displays, the page parameters the render set, and the side navigation and sidebar
 * `pageParam` reads back what a rendered template set with `<xf:title>` and friends, which never appear in the
 template's own output
+* `sideNavHtml` and `sidebarHtml` read back what a render contributed through `<xf:sidenav>` and `<xf:sidebar>`,
+which are in neither the rendered output nor the page parameters - XenForo's account pages build their whole
+sidebar that way. Both accumulate across renders within one test
 * `globalTemplateData` hands back the `xf` parameter a render sees, which is how a test asserts on what a
 `templater_global_data` listener of yours contributed - the event fires from inside XenForo's own method, so nothing
 else proves the listener is registered the way XenForo will call it

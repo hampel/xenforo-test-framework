@@ -211,6 +211,35 @@ from XenForo or its vendor tree is unavailable there — a class constant such a
 `Class "Symfony\Component\Console\Output\OutputInterface" not found`. Return the literal value from
 the provider, or resolve it inside the test.
 
+## Be careful counting queries
+
+A test that asserts on the number of queries a call makes is measuring something real, and two
+things about the test environment make the number mean less than it looks.
+
+**The first link built in a test costs two queries nothing else will.** XenForo's route formatter
+loads the `routesPublic` and `routeFilters` registry entries the first time it is asked for a
+link, so the first `buildLink()` of a test pays for them and every later one pays nothing - the
+same route or a different one. Build a link before the measurement, so what you count is your own
+code rather than the warm-up:
+
+```php
+$this->app()->router('public')->buildLink('index');   // warm-up, discarded
+
+$before = $this->app()->db()->getQueryCount();
+$this->service('MyVendor\MyAddOn:Thing')->doTheWork();
+$this->assertSame(3, $this->app()->db()->getQueryCount() - $before);
+```
+
+**And permission loading is free for the ids the test seeded, which is the trap.**
+`setVisitorContentPermissions()` puts them in the permission cache in memory, and XenForo's
+`cacheContentPermsByIds()` drops every id already cached and returns before it queries. So the
+node ids a test set cost no queries, while ids it did not set cost one - and a query-count
+assertion over the seeded ids cannot notice code that stopped loading permissions at all, because
+there was never a query there to lose. Those are usually exactly the ids under test.
+
+So count queries to catch a loop that queries per row, and assert on the permission decision -
+`hasNodePermission()` - rather than on a query count to catch a permission regression.
+
 ## Don't treat your test code as unimportant
 
 A bug in a test can hide a bug in your code. Review test code as carefully as production code, and

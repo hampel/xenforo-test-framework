@@ -5,6 +5,32 @@ Most releases need nothing beyond `composer update`. `CHANGELOG.md` lists everyt
 
 `tests/TestCase.php` is copied into your add-on, so a change to it has to be merged by hand.
 
+## 5.29.0
+
+Nothing to do. If one of your test classes already defines a method named
+`assertAddOnTemplateModificationsApply()`, `sideNavHtml()` or `sidebarHtml()`, rename it: `TestCase`
+now has protected methods of those names, and a private one of the same name is a fatal at class
+load.
+
+```bash
+grep -rnE 'function (assertAddOnTemplateModificationsApply|sideNavHtml|sidebarHtml)\(' tests/
+```
+
+Worth adding to a suite that isolates one add-on and owns template modifications, as a single test:
+
+```php
+$this->assertAddOnTemplateModificationsApply();
+```
+
+It exists so that a XenForo release changing a template your modification searches turns that into
+a failure, rather than into markup that quietly stops being inserted - XenForo records such a
+modification as `ok` with an apply count of zero.
+
+`assertNoUnresolvedPhrases()` now searches the side navigation and the sidebar as well. That can
+only find keys it could not see before, so it turns a passing assertion red where a phrase really
+did fail to resolve inside `<xf:sidenav>` or `<xf:sidebar>`. No grep finds those: the condition is
+in rendered output rather than at a call site.
+
 ## 5.28.0
 
 Nothing to do. If one of your test classes already defines an `assertAddOnClassExtensionsApply()`

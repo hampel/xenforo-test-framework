@@ -242,6 +242,20 @@ template printing `$record.CreatedBy.username` renders the owner's name, not the
 Asserting on the column passes; asserting on the rendered name fails - or, on a forum whose user 1
 happens to match, passes for the wrong reason.
 
+**The other half is reading.** Anything that fetches rows keyed by the visitor's id finds whatever
+user 1 really has on that forum - so an add-on's own finder or repository, asked for the visitor's
+records, answers with the owner's. A test asserting it found nothing fails on a forum where the
+owner happens to have one, and a test asserting a count gets the owner's. Pass an id above the
+forum's own users, as `buildVisitor()` does for permission combinations:
+
+```php
+$highest = $this->app()->db()->fetchOne('SELECT MAX(user_id) FROM xf_user');
+$user = $this->actingAsMember(['user_id' => $highest + 1000]);
+```
+
+`createUserAccount()` is the other answer, and takes a real auto-increment id rather than one you
+chose - see the caveats in its own section.
+
 Where the page has to read the account back, create one with `createUserAccount()` and act as that:
 
 ```php
@@ -347,6 +361,13 @@ $this->assertTrue($user->hasPermission('forum', 'view'));
 $this->assertTrue($user->hasNodePermission(7, 'view'));
 $this->assertFalse($user->hasNodePermission(8, 'view'));
 ```
+
+**A test counting queries cannot see per-node permission loading for the ids it set here.**
+XenForo's `cacheContentPermsByIds()` drops every id already in the permission cache and returns
+before querying, and these are set in memory, so the ids a test seeded cost **no** queries while
+ids it did not seed cost one. A query-count assertion over the seeded ids therefore cannot notice
+code that stopped loading permissions - which is usually exactly the ids under test. Assert on the
+permission decision rather than on the query count.
 
 ### buildVisitor
 Build an `XF\Entity\User` in memory without writing it to the database, for cases where you want
@@ -1078,6 +1099,12 @@ goes with it - core's `<!--[XF:actions_menu:bottom]-->` in `admin:user_edit` is 
 tags compile to a write into the templater's page params rather than to output. Read them with
 `pageParam()` before the next render.
 
+**`<xf:sidenav>` and `<xf:sidebar>` are absent the same way, and are not page params either.**
+They compile to a write into the templater of their own, so what they produce is in neither the
+returned HTML nor `pageParam()`. The account pages build their whole sidebar with `<xf:sidenav>`,
+so an add-on adding a link there has nothing in the rendered string to assert on. Read them with
+`sideNavHtml()` and `sidebarHtml()`.
+
 The direction that fails loudly is the safe one: `assertSee()` reports a miss. The one to watch is
 `assertDontSee()`, which passes against a page that does show the value. Assert on the page param
 itself:
@@ -1367,6 +1394,30 @@ An empty string is found at position 0 of anything, so `assertSee($html, '')` ca
 usual cause is a value built from something that came back empty itself. `assertSeeInOrder()`
 refuses an empty list for the same reason: a loop over no values makes no assertion.
 
+### sideNavHtml / sidebarHtml
+The markup a render contributed to the side navigation or the sidebar, as one string.
+
+`<xf:sidenav>` and `<xf:sidebar>` compile to a write into the templater rather than to markup, so
+what they produce is in neither the rendered HTML nor the page parameters. XenForo's account pages
+build their whole sidebar with `<xf:sidenav>`, so this is the only surface an add-on adding a link
+there can assert on.
+
+##### Example:
+
+```php
+$this->setAppClassType('public');
+$this->renderTemplate('public:account_wrapper', ['templateName' => 'account_preferences']);
+
+$this->assertSee($this->sideNavHtml(), 'My add-on');
+```
+
+**Both accumulate across renders within one test**, as the page parameters do, so a test that
+renders twice is asserting against both renders' blocks. XenForo keeps them keyed by block; where a
+test needs to know which block a string came from, read
+`$this->app()->templater()->getSideNavHtml()` for the array.
+
+`assertNoUnresolvedPhrases()` searches both surfaces itself, so the call given the HTML covers them.
+
 ### assertNoUnresolvedPhrases
 Assert that no phrase in the rendered output came out as its own key - which is what XenForo renders
 for a phrase it cannot find.
@@ -1405,6 +1456,10 @@ and a search of the html alone passes having checked nothing. The failure names 
 key came from, since a key reported from a page parameter cannot be found by searching the html for
 it. Page parameters accumulate as each template sets them, so a test that renders twice is told
 about both renders.
+
+**The side navigation and the sidebar are searched too**, for the same reason and with the same
+accumulation - a key that failed to resolve inside `<xf:sidenav>` is in no other surface, and the
+failure names which of them it came from.
 
 **Pair it with an assertion that the text you expect is present.** Output that never rendered
 carries no unresolved key either.
@@ -1510,8 +1565,45 @@ A modification inserting an `<xf:include>` does not put the included template's 
 so assert on the markup it produces instead.
 
 This assertion is also the one to reach for where the insertion lands somewhere the rendered HTML
-does not carry at all - inside `<xf:pageaction>`, `<xf:title>`, `<xf:h1>` or `<xf:description>`. See
-`renderTemplate()`, which has what those tags do and how to read them.
+does not carry at all - inside `<xf:pageaction>`, `<xf:title>`, `<xf:h1>`, `<xf:description>`,
+`<xf:sidenav>` or `<xf:sidebar>`. See `renderTemplate()`, which has what those tags do and how to
+read them.
+
+### assertAddOnTemplateModificationsApply
+Assert that every template modification the add-on registers still applies, and return each
+modification key with the number of times it applied.
+
+```php
+$applied = $this->assertAddOnTemplateModificationsApply('MyVendor/MyAddOn');
+```
+
+With no argument it uses the add-on `$addonsToLoad` isolates, and refuses when that names more than
+one or none.
+
+**A modification whose `find` stops matching is silent.** XenForo records it with status `ok` and an
+apply count of zero, so nothing fails, and the markup it inserts is simply absent from every
+render. A suite with no assertion on that markup passes identically either way - the same shape as
+a class extension that stops applying, which is why `assertAddOnClassExtensionsApply()` exists
+beside this.
+
+It fails naming every modification that applied zero times, and refuses rather than passing
+vacuously when there is nothing to check:
+
+| | |
+|---|---|
+| the id matches no installed add-on | refused - the likely cause is a typo |
+| the add-on is installed but disabled | refused - XenForo leaves its modifications out |
+| it registers no enabled modification | refused - nothing to assert |
+
+**The add-on must be enabled, but it need not be idle.** XenForo gathers modifications with
+`whereAddOnActive()` and no `disableProcessing` option, so an add-on part way through an install
+still has its modifications applied - which is the opposite of the class extension cache, where
+both are checked. So a disabled add-on is refused here and a mid-install one is not.
+
+**It reads what the forum has.** A modification edited in `_output/template_modifications/` and
+never imported is invisible to this, so it cannot see the drift a commit without an import leaves.
+A test globbing that directory and comparing it against the database catches that, and the two are
+worth having together rather than one replacing the other.
 
 ### renderTemplateWithoutModification
 Render a template with one of its template modifications left out, so a test can show that the
