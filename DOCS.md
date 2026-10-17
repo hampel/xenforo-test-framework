@@ -2431,6 +2431,11 @@ in instead: `actingAsMember(['user_id' => 42])`.
 An unsaved entity cannot load its relations from the database. Link entities in memory with
 XenForo's `hydrateRelation()`:
 
+**Nodes and threads have helpers of their own, and for a node it matters which you use.** The
+example below never saves, so it is safe - but `createEntity('XF:Node', ...)` does, and saving a
+node schedules a tree rebuild that writes every row in `xf_node`. Use `createNodeFixture()` and
+`createThreadFixture()` where a test needs the rows to exist.
+
 ```php
 $node = $this->makeEntity('XF:Node', ['title' => 'Test node']);
 $node->setTrusted('node_id', 1);
