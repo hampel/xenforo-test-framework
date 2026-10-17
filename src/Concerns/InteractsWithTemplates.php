@@ -159,6 +159,9 @@ trait InteractsWithTemplates
 	 * their whole sidebar this way, so an add-on adding a link there has nothing to assert on
 	 * without this.
 	 *
+	 * XenForo stores each block pre-escaped, as an `XF\PreEscaped` rather than a string, so the
+	 * values are cast rather than concatenated as they come.
+	 *
 	 * **It accumulates across renders in one test**, as the page parameters do, so a test
 	 * rendering twice sees both renders' blocks. XenForo keeps them keyed by block; where a test
 	 * needs to know which block a string came from, read
@@ -168,7 +171,7 @@ trait InteractsWithTemplates
 	 */
 	protected function sideNavHtml()
 	{
-		return implode('', $this->app()->templater()->getSideNavHtml());
+		return implode('', array_map('strval', $this->app()->templater()->getSideNavHtml()));
 	}
 
 	/**
@@ -182,7 +185,7 @@ trait InteractsWithTemplates
 	 */
 	protected function sidebarHtml()
 	{
-		return implode('', $this->app()->templater()->getSidebarHtml());
+		return implode('', array_map('strval', $this->app()->templater()->getSidebarHtml()));
 	}
 
 	/**
@@ -621,7 +624,7 @@ trait InteractsWithTemplates
 
 		foreach (['side navigation' => 'getSideNavHtml', 'sidebar' => 'getSidebarHtml'] AS $name => $method)
 		{
-			$html = implode('', $this->app()->templater()->$method());
+			$html = implode('', array_map('strval', $this->app()->templater()->$method()));
 
 			if ($html !== '')
 			{

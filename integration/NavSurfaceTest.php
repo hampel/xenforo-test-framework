@@ -4,6 +4,7 @@ namespace Hampel\Testing\Integration;
 
 use Hampel\Testing\Concerns\UsesDatabaseTransactions;
 use PHPUnit\Framework\ExpectationFailedException;
+use XF\PreEscaped;
 
 /**
  * `<xf:sidenav>` and `<xf:sidebar>` compile to a write into the templater rather than to markup,
@@ -79,6 +80,21 @@ class NavSurfaceTest extends TestCase
 			$this->assertStringContainsString('zzphrase_only_in_the_nav', $reported);
 			$this->assertStringContainsString('side navigation', $reported, 'the failure names the surface');
 		}
+	}
+
+	public function test_the_blocks_are_pre_escaped_objects_rather_than_strings()
+	{
+		$this->fakesErrors();
+		$this->renderTemplate($this->givenATemplateContributing('sidenav', 'zznav_typed'));
+
+		// which is why the accessors cast rather than concatenating the values as they come. If
+		// XenForo ever stores plain strings here, this fails and the cast becomes redundant
+		foreach ($this->app()->templater()->getSideNavHtml() AS $block)
+		{
+			$this->assertInstanceOf(PreEscaped::class, $block);
+		}
+
+		$this->assertSee($this->sideNavHtml(), 'zznav_typed');
 	}
 
 	/**
