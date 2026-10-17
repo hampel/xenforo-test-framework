@@ -124,6 +124,10 @@ trait InteractsWithNodes
 	 * which is XenForo's own behaviour and is why a thread fixture belongs under
 	 * `UsesDatabaseTransactions` like any other.
 	 *
+	 * The author is the current visitor, or user 1 where there is no visitor. An explicit
+	 * `user_id` is honoured as given, including 0 for a guest - which needs a `username` as well,
+	 * since a guest has no user row to read a name from.
+	 *
 	 * @param Node|int $node - the node, or its id
 	 * @param string $title
 	 * @param array $values - further columns for the thread; `message` is used for the first post
@@ -136,11 +140,12 @@ trait InteractsWithNodes
 		$message = $values['message'] ?? 'Thread fixture body';
 		unset($values['message']);
 
-		$userId = $values['user_id'] ?? \XF::visitor()->user_id ?: 1;
-		$username = $values['username'] ?? (string) $this->app()->db()->fetchOne(
-			'SELECT username FROM xf_user WHERE user_id = ?',
-			$userId
-		);
+		$userId = array_key_exists('user_id', $values)
+			? (int) $values['user_id']
+			: (\XF::visitor()->user_id ?: 1);
+		$username = array_key_exists('username', $values)
+			? (string) $values['username']
+			: $this->threadFixtureUsername($userId);
 
 		/** @var Thread $thread */
 		$thread = $this->createEntity('XF:Thread', $values + [
@@ -178,6 +183,37 @@ trait InteractsWithNodes
 		$thread->save();
 
 		return $thread;
+	}
+
+	/**
+	 * The name a thread fixture's author carries, read from the user row.
+	 *
+	 * A thread's `username` column is required, so an id with no row is refused here rather than at
+	 * the save, which would name the column instead of the lookup that found nothing.
+	 *
+	 * @param int $userId
+	 *
+	 * @return string
+	 */
+	private function threadFixtureUsername($userId)
+	{
+		$username = (string) $this->app()->db()->fetchOne(
+			'SELECT username FROM xf_user WHERE user_id = ?',
+			$userId
+		);
+
+		if ($username === '')
+		{
+			throw new \LogicException(
+				"createThreadFixture() found no xf_user row for user_id $userId, so it has no name to"
+				. " give the thread and its first post, and a thread's username column is required. A"
+				. ' guest has no row by definition, and a visitor built in memory by actingAsMember()'
+				. ' need not have one either. Pass the name the thread should carry:'
+				. " createThreadFixture(\$node, \$title, ['user_id' => $userId, 'username' => 'Guest'])."
+			);
+		}
+
+		return $username;
 	}
 
 	/**

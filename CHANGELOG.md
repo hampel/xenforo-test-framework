@@ -1,5 +1,16 @@
 # Changelog
 
+## 5.30.1 (unreleased)
+
+* `createThreadFixture()` honours an explicit `user_id` of 0, so a thread can be attributed to a
+  guest. It resolved 0 to user 1 instead, which gave the thread that member's name, attributed its
+  first post to a member the test never named, and adjusted that member's message count - a write
+  a guest's post does not make at all
+* `createThreadFixture()` refuses a `user_id` with no `xf_user` row unless a `username` is given
+  beside it, naming the lookup that found nothing. A thread's `username` column is required, so the
+  save failed naming that column instead - including for a visitor built by `actingAsMember()`,
+  whose id need match no row
+
 ## 5.30.0 (2026-10-17)
 
 * `createNodeFixture()`, `createNodeTreeFixture()` and `createThreadFixture()` create forum content

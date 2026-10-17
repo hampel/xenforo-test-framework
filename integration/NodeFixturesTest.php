@@ -191,4 +191,76 @@ class NodeFixturesTest extends TestCase
 
 		$this->assertSame($node->node_id, $thread->node_id);
 	}
+
+	public function test_a_thread_fixture_and_its_first_post_name_one_author()
+	{
+		$node = $this->createNodeFixture('Zz Author Forum');
+
+		$thread = $this->createThreadFixture($node, 'Zz Authored', ['user_id' => 1]);
+		$post = $thread->FirstPost;
+
+		$this->assertSame(1, $thread->user_id);
+		$this->assertSame(1, $post->user_id);
+		$this->assertSame($thread->username, $post->username);
+		$this->assertNotSame('', $thread->username);
+		$this->assertSame(1, $thread->last_post_user_id);
+	}
+
+	public function test_a_guest_thread_fixture_is_attributed_to_no_member_at_all()
+	{
+		$db = $this->app()->db();
+		$node = $this->createNodeFixture('Zz Guest Forum');
+
+		// the write this test asserts is absent is gated on the forum counting messages and the
+		// thread being visible, so both have to be true or its absence means nothing
+		$forum = $this->app()->em()->find('XF:Forum', $node->node_id);
+		$this->assertTrue((bool) $forum->count_messages, 'the fixture forum counts messages');
+		$countBefore = $db->fetchOne('SELECT message_count FROM xf_user WHERE user_id = 1');
+
+		$thread = $this->createThreadFixture($node, 'Zz Guest Thread', [
+			'user_id' => 0,
+			'username' => 'Zz Passer By',
+		]);
+		$post = $thread->FirstPost;
+
+		$this->assertSame('visible', $thread->discussion_state);
+		$this->assertSame(0, $thread->user_id);
+		$this->assertSame('Zz Passer By', $thread->username);
+		$this->assertSame(0, $post->user_id, 'the post is the guest\'s, not a member\'s');
+		$this->assertSame('Zz Passer By', $post->username);
+		$this->assertSame(0, $thread->last_post_user_id);
+
+		// XenForo only adjusts a message count for a post that has a user, so a guest post writes
+		// to no user row - where one misattributed to user 1 writes to that member's row, inside
+		// this test's transaction
+		$this->assertSame(
+			$countBefore,
+			$db->fetchOne('SELECT message_count FROM xf_user WHERE user_id = 1'),
+			'a guest post should leave every user row alone'
+		);
+	}
+
+	public function test_a_guest_thread_fixture_without_a_name_is_refused()
+	{
+		$node = $this->createNodeFixture('Zz Nameless Forum');
+
+		$this->expectException(\LogicException::class);
+		$this->expectExceptionMessage('found no xf_user row for user_id 0');
+
+		$this->createThreadFixture($node, 'Zz Nameless', ['user_id' => 0]);
+	}
+
+	public function test_a_thread_fixture_for_a_visitor_with_no_user_row_is_refused()
+	{
+		$node = $this->createNodeFixture('Zz Absent Author Forum');
+		$unused = (int) $this->app()->db()->fetchOne('SELECT MAX(user_id) FROM xf_user') + 1000;
+
+		// actingAsMember() builds its visitor in memory, so the id it carries need match no row
+		$this->actingAsMember(['user_id' => $unused]);
+
+		$this->expectException(\LogicException::class);
+		$this->expectExceptionMessage("found no xf_user row for user_id $unused");
+
+		$this->createThreadFixture($node, 'Zz Absent Author');
+	}
 }

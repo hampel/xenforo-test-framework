@@ -575,7 +575,26 @@ $this->assertSame('The body', $thread->FirstPost->message);
 ```
 
 Takes the node or its id. `message` is used for the first post; anything else is set on the thread.
-The author defaults to the current visitor.
+The author defaults to the current visitor, or to user 1 where a test has not set one.
+
+**An explicit `user_id` is honoured as given, including 0.** A guest thread needs a `username` as
+well, since there is no user row to read a name from:
+
+```php
+$thread = $this->createThreadFixture($forum, 'By a guest', [
+    'user_id' => 0,
+    'username' => 'A passer by',
+]);
+```
+
+The thread and its first post always carry the same author, so a count or a permission check that
+reads one agrees with the other. A `user_id` with no `xf_user` row and no `username` beside it is
+refused, naming the lookup that found nothing - which is the case a visitor built by
+`actingAsMember()` falls into, since the id it carries need match no row.
+
+**A guest post adjusts no member's message count.** XenForo only adjusts the count of a post that
+has a user, so attributing a guest's post to a member would both misreport the author and write to
+that member's row inside the test's transaction.
 
 **The post is not optional.** A thread whose `first_post_id` is 0 has a null `FirstPost`, so
 anything reading through it fails on a fixture that looks complete - so the helper creates the post

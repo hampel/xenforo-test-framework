@@ -5,6 +5,21 @@ Most releases need nothing beyond `composer update`. `CHANGELOG.md` lists everyt
 
 `tests/TestCase.php` is copied into your add-on, so a change to it has to be merged by hand.
 
+## 5.30.1
+
+Nothing to do unless a test passed `createThreadFixture()` a `user_id` of 0 and asserted on the
+author it got: the thread's first post was attributed to user 1 and is now the guest's, and the
+thread carries the `username` given rather than user 1's. A guest thread now needs a `username`,
+and is refused without one rather than failing at the save.
+
+```bash
+grep -rnE "'user_id' *=> *0[^0-9]" tests/
+```
+
+That searches for the value rather than the call, because the usual spelling puts the array over
+several lines and a grep for the call site then matches nothing. Most of what it finds will be
+something else, so check each hit for the helper.
+
 ## 5.30.0
 
 Nothing to do. If one of your test classes already defines a method named `createNodeFixture()`,
