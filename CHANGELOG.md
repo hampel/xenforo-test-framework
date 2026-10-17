@@ -1,6 +1,6 @@
 # Changelog
 
-## 5.30.1 (unreleased)
+## 5.30.1 (2026-10-18)
 
 * `createThreadFixture()` honours an explicit `user_id` of 0, so a thread can be attributed to a
   guest. It resolved 0 to user 1 instead, which gave the thread that member's name, attributed its
