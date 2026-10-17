@@ -136,6 +136,9 @@ trait InteractsWithTemplates
 	 * The names are XenForo's own: `pageTitle` for `<xf:title>`, `pageDescription` for
 	 * `<xf:description>`, `pageAction` for `<xf:pageaction>` and `pageH1` for `<xf:h1>`.
 	 *
+	 * `<xf:sidenav>` and `<xf:sidebar>` are absent from the output as well, and are not page
+	 * parameters - read those with `sideNavHtml()` and `sidebarHtml()`.
+	 *
 	 * @param string $name
 	 *
 	 * @return string|null - null if the render never set it
@@ -315,9 +318,10 @@ trait InteractsWithTemplates
 	 * The cost is that a phrase which failed to resolve *inside* an attribute - the `value` of a
 	 * submit button, say - is not seen here. Assert on that one directly.
 	 *
-	 * The page parameters the render set are searched as well as the html. `<xf:title>` and its
-	 * siblings compile to a write into the templater rather than to markup, so a key that failed
-	 * to resolve in one of them never reaches the output - and a search of the html alone passes
+	 * The page parameters the render set are searched as well as the html, and so are the side
+	 * navigation and the sidebar. `<xf:title>` and its siblings, `<xf:sidenav>` and `<xf:sidebar>`
+	 * all compile to a write into the templater rather than to markup, so a key that failed to
+	 * resolve in one of them never reaches the output - and a search of the html alone passes
 	 * having checked nothing. The failure names which surface each key came from, because a reader
 	 * given only the key would look in the html and not find it.
 	 *
