@@ -5,6 +5,24 @@ Most releases need nothing beyond `composer update`. `CHANGELOG.md` lists everyt
 
 `tests/TestCase.php` is copied into your add-on, so a change to it has to be merged by hand.
 
+## 5.30.0
+
+Nothing to do. If one of your test classes already defines a method named `createNodeFixture()`,
+`createNodeTreeFixture()` or `createThreadFixture()`, rename it: `TestCase` now has protected
+methods of those names, and a private one of the same name is a fatal at class load.
+
+```bash
+grep -rnE 'function (createNodeFixture|createNodeTreeFixture|createThreadFixture)\(' tests/
+```
+
+The names avoid `createNode()` and `createThread()` deliberately: both are already taken in
+consuming suites, with signatures that are not compatible with an inherited method, so either would
+have been a fatal rather than something a grep could warn about.
+
+Worth replacing a hand-written node fixture with these. A node saved the ordinary way writes every
+row in `xf_node`, so a suite that creates nodes is locking the forum's whole node tree for the
+length of each test.
+
 ## 5.29.0
 
 Nothing to do. If one of your test classes already defines a method named

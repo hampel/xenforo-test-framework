@@ -1,5 +1,21 @@
 # Changelog
 
+## 5.30.0 (unreleased)
+
+* `createNodeFixture()`, `createNodeTreeFixture()` and `createThreadFixture()` create forum content
+  without rebuilding the forum's node tree. Saving an `XF:Node` the ordinary way schedules a
+  nested-set rebuild and enqueues a `permissionRebuild` job, and the rebuild writes every row in
+  `xf_node` - so inside a test's transaction every node on the forum is locked until the test ends,
+  whether or not any value changes. A fixture node is one write rather than four and touches no
+  existing row. `createNodeFixture()` creates a node at the root and refuses a parent, because a
+  child has to be numbered inside its parent and a parent whose range is wider than its children
+  makes XenForo report that a childless node has children; `createNodeTreeFixture()` builds a
+  parent and its children in one call and numbers them tightly. `createThreadFixture()` creates the
+  thread's first post as well, since a thread whose `first_post_id` is 0 has a null `FirstPost`
+* docs: a node at the root has an empty `breadcrumb_data`, which is what makes the behaviour rebuild
+  the tree whenever such a node is saved again - true of a real root node, not only of a fixture.
+  The option to set on that save is named
+
 ## 5.29.0 (2026-10-17)
 
 * `assertAddOnTemplateModificationsApply()` asserts that every template modification an add-on

@@ -227,7 +227,31 @@ The `src/` classes outside `Concerns/` are the fakes and subclasses that get swa
 
 Naming convention across the concerns: `fakes*()` installs an in-memory implementation with
 assertion helpers, `mock*()` installs a Mockery double, `set*()` mutates state that is restored in
-teardown.
+teardown, and `create*Fixture()` writes real rows a test needs and relies on the transaction to
+undo them.
+
+### `InteractsWithNodes` suppresses a rebuild, and both halves are load-bearing
+
+Saving an `XF:Node` the ordinary way schedules a nested-set rebuild and enqueues `permissionRebuild`
+on **every insert** - the breadcrumb field is empty on an insert, and `_fillInsertDefaults()` puts
+every defaulted column in `_newValues`, so both of the behaviour's rebuild conditions are true. The
+rebuild writes every row in `xf_node`, which inside a test's transaction locks the forum's whole
+node tree. **The values it writes are usually identical, so comparing values reports nothing wrong;
+the cost is the write.**
+
+Two things follow, and neither is cosmetic:
+
+- **`rebuildCache` off means nothing computes `lft`, `rgt`, `depth` or `breadcrumb_data`**, so the
+  helper sets all four with `setTrusted()`. A node left with `lft` 0 is not a tree member.
+- **The ranges have to be tight.** `Node::hasChildren()` is `(rgt - lft) > 1`, so a range wider than
+  the node needs makes a childless node claim children. That is why `createNodeFixture()` refuses a
+  parent and `createNodeTreeFixture()` exists: a child is numbered inside its parent, and the
+  parent's range is not known until its children are numbered, so a tree can only be numbered in
+  one pass.
+
+`integration/NodeFixturesTest.php` pins both. It never saves a node the ordinary way - on a shared
+forum that would lock every node row for the length of the test - so the controls recorded in the
+commit are what show its assertions discriminate.
 
 ### An assertion that passes because the thing is absent
 

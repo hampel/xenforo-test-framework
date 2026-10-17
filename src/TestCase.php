@@ -22,6 +22,7 @@ abstract class TestCase extends BaseTestCase
 	use Concerns\InteractsWithLanguage;
 	use Concerns\InteractsWithLogger;
 	use Concerns\InteractsWithMail;
+	use Concerns\InteractsWithNodes;
 	use Concerns\InteractsWithOptions;
 	use Concerns\InteractsWithPsrLog;
 	use Concerns\InteractsWithRegistry;

@@ -449,6 +449,11 @@ resolves a relative or empty path against your XenForo root
 from the database
 * `makeEntity` and `createEntity` build an entity with the values you give it - `makeEntity` touches no database,
 `createEntity` saves
+* `createNodeFixture` and `createNodeTreeFixture` create nodes without rebuilding the forum's node tree. Saving an
+`XF:Node` the ordinary way writes every row in `xf_node` and queues a `permissionRebuild` job, so inside a test's
+transaction every node on the forum is locked until the test ends
+* `createThreadFixture` creates a thread in a node, with its first post - a thread without one has a null
+`FirstPost`, so it fails wherever anything reads through it
 * `dispatch` runs one of your routes the way XenForo does and hands back the reply its controller produced, with
 `assertReplyIsView`, `assertReplyTemplate`, `assertReplyViewClass`, `assertReplyParam`, `replyParam`,
 `assertReplyIsRedirect`, `assertReplyIsError`, `assertReplyIsMessage`, `assertReplyIsApiResult`, `replyApiResult` and

@@ -494,6 +494,97 @@ $html = $this->renderReply($this->dispatch("users/{$user->user_id}/edit", 'admin
 $this->assertSee($html, 'probebob');
 ```
 
+### createNodeFixture
+Create a node and its type data row, without rebuilding the forum's node tree.
+
+```php
+$forum = $this->createNodeFixture('Test forum');
+$category = $this->createNodeFixture('Test category', 'Category');
+$forum = $this->createNodeFixture('Tagged forum', 'Forum', [], ['min_tags' => 1]);
+```
+
+Returns the `XF:Node`. Its type row is on `$node->Data`, or fetch it by the node's id -
+`$this->app()->em()->find('XF:Forum', $node->node_id)`.
+
+**Saving an `XF:Node` the ordinary way is not safe on a shared forum.** XenForo's `TreeStructured`
+behaviour schedules a nested-set rebuild and enqueues a `permissionRebuild` job on every insert,
+and the rebuild writes **every** row in `xf_node` - so inside a test's transaction every node on
+the forum is locked until the test ends. The values it writes are usually identical, which is why
+comparing values suggests nothing is wrong: the cost is the write, not the change.
+
+| a single node insert | queries | writes | `xf_node` UPDATEs |
+|---|---|---|---|
+| saved the ordinary way | 9 | 4 | one per row in the table |
+| `createNodeFixture()` | 3 | 1 | 0 |
+
+The helper turns that behaviour's `rebuildCache` option off, which suppresses both the rebuild and
+the job, and supplies the nested-set columns itself. It numbers the node clear of the forum's own
+tree, so a fixture can never be numbered into it.
+
+**It creates a node at the root and refuses a parent.** A child has to be numbered inside its
+parent, and `hasChildren()` is `(rgt - lft) > 1`, so a parent whose range is wider than its
+children makes XenForo report that a childless node has children. Build a parent and child
+together with `createNodeTreeFixture()`.
+
+**A fixture node grants nothing.** `canView()` is false until the test grants the permission, as
+for any built visitor - see `setVisitorContentPermissions()`.
+
+**If the code under test saves the node again, the rebuild fires after all.** The behaviour
+rebuilds whenever `breadcrumb_data` is empty, and empty is what XenForo itself stores for a node
+at the root - so this is true of a real root node too, not just a fixture. Where a test saves a
+node, set the option on that save as well:
+
+```php
+$node->getBehavior('XF:TreeStructured')->setOption('rebuildCache', false);
+```
+
+### createNodeTreeFixture
+Create a tree of nodes in one call, numbered the way XenForo numbers one.
+
+```php
+$nodes = $this->createNodeTreeFixture([
+    'Top category' => ['type' => 'Category', 'children' => [
+        'Inner forum' => ['type' => 'Forum'],
+        'Other forum' => ['type' => 'Forum', 'data' => ['min_tags' => 1]],
+    ]],
+]);
+
+$thread = $this->createThreadFixture($nodes['Inner forum'], 'A thread');
+```
+
+Each key is a title and each value may carry `type` (default `Forum`), `values` for the node,
+`data` for its type row, and `children`. Returns every node created, keyed by title, parents
+first. A title used twice is refused, since one of the two would be unreachable in that array.
+
+**A tree has to be built in one call rather than a node at a time**, because a child's range sits
+inside its parent's and the parent's range is not known until its children have been numbered. The
+result is tight, so `hasChildren()` is true for a parent and false for a leaf, and
+`WHERE lft > ? AND rgt < ?` returns exactly the descendants.
+
+Each child carries its ancestors in `breadcrumb_data`, built by the helper from what XenForo
+stores. A node at the root has an empty trail, which is what XenForo stores for one.
+
+### createThreadFixture
+Create a thread in a node, with its first post.
+
+```php
+$forum = $this->createNodeFixture('Test forum');
+$thread = $this->createThreadFixture($forum, 'A thread', ['message' => 'The body']);
+
+$this->assertSame('The body', $thread->FirstPost->message);
+```
+
+Takes the node or its id. `message` is used for the first post; anything else is set on the thread.
+The author defaults to the current visitor.
+
+**The post is not optional.** A thread whose `first_post_id` is 0 has a null `FirstPost`, so
+anything reading through it fails on a fixture that looks complete - so the helper creates the post
+and points the thread's first and last post columns at it.
+
+**Saving a thread writes more than the thread.** XenForo updates the forum's counters and writes to
+`xf_news_feed` and `xf_content_activity_log`, so a thread fixture belongs under
+`UsesDatabaseTransactions` like any other content.
+
 ### dispatch
 Dispatch a route the way XenForo does, and return the reply its controller produced.
 
