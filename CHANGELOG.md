@@ -1,6 +1,6 @@
 # Changelog
 
-## 5.29.0 (unreleased)
+## 5.29.0 (2026-10-17)
 
 * `assertAddOnTemplateModificationsApply()` asserts that every template modification an add-on
   registers still applies. One whose `find` stops matching is silent - XenForo records it with
