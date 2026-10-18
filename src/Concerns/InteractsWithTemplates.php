@@ -139,6 +139,11 @@ trait InteractsWithTemplates
 	 * errored. So `assertSame('', $this->renderWidgetHtml(...))` means the widget declined, and
 	 * nothing else.
 	 *
+	 * Those three refusals can only reach a render where the widget **named** a template. A widget
+	 * that declines returns before it calls `renderer()`, so there is no template to check and a
+	 * decline test on its own cannot notice that the widget's template has gone. Render the
+	 * showing case beside it.
+	 *
 	 * The identifier is either form XenForo accepts, and they are looked up in different places:
 	 *
 	 * - a **definition class**, `XF\Widget\MembersOnline` - matched against the installed

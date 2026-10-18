@@ -1,5 +1,12 @@
 # Changelog
 
+## 5.31.1 (unreleased)
+
+* docs: `renderWidgetHtml()` says that its three refusals can only reach a render where the
+  widget named a template. A widget that declines returns before it names one, so a decline
+  test on its own does not check that the widget's template still exists - render the showing
+  case beside it
+
 ## 5.31.0 (2026-10-18)
 
 * `renderWidgetHtml()` renders one widget and returns its HTML, named either by its definition

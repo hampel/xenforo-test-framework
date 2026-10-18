@@ -1270,6 +1270,11 @@ other ways a widget render comes back empty are faults and are refused instead: 
 carrying no template name, a template that does not exist, and a template that errored. So
 `assertSame('', ...)` on the result means the widget declined, and nothing else.
 
+Those three refusals can only reach a render where the widget **named** a template. A widget that
+declines returns before it calls `renderer()`, so there is no template to check and a decline
+test on its own cannot notice that the widget's template has gone - render the showing case
+beside it, as the second example below does.
+
 ##### Parameters:
 
 * `identifier` - a widget definition class, or the key of a widget the forum has configured

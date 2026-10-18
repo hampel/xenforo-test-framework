@@ -22,6 +22,9 @@ Worth reaching for in place of a hand-written widget render. A test that asserts
 nothing cannot otherwise tell a widget that declined to show itself from one whose template has
 been renamed, deleted or broken, because all four produce an empty string.
 
+Those refusals reach only a render where the widget named a template, and a widget that declines
+names none - so a decline test still wants the showing case rendered beside it.
+
 ## 5.30.1
 
 Nothing to do unless a test passed `createThreadFixture()` a `user_id` of 0 and asserted on the
