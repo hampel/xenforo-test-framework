@@ -1261,6 +1261,71 @@ arguments given is returned as an empty string.
 
 The `xf` parameter is set as for `renderTemplate()`.
 
+### renderWidgetHtml
+Render one widget and return its HTML.
+
+A widget that decides not to show itself renders an empty string, and that is preserved - it is
+how a widget says "not applicable to this visitor", and several core widgets do it. The three
+other ways a widget render comes back empty are faults and are refused instead: a renderer
+carrying no template name, a template that does not exist, and a template that errored. So
+`assertSame('', ...)` on the result means the widget declined, and nothing else.
+
+##### Parameters:
+
+* `identifier` - a widget definition class, or the key of a widget the forum has configured
+* `options` - optional - the widget's options, plus `_title` and `context` if wanted
+
+The two identifier forms are looked up in different places and differ in one way that matters:
+
+| given | found by | stored options |
+|---|---|---|
+| a definition class | matching the installed definitions | **not applied** |
+| a configured widget's key | the widgets the forum configured | applied, `options` merged over |
+
+Given a definition class, the options you pass are the widget's whole configuration - nothing it
+was set up with anywhere on the forum applies.
+
+The short `Vendor\MyAddon:MyWidget` form is refused. A widget identifier is never expanded, so
+the definition class is passed in full; a configured widget's key is alphanumeric.
+
+`_title` in the options overrides the widget's title, and `context` is passed to the widget as its
+context parameters rather than as an option. `_title` applies to the definition-class form.
+
+##### Example:
+
+```php
+$html = $this->renderWidgetHtml(\Vendor\MyAddon\Widget\MyWidget::class, [
+    'limit' => 5,
+    '_title' => 'My widget',
+]);
+
+$this->assertSee($html, 'My widget');
+$this->assertNoUnresolvedPhrases($html, 'myaddon_');
+```
+
+A widget that shows nothing to a visitor without the permission, with the positive assertion
+beside it so the absence is not passing on a broken subject:
+
+```php
+$this->actingAsMember([], ['myaddon' => ['view' => true]]);
+$this->assertNotSame('', $this->renderWidgetHtml(MyWidget::class));
+
+$this->actingAsMember();
+$this->assertSame('', $this->renderWidgetHtml(MyWidget::class));
+```
+
+The style a render needs is installed for you. The application type is not: call
+`setAppClassType('public')` first where what the widget renders depends on it. A widget template is
+always a `public:` one whatever the application type, because XenForo prefixes the type itself.
+
+There is no public way to read a definition's default options - XenForo keeps them on the
+definition class - so an option a test does not pass takes whatever default that class applies.
+
+On a forum shared with other add-ons the render can carry a **sibling's** template errors, because
+template modifications compile into the install's shared template cache whatever `$addonsToLoad`
+says. Only an empty render is refused; pair this with `assertNoTemplateErrors()` and the prefix of
+the templates you own for the strict form.
+
 ### pageParam
 A page parameter the rendered template set, such as the title from `<xf:title>`. These do not
 appear in the rendered HTML. Call it after a render.

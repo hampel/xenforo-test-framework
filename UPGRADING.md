@@ -5,6 +5,23 @@ Most releases need nothing beyond `composer update`. `CHANGELOG.md` lists everyt
 
 `tests/TestCase.php` is copied into your add-on, so a change to it has to be merged by hand.
 
+## 5.31.0
+
+Nothing to do. If one of your test classes already defines a method named `renderWidgetHtml()`,
+rename it: `TestCase` now has a protected method of that name, and a private one of the same name
+is a fatal at class load.
+
+```bash
+grep -rnE 'function renderWidgetHtml\(' tests/
+```
+
+The name avoids `renderWidget()` deliberately, which is already taken in a consuming suite as a
+private method - that would have been a fatal rather than something a grep could warn about.
+
+Worth reaching for in place of a hand-written widget render. A test that asserts a widget renders
+nothing cannot otherwise tell a widget that declined to show itself from one whose template has
+been renamed, deleted or broken, because all four produce an empty string.
+
 ## 5.30.1
 
 Nothing to do unless a test passed `createThreadFixture()` a `user_id` of 0 and asserted on the

@@ -1,5 +1,16 @@
 # Changelog
 
+## 5.31.0 (unreleased)
+
+* `renderWidgetHtml()` renders one widget and returns its HTML, named either by its definition
+  class or by the key of a widget the forum has configured. A widget that decides not to show
+  itself renders an empty string and that is preserved, so an assertion on the absence means the
+  widget declined. The other three ways a widget render comes back empty are refused instead - a
+  renderer carrying no template name, a template that does not exist, and a template that errored -
+  because an assertion cannot tell them from a widget that declined. The style a render needs is
+  installed for you; the application type is not. The short `Vendor\AddOn:MyWidget` identifier is
+  refused, since XenForo does not expand one for a widget
+
 ## 5.30.1 (2026-10-18)
 
 * `createThreadFixture()` honours an explicit `user_id` of 0, so a thread can be attributed to a

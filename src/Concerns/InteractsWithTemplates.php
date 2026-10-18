@@ -11,6 +11,8 @@ use XF\Mvc\Reply\View;
 use XF\Repository\TemplateModificationRepository;
 use XF\Style;
 use XF\Template\Templater;
+use XF\Widget\AbstractWidget;
+use XF\Widget\WidgetRenderer;
 
 trait InteractsWithTemplates
 {
@@ -124,6 +126,162 @@ trait InteractsWithTemplates
 		$this->requireRenderSucceeded($errorsBefore, $html, "$template::$macro");
 
 		return $html;
+	}
+
+	/**
+	 * Render one widget and return its HTML.
+	 *
+	 * **A widget that decides not to show itself renders an empty string, and that is preserved** -
+	 * seven core widgets do exactly that, so it is XenForo's own idiom for "not applicable to this
+	 * visitor" rather than a fault. The three other ways a widget render comes back empty are
+	 * faults, and are refused instead, because a test asserting on an absence cannot tell them
+	 * apart: a renderer with no template name, a template that does not exist, and a template that
+	 * errored. So `assertSame('', $this->renderWidgetHtml(...))` means the widget declined, and
+	 * nothing else.
+	 *
+	 * The identifier is either form XenForo accepts, and they are looked up in different places:
+	 *
+	 * - a **definition class**, `XF\Widget\MembersOnline` - matched against the installed
+	 *   definitions, which renders a widget the forum need not have configured anywhere. Its
+	 *   stored options are **not** applied, so `$options` is the whole configuration.
+	 * - a **widget key**, `forum_overview_members_online` - a widget the forum has configured, with
+	 *   your `$options` merged over the ones it was set up with.
+	 *
+	 * `_title` in `$options` overrides the widget's title, and `context` is passed as the context
+	 * parameters rather than as an option. Both are XenForo's own special keys, and `_title` is
+	 * honoured on the definition-class form only.
+	 *
+	 * The style a render needs is installed for you. The application type is not: call
+	 * `setAppClassType('public')` first where what the widget renders depends on it. A widget
+	 * template is always a `public:` one, because `XF\Widget\AbstractWidget::renderer()` prefixes
+	 * the type itself, so the app type changes nothing about which template is found.
+	 *
+	 * On a forum shared with other add-ons a widget render can carry a **sibling's** template
+	 * errors, since modifications compile into the install's shared template cache whatever
+	 * `$addonsToLoad` says. That is why only an empty render is refused; pair this with
+	 * `assertNoTemplateErrors()` and the prefix of the templates you own for the strict form.
+	 *
+	 * @param string $identifier - a definition class, or a configured widget's key
+	 * @param array $options - the widget's options, plus `_title` and `context` if wanted
+	 *
+	 * @return string - the rendered HTML, trimmed, or '' if the widget declined to show
+	 */
+	protected function renderWidgetHtml($identifier, array $options = [])
+	{
+		$this->requireWidgetIdentifier($identifier);
+
+		$templater = $this->app()->templater();
+		$this->installGlobalTemplateData($templater, null);
+		$errorsBefore = count($templater->getTemplateErrors());
+
+		$widget = $this->app()->widget()->widget($identifier, $options);
+
+		if (!$widget instanceof AbstractWidget)
+		{
+			throw new \LogicException(
+				"Widget '$identifier' resolved to " . get_debug_type($widget) . ' rather than an '
+				. AbstractWidget::class . ', so there is nothing to render.'
+			);
+		}
+
+		return $this->widgetHtmlFrom($widget->render(), $identifier, $errorsBefore);
+	}
+
+	/**
+	 * Turn whatever a widget's render() answered into HTML, refusing every empty render but the
+	 * one that is deliberate.
+	 *
+	 * `$rendered` is `mixed` rather than the `string|null` XenForo's own
+	 * `XF\Widget\AbstractWidget::render()` declares, because that docblock is wrong: a widget that
+	 * means to render answers with a `WidgetRenderer`, as every core widget does. Typing the
+	 * parameter honestly is what keeps the check below live - static analysis reading XenForo's
+	 * declaration otherwise calls it impossible.
+	 *
+	 * @param mixed $rendered - a WidgetRenderer, or a string from a widget that declined
+	 * @param string $identifier
+	 * @param int $errorsBefore
+	 *
+	 * @return string
+	 */
+	private function widgetHtmlFrom($rendered, $identifier, $errorsBefore)
+	{
+		// A widget declines to show by returning a string from its own render(), where one that
+		// means to render answers with a WidgetRenderer. That is the only thing separating a
+		// deliberate empty render from a broken one, so it is what decides here rather than the
+		// emptiness of the output.
+		if (!$rendered instanceof WidgetRenderer)
+		{
+			return trim((string) $rendered);
+		}
+
+		$template = (string) $rendered->getTemplateName();
+
+		// AbstractWidget::renderer() prefixes the type itself, so a widget that called it with no
+		// name leaves 'public:' here rather than an empty string - which is truthy, so XenForo goes
+		// on to render a template whose title is empty and comes back with nothing.
+		$title = substr($template, strpos($template, ':') === false ? 0 : strpos($template, ':') + 1);
+
+		if ($title === '')
+		{
+			throw new \LogicException(
+				"Widget '$identifier' asked to render the template '$template', which names no title -"
+				. ' so XenForo renders an empty string rather than failing. The widget\'s render()'
+				. ' called renderer() without a template name, and an assertion against its output'
+				. ' would have passed while testing nothing.'
+			);
+		}
+
+		$html = trim((string) $rendered);
+
+		if ($html === '')
+		{
+			// The widget meant to render a template and produced nothing. A template XenForo cannot
+			// find renders empty and records no error at all, so the existence check is the only
+			// thing that catches it - and without it this would be indistinguishable from a widget
+			// that declined.
+			$this->requireTemplateExists($template);
+		}
+
+		$this->requireRenderSucceeded($errorsBefore, $html, "widget '$identifier' template '$template'");
+
+		return $html;
+	}
+
+	/**
+	 * Refuse a widget identifier that cannot match either of the two things XenForo looks up.
+	 *
+	 * A colon is the short `Vendor\AddOn:Name` form, which nothing expands here: an identifier
+	 * carrying a backslash is compared **literally** against the stored `definition_class` values,
+	 * and `\XF::stringToClass()` is applied to the stored value rather than to what the caller
+	 * passed. One without a backslash is looked up as a widget key, and a key is alphanumeric by
+	 * XenForo's own column rule, so it can never contain a colon either. Either way the colon form
+	 * fails with a message about a definition or a key that does not exist, which names the symptom
+	 * rather than the mistake.
+	 *
+	 * @param mixed $identifier
+	 *
+	 * @return void
+	 */
+	private function requireWidgetIdentifier($identifier)
+	{
+		if (!is_string($identifier) || $identifier === '')
+		{
+			throw new \LogicException(
+				'renderWidgetHtml() needs a widget definition class or a configured widget\'s key,'
+				. ' and was given ' . get_debug_type($identifier) . '.'
+			);
+		}
+
+		if (strpos($identifier, ':') !== false)
+		{
+			throw new \LogicException(
+				"Widget identifier '$identifier' carries a colon, so it is the short"
+				. " Vendor\\AddOn:Name form - which XenForo does not expand for a widget. Pass the"
+				. ' full definition class, eg \'Vendor\\AddOn\\Widget\\TheWidget\', or the key of a'
+				. ' widget the forum has configured, which is alphanumeric and so never carries a'
+				. ' colon.'
+			);
+		}
 	}
 
 	/**

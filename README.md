@@ -497,6 +497,10 @@ else proves the listener is registered the way XenForo will call it
 template - a file download shaped in `renderRaw()`, or an endpoint shaping its response in `renderJson()`. The first
 returns the `XF\Http\Response` with the body set, the second the decoded JSON document
 * `renderBbCode` renders BB code to HTML, the BB code twin of `renderTemplate`
+* `renderWidgetHtml` renders one widget to HTML, named by its definition class or by the key of a widget the forum
+has configured. A widget that decides not to show itself renders an empty string and that is preserved, so an
+assertion on the absence means the widget declined - the other ways a widget render comes back empty are faults
+and are refused instead
 * `setVisitorAdminPermissions` grants admin permissions to a built visitor
 * `UsesDatabaseTransactions` is a trait you opt into per test class: it wraps each test in a transaction and rolls it
 back, so tests can save entities without leaving anything behind. `assertDatabaseHas`,
