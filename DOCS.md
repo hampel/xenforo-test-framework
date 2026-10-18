@@ -767,6 +767,42 @@ is answered with a redirect to `forums/announcements.1/` rather than with the pa
 `followRedirect()` is the other way to reach it, and it works whatever the canonical form turns
 out to be.
 
+**A `GET` answered with a redirect has two unrelated causes, and the redirect's type tells them
+apart.** A controller correcting the address answers with a **permanent** redirect, from
+`assertCanonicalUrl()`; a controller that stored something and is pointing at it answers with a
+**temporary** one. Only the first can be avoided by dispatching a different address:
+
+| type | what happened | what to do |
+|---|---|---|
+| `permanent` | the address is not the canonical one | dispatch the canonical one, or follow |
+| `temporary` | the controller stored a result and points at it | follow it - no address avoids it |
+
+**The canonical comparison is against a link the controller builds, so it follows whatever that
+link carries.** A node's canonical address carries its title as well as its id, which matters
+because an address built from a node's id is never the canonical one: a node created in a test and
+dispatched as `forums/<id>/` is answered with a permanent redirect to `forums/<title>.<id>/`, and so
+is `categories/<id>/` on a forum where *Categories have their own page* is on.
+
+```php
+$node = $this->createNodeFixture('My test forum');
+
+$member = $this->actingAsMember([], ['general' => ['view' => true]]);
+$this->setVisitorContentPermissions($member, 'node', $node->node_id, ['view' => true]);
+
+$reply = $this->dispatch('forums/' . $node->node_id . '/');
+$this->assertReplyIsRedirect($reply, null, 'permanent');
+
+$this->assertReplyTemplate($this->followRedirect($reply), 'forum_view');
+```
+
+`$this->app()->router('public')->buildLink('forums', $node)` is the canonical address, so building
+the link rather than the string reaches the page in one dispatch.
+
+The correction does not depend on the *Use full friendly URLs* option - a node's title is part of
+the route path in either url form - and it reaches only an html `GET` or `HEAD`, since
+`assertCanonicalUrl()` returns before comparing anything otherwise. So an api dispatch, or any
+non-`GET`, is never corrected however wrong the address.
+
 ### dispatchWithoutCsrfToken
 Dispatch a route sending no CSRF token, for asserting that XenForo's check refuses. Takes the same
 arguments as `dispatch()`, with the method defaulting to `POST`, since a `GET` is not checked.
@@ -1101,6 +1137,25 @@ that is itself a redirect comes back as one - assert it, or follow it again.
 
 A fragment is ignored. A controller commonly appends one - `#__1602`, to scroll to the row it just
 saved - and it is no part of the route.
+
+**Some pages work by storing a result and redirecting to it, so the follow is how the page is
+reached rather than a correction.** What's New runs its search, saves an `xf_find_new` row and
+answers with a temporary redirect to that row's own address; core search does the same with
+`xf_search` and `search/<id>/`. The id does not exist until the search has run, so there is no
+address a test could dispatch instead:
+
+```php
+$this->actingAsMember([], ['general' => ['view' => true]]);
+
+$reply = $this->dispatch('whats-new/posts/', 'public', ['unread' => 1]);
+$this->assertReplyIsRedirect($reply, null, 'temporary');
+
+$this->assertReplyTemplate($this->followRedirect($reply), 'whats_new_posts');
+```
+
+Both write a row, so a class dispatching them wants `UsesDatabaseTransactions`. Neither always
+redirects: What's New answers with the page directly when its search found nothing and no filters
+were given, and a search with no results answers with a message.
 
 A redirect pointing at another host is refused: there is no route to dispatch, so assert the url
 with `assertReplyIsRedirect()` instead.

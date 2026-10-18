@@ -109,6 +109,12 @@ trait InteractsWithRoutes
 	 *
 	 * The controller's preDispatch() runs, so its access checks are exercised.
 	 *
+	 * **An address written out by hand need not be the canonical one.** A public controller
+	 * compares the url it would build against the url the request carries and answers a permanent
+	 * redirect where they differ, and a node's canonical address carries its title as well as its
+	 * id - so `forums/<id>/` is a redirect to `forums/<title>.<id>/` rather than the page. Build
+	 * the link with the router, or follow the redirect.
+	 *
 	 * @param string $routePath - as it appears after the ? in a URL, eg 'help/terms'
 	 * @param string $type - 'public', 'admin' or 'api'
 	 * @param array $input - GET parameters the route reads, as $_GET would carry them
@@ -217,6 +223,12 @@ trait InteractsWithRoutes
 	 * says nothing about what the next page shows - so a test that asserts only the redirect stops
 	 * one step short of what the user would see. This takes the step: it reads the url off the
 	 * reply, works out which route and which router it names, and dispatches it.
+	 *
+	 * **The redirect's type says whether a different address would have avoided it.** A permanent
+	 * one is a canonical correction, so dispatching the canonical address reaches the page in one
+	 * hop. A temporary one is a controller pointing at something it stored - What's New saves an
+	 * xf_find_new row and redirects to it, and core search does the same with xf_search - and
+	 * there the id does not exist until the request has run, so following is the only way there.
 	 *
 	 * **The route type comes from the url, not from the dispatch that produced the redirect.** The
 	 * forum serves the control panel from its own script and the api behind a prefix on the public

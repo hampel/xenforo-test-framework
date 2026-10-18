@@ -6,6 +6,11 @@
   widget named a template. A widget that declines returns before it names one, so a decline
   test on its own does not check that the widget's template still exists - render the showing
   case beside it
+* docs: `dispatch()` and `followRedirect()` name the two reasons a `GET` is answered with a
+  redirect, and the type that tells them apart. A permanent one is an address correction, and a
+  node's canonical address carries its title as well as its id, so `forums/<id>/` is a redirect
+  rather than the page; a temporary one is a controller pointing at something it stored, as What's
+  New and search both do, where no address a test could dispatch avoids it
 
 ## 5.31.0 (2026-10-18)
 
