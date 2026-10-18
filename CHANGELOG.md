@@ -1,6 +1,6 @@
 # Changelog
 
-## 5.31.0 (unreleased)
+## 5.31.0 (2026-10-18)
 
 * `renderWidgetHtml()` renders one widget and returns its HTML, named either by its definition
   class or by the key of a widget the forum has configured. A widget that decides not to show
