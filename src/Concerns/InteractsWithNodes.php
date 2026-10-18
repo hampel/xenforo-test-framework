@@ -54,15 +54,21 @@ trait InteractsWithNodes
 	/**
 	 * Create a tree of nodes in one call, numbered as XenForo numbers one.
 	 *
-	 * Each key is a node title; each value may carry `type`, `values`, `data` and `children`:
+	 * Each key is a node title; each value may carry `type`, `values`, `data`, `children` and
+	 * `key`:
 	 *
 	 * ```php
 	 * $nodes = $this->createNodeTreeFixture([
 	 *     'Top category' => ['type' => 'Category', 'children' => [
-	 *         'Inner forum' => ['type' => 'Forum'],
+	 *         'Inner forum' => ['type' => 'Forum', 'key' => 'inner'],
 	 *     ]],
 	 * ]);
 	 * ```
+	 *
+	 * `key` is what that node is called in the array this returns, for a test whose own name for a
+	 * node is not the title a reader of the forum would see. It defaults to the title, and it is
+	 * the thing that has to be unique rather than the title: two nodes may share a title as long
+	 * as their keys differ, which XenForo itself allows.
 	 *
 	 * A tree has to be built in one call rather than a node at a time, because a child's
 	 * nested-set range sits inside its parent's and the parent's range is not known until its
@@ -70,7 +76,7 @@ trait InteractsWithNodes
 	 *
 	 * @param array $spec - title => definition, nested through `children`
 	 *
-	 * @return array<string, Node> - every node created, keyed by its title
+	 * @return array<string, Node> - every node created, keyed by its `key` or by its title
 	 */
 	protected function createNodeTreeFixture(array $spec)
 	{
@@ -89,7 +95,7 @@ trait InteractsWithNodes
 		$nodes = [];
 
 		// $flat holds each node before its own children, so a parent is always already saved
-		foreach ($flat AS $entry)
+		foreach ($flat AS $key => $entry)
 		{
 			$values = $entry['values'];
 			$parent = $entry['parent'] === null ? null : $nodes[$entry['parent']];
@@ -99,7 +105,7 @@ trait InteractsWithNodes
 				$values['parent_node_id'] = $parent->node_id;
 			}
 
-			$nodes[$entry['title']] = $this->insertNodeFixture(
+			$nodes[$key] = $this->insertNodeFixture(
 				$entry['title'],
 				$entry['type'],
 				$values,
@@ -270,10 +276,11 @@ trait InteractsWithNodes
 	 * exactly - a wider range would make XenForo's `hasChildren()` true for a childless node.
 	 *
 	 * @param array $spec
-	 * @param array $flat - filled with one entry per node, parents before their children
+	 * @param array $flat - filled with one entry per node, keyed as the tree will be, parents
+	 *                      before their children
 	 * @param int $counter
 	 * @param int $depth
-	 * @param string|null $parent - the parent's title, or null at the root
+	 * @param string|null $parent - the parent's key, or null at the root
 	 *
 	 * @return void
 	 */
@@ -281,17 +288,20 @@ trait InteractsWithNodes
 	{
 		foreach ($spec AS $title => $definition)
 		{
-			if (isset($flat[$title]))
+			// the key is what the returned tree is keyed by, so it is the value that has to be
+			// unique - a title need not be, here or on a real forum
+			$key = (string) ($definition['key'] ?? $title);
+
+			if (isset($flat[$key]))
 			{
 				throw new \LogicException(
-					"createNodeTreeFixture() was given the title '$title' twice. The tree it returns"
-					. ' is keyed by title, so one of the two would be unreachable. Give them'
-					. ' different titles.'
+					"createNodeTreeFixture() was given the key '$key' twice. The tree it returns is"
+					. " keyed by each node's 'key', or by its title where it has none, so one of the"
+					. ' two would be unreachable. Give them different keys.'
 				);
 			}
 
-			$index = $title;
-			$flat[$index] = [
+			$flat[$key] = [
 				'title' => $title,
 				'type' => $definition['type'] ?? 'Forum',
 				'values' => $definition['values'] ?? [],
@@ -301,9 +311,9 @@ trait InteractsWithNodes
 				'lft' => $counter++,
 			];
 
-			$this->numberNodeFixtureSpec($definition['children'] ?? [], $flat, $counter, $depth + 1, $title);
+			$this->numberNodeFixtureSpec($definition['children'] ?? [], $flat, $counter, $depth + 1, $key);
 
-			$flat[$index]['rgt'] = $counter++;
+			$flat[$key]['rgt'] = $counter++;
 		}
 	}
 

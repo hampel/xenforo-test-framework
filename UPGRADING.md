@@ -5,6 +5,15 @@ Most releases need nothing beyond `composer update`. `CHANGELOG.md` lists everyt
 
 `tests/TestCase.php` is copied into your add-on, so a change to it has to be merged by hand.
 
+## 5.32.0
+
+Nothing to do. `createNodeTreeFixture()` takes an optional `key` per node, and a spec that names
+none behaves as it did.
+
+Two nodes sharing a title are no longer refused where their keys differ, and the refusal names the
+key rather than the title. Two nodes with the same title and no keys are still refused, since a
+key defaults to its node's title.
+
 ## 5.31.0
 
 Nothing to do. If one of your test classes already defines a method named `renderWidgetHtml()`,

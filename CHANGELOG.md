@@ -1,7 +1,12 @@
 # Changelog
 
-## 5.31.1 (unreleased)
+## 5.32.0 (unreleased)
 
+* `createNodeTreeFixture()` takes an optional `key` for each node in the spec, which is what that
+  node is called in the array the helper returns - for a test whose own name for a node is not the
+  title a reader of the forum would see. It defaults to the title, so a spec naming no keys behaves
+  as it did. The key is what has to be unique rather than the title, so two nodes may share a title
+  where their keys differ, as they may on a real forum
 * docs: `renderWidgetHtml()` says that its three refusals can only reach a render where the
   widget named a template. A widget that declines returns before it names one, so a decline
   test on its own does not check that the widget's template still exists - render the showing

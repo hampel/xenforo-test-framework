@@ -161,6 +161,72 @@ class NodeFixturesTest extends TestCase
 		]);
 	}
 
+	public function test_a_tree_is_keyed_by_the_key_each_node_was_given()
+	{
+		$nodes = $this->createNodeTreeFixture([
+			'Zz Keyed Top' => ['type' => 'Category', 'key' => 'top', 'children' => [
+				'Zz Keyed Inner' => ['type' => 'Forum', 'key' => 'inner'],
+				'Zz Keyed Other' => ['type' => 'Forum'],
+			]],
+		]);
+
+		// the node that named no key keeps its title, so the two forms mix in one tree
+		$this->assertSame(['top', 'inner', 'Zz Keyed Other'], array_keys($nodes));
+
+		$this->assertSame('Zz Keyed Top', $nodes['top']->title);
+		$this->assertSame('Zz Keyed Inner', $nodes['inner']->title);
+		$this->assertSame($nodes['top']->node_id, $nodes['inner']->parent_node_id);
+	}
+
+	public function test_two_nodes_can_share_a_title_when_their_keys_differ()
+	{
+		$nodes = $this->createNodeTreeFixture([
+			'Zz Shared Parent A' => ['type' => 'Category', 'key' => 'a', 'children' => [
+				'Zz Shared' => ['key' => 'childOfA'],
+			]],
+			'Zz Shared Parent B' => ['type' => 'Category', 'key' => 'b', 'children' => [
+				'Zz Shared' => ['key' => 'childOfB'],
+			]],
+		]);
+
+		$this->assertSame('Zz Shared', $nodes['childOfA']->title);
+		$this->assertSame('Zz Shared', $nodes['childOfB']->title);
+		$this->assertNotSame($nodes['childOfA']->node_id, $nodes['childOfB']->node_id);
+
+		// each child belongs to its own parent, which is what says the tree is walked by key: a
+		// parent looked up by title would give both children whichever node came last
+		$this->assertSame($nodes['a']->node_id, $nodes['childOfA']->parent_node_id);
+		$this->assertSame($nodes['b']->node_id, $nodes['childOfB']->parent_node_id);
+
+		$this->assertSame(
+			[$nodes['a']->node_id],
+			array_keys($nodes['childOfA']->breadcrumb_data),
+			'the breadcrumb follows the same parent'
+		);
+	}
+
+	public function test_the_same_key_twice_is_refused()
+	{
+		$this->expectException(\LogicException::class);
+		$this->expectExceptionMessage("the key 'same' twice");
+
+		$this->createNodeTreeFixture([
+			'Zz Key One' => ['key' => 'same'],
+			'Zz Key Two' => ['key' => 'same'],
+		]);
+	}
+
+	public function test_a_key_colliding_with_an_unkeyed_nodes_title_is_refused()
+	{
+		$this->expectException(\LogicException::class);
+		$this->expectExceptionMessage('twice');
+
+		$this->createNodeTreeFixture([
+			'Zz Collide' => [],
+			'Zz Other Title' => ['key' => 'Zz Collide'],
+		]);
+	}
+
 	public function test_an_empty_tree_is_refused()
 	{
 		$this->expectException(\LogicException::class);

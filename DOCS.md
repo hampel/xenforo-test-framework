@@ -553,8 +553,25 @@ $thread = $this->createThreadFixture($nodes['Inner forum'], 'A thread');
 ```
 
 Each key is a title and each value may carry `type` (default `Forum`), `values` for the node,
-`data` for its type row, and `children`. Returns every node created, keyed by title, parents
-first. A title used twice is refused, since one of the two would be unreachable in that array.
+`data` for its type row, `children`, and `key`. Returns every node created, parents first.
+
+**`key` is what a node is called in the array that comes back**, for a test whose own name for a
+node is not the title a reader of the forum would see:
+
+```php
+$nodes = $this->createNodeTreeFixture([
+    'Announcements and site news' => ['type' => 'Category', 'key' => 'parent', 'children' => [
+        'Scheduled maintenance' => ['key' => 'child'],
+    ]],
+]);
+
+$thread = $this->createThreadFixture($nodes['child'], 'A thread');
+```
+
+It defaults to the title, so a node naming none is keyed by its title and the two forms mix in one
+tree. The key is the value that has to be unique rather than the title - two nodes may share a
+title where their keys differ, as they may on a real forum - and a key used twice is refused, since
+one of the two would be unreachable in that array.
 
 **A tree has to be built in one call rather than a node at a time**, because a child's range sits
 inside its parent's and the parent's range is not known until its children have been numbered. The
