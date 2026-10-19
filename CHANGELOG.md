@@ -1,6 +1,6 @@
 # Changelog
 
-## 5.32.0 (unreleased)
+## 5.32.0 (2026-10-19)
 
 * `createNodeTreeFixture()` takes an optional `key` for each node in the spec, which is what that
   node is called in the array the helper returns - for a test whose own name for a node is not the
