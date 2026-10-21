@@ -34,6 +34,7 @@
 		"league/flysystem-memory": "^1.0 - required when swapping out filesystems"
 	},
 	"require-dev": {
+		"hampel/xenforo-phpstan": "^0.1",
 		"league/flysystem": "^1.1.4",
 		"league/flysystem-memory": "^1.0",
 		"nesbot/carbon": "^2.50|^3.0",
@@ -63,6 +64,7 @@
 			"@integration"
 		],
 		"analyse": "XF_ROOT=${XF_ROOT:?set XF_ROOT to your XenForo root, eg XF_ROOT=/srv/www/myforum} phpstan analyse",
+		"generate": "XF_ROOT=${XF_ROOT:?set XF_ROOT to your XenForo root, eg XF_ROOT=/srv/www/myforum} xenforo-phpstan generate",
 		"integration": "phpunit -c integration/phpunit.xml",
 		"check:lowest": "bash bin/check-lowest",
 		"format": "php-cs-fixer fix",

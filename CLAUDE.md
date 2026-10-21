@@ -102,13 +102,21 @@ PHPStan needs a XenForo install to analyse against — almost every class here e
 and the source is licensed and not on Packagist. So the forum root comes from the environment:
 
 ```bash
+XF_ROOT=/srv/www/myforum composer generate   # once per forum, and again after a XenForo upgrade
 XF_ROOT=/srv/www/myforum composer analyse
 ```
 
 `phpstan.neon.dist` is committed and expands `%env.XF_ROOT%`; copy it to `phpstan.neon`
-(gitignored) to hard-code your own path. It scans `src/XF`, XF's `vendor`, `XF.php` and
-`utf8.php` — the last because XF `require`s it at runtime rather than autoloading it. The committed
-level is 4; keep it clean.
+(gitignored) to hard-code your own path. The scan of the forum comes from
+`hampel/xenforo-phpstan`, which also types XenForo's container shortcuts. `generate` writes what
+it needs to know about the install into the forum's `internal_data/phpstan/`, and a set written
+for another XenForo version is refused with the command to rerun. The committed level is 4; keep
+it clean.
+
+The three `instanceof` guards after `repository('XF:...')` are reported as always true, because
+the shortcut is typed, and are kept under scoped `ignoreErrors` entries rather than removed: the
+type is the extension's claim about the install, and the guard turns an undefined-method fatal
+on a forum that resolves the identifier to something else into a named error.
 
 ### Do not add the dependency checks
 

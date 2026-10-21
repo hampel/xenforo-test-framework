@@ -1,15 +1,20 @@
 # PHPStan cannot analyse this package without XenForo: almost every class here
-# extends one of XF's. The source is licensed and not on Packagist, and there is
-# no public stub package, so the forum root is supplied per machine instead of
-# being committed:
+# extends one of XF's. The source is licensed and not on Packagist, so the forum
+# root is supplied per machine instead of being committed:
 #
+#     XF_ROOT=/srv/www/myforum composer generate
 #     XF_ROOT=/srv/www/myforum composer analyse
+#
+# hampel/xenforo-phpstan scans the forum and types XenForo's container shortcuts;
+# `generate` writes what it needs to know about the install into the forum's
+# internal_data/phpstan/ and must be repeated after a XenForo upgrade.
 #
 # Copy this file to phpstan.neon (gitignored) to hard-code your own path.
 includes:
     # Teaches PHPStan that Mockery::mock(Foo::class) is a Foo as well as a MockInterface.
     # Without it the helpers here look like they return the wrong type to their own callers.
     - vendor/phpstan/phpstan-mockery/extension.neon
+    - vendor/hampel/xenforo-phpstan/extension.neon
 
 parameters:
     # Level 5 is ten errors away and level 6 is 222, almost all of them XenForo entities, whose
@@ -32,12 +37,26 @@ parameters:
         # and that noise would bury a finding like that one.
         - integration/DatabaseTransactionsTest.php
 
-    scanDirectories:
-        - %env.XF_ROOT%/src/XF
-        - %env.XF_ROOT%/src/vendor
+    xenforo:
+        root: %env.XF_ROOT%
 
-    scanFiles:
-        # \XF itself, and utf8_substr and friends, which XF require()s at
-        # runtime rather than autoloading - src/Error.php calls them.
-        - %env.XF_ROOT%/src/XF.php
-        - %env.XF_ROOT%/src/utf8.php
+    ignoreErrors:
+        # The repository shortcut is typed by the extension, so these guards cannot fail under
+        # analysis. They stay: the type is the extension's claim about the install, and the
+        # guard turns an undefined-method fatal on a forum that resolves the identifier to
+        # something else into a named error.
+        -
+            message: '#^Instanceof between XF\\Repository\\\w+ and XF\\Repository\\\w+Repository will always evaluate to true\.$#'
+            identifier: instanceof.alwaysTrue
+            count: 1
+            path: src/Concerns/InteractsWithEntityManager.php
+        -
+            message: '#^Instanceof between XF\\Repository\\\w+ and XF\\Repository\\\w+Repository will always evaluate to true\.$#'
+            identifier: instanceof.alwaysTrue
+            count: 1
+            path: src/Concerns/InteractsWithVisitor.php
+        -
+            message: '#^Instanceof between XF\\Repository\\\w+ and XF\\Repository\\\w+Repository will always evaluate to true\.$#'
+            identifier: instanceof.alwaysTrue
+            count: 1
+            path: src/Concerns/InteractsWithTemplates.php
