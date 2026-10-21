@@ -927,3 +927,24 @@ visitor afterwards.
 
 Recognising code that is hard to test, and knowing how to restructure it, is most of what makes a
 suite worth having. Those tips have their own document: [TIPS.md](TIPS.md).
+
+## 14. Static analysis
+
+A test exercises the code it reaches; PHPStan reads all of it. The two find different things, and
+an add-on with a suite is worth analysing as well. PHPStan cannot analyse an add-on on its own,
+because almost every class in one extends a XenForo class and XenForo is not on Packagist, so use
+[hampel/xenforo-phpstan](https://github.com/hampel/xenforo-phpstan): it lets PHPStan see the forum
+the add-on sits in without analysing it, declares the legacy class names XenForo 2.3 aliases at
+runtime and the `XFCP_` parent of every class extension, and types the container shortcuts given
+the short `Vendor\AddOn:Name` identifier - the cases that otherwise report a working add-on as
+broken. Install it beside this framework and run its generator once per forum, and again after
+upgrading XenForo:
+
+```bash
+composer require --dev hampel/xenforo-phpstan
+vendor/bin/xenforo-phpstan generate
+```
+
+Its README has the `phpstan.neon` to start from, and the add-on's `vendor/` must be excluded from
+PHPStan's scan there, or the `tests/` scaffold this framework ships is read beside the add-on's own
+`Tests\` classes.

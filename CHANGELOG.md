@@ -1,5 +1,10 @@
 # Changelog
 
+## 5.32.1 (unreleased)
+
+* docs: the README recommends `hampel/xenforo-phpstan` for analysing an add-on with PHPStan, and
+  says why PHPStan cannot analyse one on its own
+
 ## 5.32.0 (2026-10-19)
 
 * `createNodeTreeFixture()` takes an optional `key` for each node in the spec, which is what that
