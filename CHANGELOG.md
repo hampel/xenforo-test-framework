@@ -1,6 +1,6 @@
 # Changelog
 
-## 5.32.1 (unreleased)
+## 5.32.1 (2026-10-23)
 
 * docs: the README recommends `hampel/xenforo-phpstan` for analysing an add-on with PHPStan, and
   says why PHPStan cannot analyse one on its own
