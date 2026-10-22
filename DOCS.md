@@ -1531,6 +1531,14 @@ Returning true keeps the error, so the assertion fails on it. The keys are XenFo
 | `file` | the compiled template file |
 | `line` | the line in it |
 
+**An add-on that is the only one modifying a core template can filter by that template's name.**
+The errors a modification raises are recorded against the template that was rendering, so where
+your add-on owns no templates, modifies one core template, and no other add-on modifies it, every
+error under that name is yours and `assertNoTemplateErrors('account_upgrades')` says so. It is the
+commonest shape for a small add-on, and it is also the shape a closure on your prefix cannot serve:
+a block that only reads option values carries no name of yours for the closure to match. It holds
+until a sibling modifies the same template, which is when the closure is the one that still works.
+
 **A string is always a template name, never called.** `header`, `compact` and `link` are PHP
 functions as well as plausible template names, so the form decides this rather than whether the
 value happens to be callable - pass a closure to filter by anything else. Anything that is neither
@@ -1633,6 +1641,7 @@ refused in each other's place rather than silently accepted:
 | `assertNoUnresolvedPhrases` | the third, after `prefix` |
 | `assertNoTemplateErrors` | the second, after the template filter |
 | `assertTemplateModificationApplied` | the second |
+| `assertTemplateModificationAppliedTimes` | the third, after `times` |
 
 A string where `escape` goes is refused, because a non-empty string is merely truthy and would be
 the default - the assertion would behave exactly as it does without it and the message would be
@@ -1813,6 +1822,10 @@ A modification whose `find` no longer matches still has status `ok`, with an app
 
 The apply count is the one recorded when the template was last compiled.
 
+**It says applied at least once.** A `str_replace` modification whose find matches twice inserts
+its block twice, and this passes. `assertTemplateModificationAppliedTimes()` is the assertion for
+exactly once.
+
 A modification inserting an `<xf:include>` does not put the included template's name in the output,
 so assert on the markup it produces instead.
 
@@ -1820,6 +1833,32 @@ This assertion is also the one to reach for where the insertion lands somewhere 
 does not carry at all - inside `<xf:pageaction>`, `<xf:title>`, `<xf:h1>`, `<xf:description>`,
 `<xf:sidenav>` or `<xf:sidebar>`. See `renderTemplate()`, which has what those tags do and how to
 read them.
+
+### assertTemplateModificationAppliedTimes
+Assert that a template modification applies exactly this many times in each template it reaches.
+
+##### Parameters:
+
+* `modificationKey` - as in `_output/template_modifications/`
+* `times` - the apply count, at least 1
+* `message` - optional
+
+##### Example:
+
+```php
+$this->assertTemplateModificationAppliedTimes('myaddon_helper_account', 1);
+```
+
+**The count is checked per template, not summed.** XenForo logs a row per template a modification
+was applied to - one per style that holds its own copy of the template - so on a forum whose styles
+have customised the template the sum is the number of styles, and a sum cannot tell two styles
+from one style matched twice. Each row has to carry the count, and the failure names the template
+and style of each one that does not.
+
+A `str_replace` modification whose find matches twice inserts its block twice, so for most of them
+the count a test wants is 1. A modification with no log row at all, or one applying zero times,
+fails as `assertTemplateModificationApplied()` does. Zero is refused: a modification that applies
+nowhere is what the plain assertion fails on, and asserting it would pin a stale find as correct.
 
 ### assertAddOnTemplateModificationsApply
 Assert that every template modification the add-on registers still applies, and return each
@@ -1856,6 +1895,30 @@ both are checked. So a disabled add-on is refused here and a mid-install one is 
 never imported is invisible to this, so it cannot see the drift a commit without an import leaves.
 A test globbing that directory and comparing it against the database catches that, and the two are
 worth having together rather than one replacing the other.
+
+**It says applied at least once.** `assertAddOnTemplateModificationsApplyTimes()` is the form for
+exactly once.
+
+### assertAddOnTemplateModificationsApplyTimes
+Assert that every template modification the add-on registers applies exactly this many times in
+each template it reaches, and return each modification key with the number of times it applied.
+
+##### Parameters:
+
+* `times` - the apply count every modification must carry in every template, at least 1
+* `addOnId` - optional - defaults to the add-on `$addonsToLoad` isolates
+
+##### Example:
+
+```php
+$applied = $this->assertAddOnTemplateModificationsApplyTimes(1);
+```
+
+The same refusals as `assertAddOnTemplateModificationsApply()`, and the same per-template check as
+`assertTemplateModificationAppliedTimes()`: XenForo logs a row per template a modification was
+applied to, so the count is checked on each row rather than summed, and the failure names each
+modification, template and style that is off. One count for every modification the add-on
+registers; where they differ, assert them one at a time.
 
 ### renderTemplateWithoutModification
 Render a template with one of its template modifications left out, so a test can show that the

@@ -476,6 +476,8 @@ its markup stripped and its entities decoded
 * `assertAddOnTemplateModificationsApply` asserts that every template modification your add-on registers still
 applies, which a suite with no assertion on the markup they insert cannot otherwise notice - XenForo records a
 modification whose find stops matching as `ok` with an apply count of zero
+* `assertTemplateModificationAppliedTimes` and `assertAddOnTemplateModificationsApplyTimes` assert the apply count
+per template, for a `str_replace` modification whose find matching twice would insert its block twice
 * `renderTemplateWithoutModification` renders a template with one of its modifications left out, so a test can show
 the markup it asserts on is that modification's work, without disabling it for every other suite on the forum. To
 pair it with a dispatch, hand it the reply's own parameters - `renderTemplateWithoutModification($key,

@@ -140,6 +140,21 @@ permission is *denied* passes for a visitor with no permissions at all.
 searching for your own prefix. Assert what should be there in the same test. For permissions,
 remove the grant and check the positive test fails.
 
+## Mutate a template with a method name the compiler accepts
+
+To prove a template test can fail, the obvious mutation is a modification calling a method that
+does not exist - and it is silently a no-op. XenForo whitelists the methods a template may call
+by their prefix, at compile time, so `{{ $xf.visitor.noSuchMethod() }}` is rejected when the
+modification is saved, with "may not be called in a template. Only functions with whitelisted
+prefixes are allowed". The modification never reaches the compiled template, nothing is mutated,
+and the test reports `OK`, which looks exactly like the test being sound.
+
+Give the invented method a whitelisted prefix - `canNoSuchMethod()` - and it compiles, applies,
+and fails the assertion naming the template. Then read the save's result rather than the test's:
+a mutation that was refused at compile time has proved nothing either way. The prefixes are the
+read-only ones, `can`, `get`, `has`, `is` and their kin, which is also why a modification calling
+`canUseSomething()` on a visitor missing an extension gets far enough to raise an error at all.
+
 ## If you aren't asserting, you aren't testing
 
 Use asserts liberally, and give them messages so a failure in a large suite is easy to locate. Test
@@ -210,6 +225,32 @@ from XenForo or its vendor tree is unavailable there — a class constant such a
 `OutputInterface::VERBOSITY_DEBUG` fails with
 `Class "Symfony\Component\Console\Output\OutputInterface" not found`. Return the literal value from
 the provider, or resolve it inside the test.
+
+## Prefix the helpers you add to your test case
+
+`TestCase` composes some two dozen concerns, and between them close to two hundred protected
+helpers with ordinary English names - `setOption()`, `setOptions()`, `renderTemplate()`,
+`createEntity()`, `mockService()`, `runJobToCompletion()`. A private helper of the same name in
+your own test class is a fatal at class load, not a failing test, because PHP refuses to narrow
+the visibility of an inherited method:
+
+```text
+PHP Fatal error: Access level to Tests\Feature\MyTest::setOptions() must be protected (as in
+class Hampel\Testing\TestCase) or weaker
+```
+
+The whole run stops before any test executes, and the message names the framework's class, so it
+reads as a framework bug. PHP method names are case-insensitive, so a private `setup()` collides
+with PHPUnit's `setUp()` the same way.
+
+Prefix your own helpers with your add-on's name, or check the name is free before using it:
+
+```bash
+grep -rn 'function setOptions(' vendor/hampel/xenforo-test-framework/src/
+```
+
+Every release adds helpers, so a name that is free today is not a name that stays free - the prefix
+is the form that does.
 
 ## Be careful counting queries
 

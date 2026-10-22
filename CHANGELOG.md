@@ -1,5 +1,20 @@
 # Changelog
 
+## 5.33.0 (unreleased)
+
+* `assertTemplateModificationAppliedTimes()` and `assertAddOnTemplateModificationsApplyTimes()`
+  assert that a template modification applies exactly the given number of times in each template
+  it reaches. The existing assertions say applied at least once, which a `str_replace`
+  modification whose find matches twice still passes while inserting its block twice. The count is
+  checked per template rather than summed, since XenForo logs a row per style holding its own copy
+  of the template, and a sum counts styles as well as matches
+* docs: `TIPS.md` says to prefix the helpers a test class adds, because a private method of the
+  same name as one of the framework's protected helpers is a fatal at class load
+* docs: `TIPS.md` says to use a whitelisted method prefix when mutating a template to prove a test
+  can fail, because a method the compiler rejects leaves the template unmutated and the test green
+* docs: `assertNoTemplateErrors()` names the case where an add-on owning no templates can still
+  filter by name - it is the only add-on modifying the one core template its markup is in
+
 ## 5.32.1 (2026-10-23)
 
 * docs: the README recommends `hampel/xenforo-phpstan` for analysing an add-on with PHPStan, and

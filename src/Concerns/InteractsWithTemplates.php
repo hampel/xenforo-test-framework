@@ -1196,43 +1196,7 @@ trait InteractsWithTemplates
 		$addOnId = $addOnId ?: $this->soleIsolatedAddOnId('whose template modifications to check');
 
 		$db = $this->app()->db();
-
-		$addOn = $db->fetchRow('SELECT addon_id, active FROM xf_addon WHERE addon_id = ?', $addOnId);
-
-		if (!$addOn)
-		{
-			throw new \LogicException(
-				"'$addOnId' is not among the installed add-ons on this forum, so it registers no"
-				. ' template modification and this would pass having checked nothing. Check the id.'
-			);
-		}
-
-		if (!$addOn['active'])
-		{
-			throw new \LogicException(
-				"'$addOnId' is installed but disabled, so XenForo leaves its template modifications"
-				. ' out of every render and none of them apply. Enable the add-on, or name one that'
-				. ' is enabled.'
-			);
-		}
-
-		$modifications = $db->fetchAll(
-			'SELECT modification_key, type, template
-				FROM xf_template_modification
-				WHERE addon_id = ? AND enabled = 1
-				ORDER BY modification_key',
-			$addOnId
-		);
-
-		if (!$modifications)
-		{
-			throw new \LogicException(
-				"'$addOnId' is installed and registers no enabled template modification, so there is"
-				. ' nothing to assert and this would pass having checked nothing. Remove the'
-				. ' assertion, or name the add-on that owns the modifications. An add-on whose'
-				. ' modifications are all disabled is the other way to reach this.'
-			);
-		}
+		$modifications = $this->enabledTemplateModificationsOf($addOnId);
 
 		$applied = [];
 		$absent = [];
@@ -1265,6 +1229,64 @@ trait InteractsWithTemplates
 			$absent,
 			"These template modifications of '$addOnId' are enabled and apply to nothing, so the"
 			. ' markup they insert is absent from every render'
+		);
+
+		return $applied;
+	}
+
+	/**
+	 * Assert that every template modification the add-on registers applies exactly this many
+	 * times in each template it reaches.
+	 *
+	 * assertAddOnTemplateModificationsApply() says applied at least once. A `str_replace`
+	 * modification whose find matches twice inserts its block twice, and passes that. The count
+	 * is checked per log row rather than summed, because XenForo logs a row per template the
+	 * modification was applied to - one per style holding its own copy of the template - so a
+	 * sum counts styles as well as matches.
+	 *
+	 * @param int $times - the apply count every row must carry, at least 1
+	 * @param string|null $addOnId - defaults to the add-on $addonsToLoad isolates, when it names one
+	 *
+	 * @return array<string, int> - each modification key, mapped to the number of times it applied
+	 */
+	protected function assertAddOnTemplateModificationsApplyTimes($times, $addOnId = null)
+	{
+		$this->requireApplyTimes($times, 'assertAddOnTemplateModificationsApplyTimes()');
+
+		$addOnId = $addOnId ?: $this->soleIsolatedAddOnId('whose template modifications to check');
+
+		$applied = [];
+		$wrong = [];
+
+		foreach ($this->enabledTemplateModificationsOf($addOnId) AS $modification)
+		{
+			$rows = $this->templateModificationLogRows($modification['modification_id']);
+			$total = array_sum(array_column($rows, 'apply_count'));
+
+			if ($total === 0)
+			{
+				$wrong[] = $modification['modification_key'] . ' on ' . $modification['type']
+					. ':' . $modification['template'] . ' applied 0 times, so its find no longer matches';
+				continue;
+			}
+
+			$applied[$modification['modification_key']] = $total;
+
+			foreach ($rows AS $row)
+			{
+				if ((int) $row['apply_count'] !== $times)
+				{
+					$wrong[] = $modification['modification_key'] . ' applied ' . $row['apply_count']
+						. ' times in ' . $row['where'] . ', not ' . $times;
+				}
+			}
+		}
+
+		PHPUnit::assertSame(
+			[],
+			$wrong,
+			"These template modifications of '$addOnId' do not apply exactly $times "
+			. ($times === 1 ? 'time' : 'times') . ' in every template they reach'
 		);
 
 		return $applied;
@@ -1321,6 +1343,189 @@ trait InteractsWithTemplates
 				'assertTemplateModificationApplied()'
 			)
 		);
+	}
+
+	/**
+	 * Assert that a template modification applies exactly this many times in each template it
+	 * reaches.
+	 *
+	 * assertTemplateModificationApplied() says applied at least once, and a `str_replace`
+	 * modification whose find matches twice inserts its block twice. The count is checked per
+	 * log row rather than summed: XenForo logs a row per template the modification was applied
+	 * to, one per style holding its own copy, so a sum counts styles as well as matches.
+	 *
+	 * @param string $modificationKey - as in `_output/template_modifications/`
+	 * @param int $times - the apply count every row must carry, at least 1
+	 * @param string|null $message - prefixed to the failure
+	 *
+	 * @return void
+	 */
+	protected function assertTemplateModificationAppliedTimes($modificationKey, $times, $message = null)
+	{
+		$this->requireApplyTimes($times, 'assertTemplateModificationAppliedTimes()');
+
+		$modification = $this->app()->db()->fetchRow(
+			'SELECT modification_id, type, template, enabled
+				FROM xf_template_modification
+				WHERE modification_key = ?',
+			$modificationKey
+		);
+
+		if (!$modification)
+		{
+			PHPUnit::fail($this->failureMessage(
+				$message,
+				"No template modification with the key '$modificationKey' exists in this forum."
+				. ' These assertions read what the forum has, so the add-on has to be installed'
+				. ' and its data imported - an edit to _output/ alone is invisible here.',
+				'assertTemplateModificationAppliedTimes()'
+			));
+		}
+
+		$rows = $this->templateModificationLogRows($modification['modification_id']);
+		$total = array_sum(array_column($rows, 'apply_count'));
+
+		if ($total === 0)
+		{
+			PHPUnit::fail($this->failureMessage(
+				$message,
+				"Template modification '$modificationKey' on {$modification['type']}:"
+				. "{$modification['template']} applied 0 times"
+				. ($modification['enabled'] ? '' : ' (and it is disabled)')
+				. " - its find no longer matches. XenForo logs that as status 'ok', so only the apply"
+				. ' count shows it.',
+				'assertTemplateModificationAppliedTimes()'
+			));
+		}
+
+		$wrong = [];
+
+		foreach ($rows AS $row)
+		{
+			if ((int) $row['apply_count'] !== $times)
+			{
+				$wrong[] = 'applied ' . $row['apply_count'] . ' times in ' . $row['where'] . ', not ' . $times;
+			}
+		}
+
+		PHPUnit::assertSame(
+			[],
+			$wrong,
+			$this->failureMessage(
+				$message,
+				"Template modification '$modificationKey' on {$modification['type']}:"
+				. "{$modification['template']} does not apply exactly $times "
+				. ($times === 1 ? 'time' : 'times') . ' in every template it reaches - '
+				. implode('; ', $wrong) . '. A find that matches more than once inserts the block'
+				. ' that many times.',
+				'assertTemplateModificationAppliedTimes()'
+			)
+		);
+	}
+
+	/**
+	 * The enabled template modifications an add-on registers, refusing the three states in which
+	 * an assertion over them would pass having checked nothing.
+	 *
+	 * @param string $addOnId
+	 *
+	 * @return array<int, array<string, mixed>> - modification_id, modification_key, type, template
+	 */
+	private function enabledTemplateModificationsOf($addOnId)
+	{
+		$db = $this->app()->db();
+
+		$addOn = $db->fetchRow('SELECT addon_id, active FROM xf_addon WHERE addon_id = ?', $addOnId);
+
+		if (!$addOn)
+		{
+			throw new \LogicException(
+				"'$addOnId' is not among the installed add-ons on this forum, so it registers no"
+				. ' template modification and this would pass having checked nothing. Check the id.'
+			);
+		}
+
+		if (!$addOn['active'])
+		{
+			throw new \LogicException(
+				"'$addOnId' is installed but disabled, so XenForo leaves its template modifications"
+				. ' out of every render and none of them apply. Enable the add-on, or name one that'
+				. ' is enabled.'
+			);
+		}
+
+		$modifications = $db->fetchAll(
+			'SELECT modification_id, modification_key, type, template
+				FROM xf_template_modification
+				WHERE addon_id = ? AND enabled = 1
+				ORDER BY modification_key',
+			$addOnId
+		);
+
+		if (!$modifications)
+		{
+			throw new \LogicException(
+				"'$addOnId' is installed and registers no enabled template modification, so there is"
+				. ' nothing to assert and this would pass having checked nothing. Remove the'
+				. ' assertion, or name the add-on that owns the modifications. An add-on whose'
+				. ' modifications are all disabled is the other way to reach this.'
+			);
+		}
+
+		return $modifications;
+	}
+
+	/**
+	 * The log rows XenForo wrote for a modification: one per template it was applied to, each
+	 * naming that template, or its id where the template row has since gone.
+	 *
+	 * @param int $modificationId
+	 *
+	 * @return array<int, array<string, mixed>> - template_id, apply_count, and `where` for a failure
+	 */
+	private function templateModificationLogRows($modificationId)
+	{
+		$rows = $this->app()->db()->fetchAll(
+			'SELECT l.template_id, l.apply_count, t.style_id, t.type, t.title
+				FROM xf_template_modification_log AS l
+				LEFT JOIN xf_template AS t ON (t.template_id = l.template_id)
+				WHERE l.modification_id = ?
+				ORDER BY l.template_id',
+			$modificationId
+		);
+
+		foreach ($rows AS $i => $row)
+		{
+			$rows[$i]['apply_count'] = (int) $row['apply_count'];
+			$rows[$i]['where'] = $row['title'] === null
+				? "template id {$row['template_id']}"
+				: "{$row['type']}:{$row['title']} (style {$row['style_id']})";
+		}
+
+		return $rows;
+	}
+
+	/**
+	 * Refuse an apply count that is not a positive integer.
+	 *
+	 * Zero is refused rather than meaning "does not apply": a modification applying nowhere is
+	 * what the plain assertion fails on, and asserting it would pin a stale find as correct.
+	 *
+	 * @param mixed $times - mixed on purpose, so the guard is live whatever the caller passed
+	 * @param string $helper
+	 *
+	 * @return void
+	 */
+	private function requireApplyTimes($times, $helper)
+	{
+		if (!is_int($times) || $times < 1)
+		{
+			throw new \LogicException(
+				"$helper takes the number of times the modification must apply in each template it"
+				. ' reaches, as a positive integer - ' . var_export($times, true) . ' given. To assert'
+				. ' only that it applies at all, use the assertion without Times.'
+			);
+		}
 	}
 
 	/**

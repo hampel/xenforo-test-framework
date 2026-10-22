@@ -5,6 +5,17 @@ Most releases need nothing beyond `composer update`. `CHANGELOG.md` lists everyt
 
 `tests/TestCase.php` is copied into your add-on, so a change to it has to be merged by hand.
 
+## 5.33.0
+
+Nothing to do. If one of your test classes already defines a method named
+`assertTemplateModificationAppliedTimes()` or `assertAddOnTemplateModificationsApplyTimes()`,
+rename it: `TestCase` now has protected methods of those names, and a private one of the same name
+is a fatal at class load.
+
+```bash
+grep -rnE 'function assert(AddOn)?TemplateModifications?Appl(ied|y)Times\(' tests/
+```
+
 ## 5.32.0
 
 Nothing to do. `createNodeTreeFixture()` takes an optional `key` per node, and a spec that names
