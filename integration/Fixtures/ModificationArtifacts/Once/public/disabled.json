@@ -1,0 +1,9 @@
+{
+    "template": "zzfinds_template",
+    "description": "probe",
+    "execution_order": 10,
+    "enabled": false,
+    "action": "str_replace",
+    "find": "AAA",
+    "replace": "$0"
+}

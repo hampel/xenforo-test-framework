@@ -56,6 +56,18 @@ class ErrorAssertionsTest extends TestCase
 		$this->assertExceptionNotLogged(\RuntimeException::class, 'SomeoneElse: ');
 	}
 
+	public function test_a_count_given_to_the_negative_assertion_is_refused()
+	{
+		$this->fakesErrors();
+
+		// the positive assertion takes a count in that slot; here there is no number that means
+		// none, and an int reaching the filter was a PHP fatal naming nothing about counts
+		$this->expectException(\LogicException::class);
+		$this->expectExceptionMessage('assertExceptionLoggedTimes($class, $times)');
+
+		$this->assertExceptionNotLogged(\RuntimeException::class, 2);
+	}
+
 	public function test_the_messages_of_everything_logged_are_readable()
 	{
 		$this->fakesErrors();

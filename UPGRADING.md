@@ -7,14 +7,18 @@ Most releases need nothing beyond `composer update`. `CHANGELOG.md` lists everyt
 
 ## 5.33.0
 
-Nothing to do. If one of your test classes already defines a method named
-`assertTemplateModificationAppliedTimes()` or `assertAddOnTemplateModificationsApplyTimes()`,
-rename it: `TestCase` now has protected methods of those names, and a private one of the same name
-is a fatal at class load.
+Nothing to do, unless one of your test classes already defines a method named
+`assertTemplateModificationAppliedTimes()`, `assertAddOnTemplateModificationsApplyTimes()`,
+`assertAddOnTemplateModificationFindsMatch()`, `addOnTemplateModificationArtifacts()` or
+`assertReplyIsLoginRequired()`. Rename it: `TestCase` now has protected methods of those names,
+and a private one of the same name is a fatal at class load.
 
 ```bash
-grep -rnE 'function assert(AddOn)?TemplateModifications?Appl(ied|y)Times\(' tests/
+grep -rnE 'function (assert(AddOn)?TemplateModifications?(Appl(ied|y)Times|FindsMatch)|addOnTemplateModificationArtifacts|assertReplyIsLoginRequired)\(' tests/
 ```
+
+`assertExceptionNotLogged()` now refuses a count. It never accepted one - an int reached the
+filter and failed as not callable - so no passing test changes.
 
 ## 5.32.0
 

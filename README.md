@@ -456,7 +456,8 @@ transaction every node on the forum is locked until the test ends
 `FirstPost`, so it fails wherever anything reads through it
 * `dispatch` runs one of your routes the way XenForo does and hands back the reply its controller produced, with
 `assertReplyIsView`, `assertReplyTemplate`, `assertReplyViewClass`, `assertReplyParam`, `replyParam`,
-`assertReplyIsRedirect`, `assertReplyIsError`, `assertReplyIsMessage`, `assertReplyIsApiResult`, `replyApiResult` and
+`assertReplyIsRedirect`, `assertReplyIsError`, `assertReplyIsLoginRequired`, `assertReplyIsMessage`,
+`assertReplyIsApiResult`, `replyApiResult` and
 `replyErrors` to assert against it. Parameters the route reads are passed as the third argument, and the controller's
 access checks in `preDispatch()` run. `describeReply` summarises a reply in one line - reach for it rather than
 `var_export`, which on a reply's errors reaches a phrase, the language and the database adapter's configuration,
@@ -478,11 +479,13 @@ applies, which a suite with no assertion on the markup they insert cannot otherw
 modification whose find stops matching as `ok` with an apply count of zero
 * `assertTemplateModificationAppliedTimes` and `assertAddOnTemplateModificationsApplyTimes` assert the apply count
 per template, for a `str_replace` modification whose find matching twice would insert its block twice
+* `assertAddOnTemplateModificationFindsMatch` asserts the same of the working copy's own artifacts against the
+template text, so it fails before an import, where the other two read what the forum last compiled
 * `renderTemplateWithoutModification` renders a template with one of its modifications left out, so a test can show
 the markup it asserts on is that modification's work, without disabling it for every other suite on the forum. To
-pair it with a dispatch, hand it the reply's own parameters - `renderTemplateWithoutModification($key,
-$reply->getParams())` - which is what `renderReply` renders the template with. `$xf.reply` is still absent on this
-side, which matters only for a template that reads it
+pair it with a dispatch, hand it the reply's own parameters and the reply -
+`renderTemplateWithoutModification($key, $reply->getParams(), $reply)` - so the two renders differ by the
+modification and nothing else
 * `assertNoTemplateErrors` asserts that nothing the test rendered raised an error
 * `assertNoUnresolvedPhrases` asserts that none of your add-on's phrases came out as its own key, which is what
 XenForo renders for a phrase it cannot find. It takes a prefix or a whole phrase key, and searches the text the page

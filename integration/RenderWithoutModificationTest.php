@@ -85,6 +85,61 @@ class RenderWithoutModificationTest extends TestCase
 		$this->assertDontSee($without, 'MODIFIED_MARKER', false);
 	}
 
+	/**
+	 * Handed the reply, the render without the modification sees the same $xf.reply as the
+	 * renderReply() it is compared against - so the two differ by the modification alone. Without
+	 * it, a template reading $xf.reply differs on both counts.
+	 */
+	public function test_given_the_reply_the_render_sees_the_same_page_as_render_reply()
+	{
+		$this->fakesErrors();
+
+		$admin = $this->actingAsMember(['is_admin' => true]);
+		$this->setVisitorAdminPermissions($admin, ['option' => true]);
+
+		$reply = $this->dispatch('tools', 'admin');
+
+		$title = 'zzreplymod_' . substr(md5(uniqid('', true)), 0, 6);
+		$key = 'zzreplymod_' . substr(md5(uniqid('', true)), 0, 6);
+
+		$this->createEntity('XF:Template', [
+			'style_id' => 0,
+			'type' => 'admin',
+			'title' => $title,
+			'template' => 'CONTROLLER=[{$xf.reply.controller}] ORIGINAL_MARKER',
+			'addon_id' => '',
+		]);
+
+		$this->createEntity('XF:TemplateModification', [
+			'type' => 'admin',
+			'template' => $title,
+			'modification_key' => $key,
+			'description' => 'leaves a marker this test can see',
+			'execution_order' => 10,
+			'enabled' => true,
+			'action' => 'str_replace',
+			'find' => 'ORIGINAL_MARKER',
+			'replace' => 'MODIFIED_MARKER',
+			'addon_id' => '',
+		]);
+
+		$reply->setTemplateName($title);
+
+		$this->assertSame('CONTROLLER=[XF:Tools] MODIFIED_MARKER', $this->renderReply($reply));
+
+		$this->assertSame(
+			'CONTROLLER=[XF:Tools] ORIGINAL_MARKER',
+			$this->renderTemplateWithoutModification($key, $reply->getParams(), $reply),
+			'given the reply, only the modification differs'
+		);
+
+		$this->assertSame(
+			'CONTROLLER=[] ORIGINAL_MARKER',
+			$this->renderTemplateWithoutModification($key, $reply->getParams()),
+			'without the reply there is no $xf.reply to read, as before'
+		);
+	}
+
 
 	/**
 	 * The injected template is removed afterwards, so the next render of the same template in the

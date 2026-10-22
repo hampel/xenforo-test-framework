@@ -1003,6 +1003,43 @@ trait InteractsWithRoutes
 	}
 
 	/**
+	 * Assert that the reply is XenForo's refusal of a guest from a route that requires registration.
+	 *
+	 * `assertRegistrationRequired()` answers with a view, not an error: the `login` template, the
+	 * `XF:Error\RegistrationRequired` view class and a 403. So assertReplyIsError() fails on the
+	 * commonest refusal a public route makes, and asserting the template alone passes on the real
+	 * login page. All three are checked.
+	 *
+	 * @param AbstractReply $reply
+	 * @param string|null $message
+	 *
+	 * @return void
+	 */
+	protected function assertReplyIsLoginRequired(AbstractReply $reply, $message = null)
+	{
+		PHPUnit::assertInstanceOf(View::class, $reply, $this->replyFailure($reply, $message));
+
+		/** @var View $reply */
+		PHPUnit::assertSame(
+			'login',
+			$reply->getTemplateName(),
+			$this->replyFailure($reply, $message . ' - a registration-required refusal renders the login template')
+		);
+
+		PHPUnit::assertSame(
+			'XF:Error\RegistrationRequired',
+			$reply->getViewClass(),
+			$this->replyFailure($reply, $message . ' - this is the login page itself, not a refusal')
+		);
+
+		PHPUnit::assertSame(
+			403,
+			$reply->getResponseCode(),
+			$this->replyFailure($reply, $message . ' - a registration-required refusal carries a 403')
+		);
+	}
+
+	/**
 	 * The error messages a reply carries, rendered as plain text.
 	 *
 	 * Worth reaching for whenever more than one guard denies with the same status code: two

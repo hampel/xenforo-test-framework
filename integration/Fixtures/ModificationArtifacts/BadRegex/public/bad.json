@@ -1,0 +1,9 @@
+{
+    "template": "zzfinds_template",
+    "description": "probe",
+    "execution_order": 10,
+    "enabled": true,
+    "action": "preg_replace",
+    "find": "/(unclosed",
+    "replace": "$0"
+}

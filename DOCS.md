@@ -720,13 +720,10 @@ one test per override isolates it.
 
 **A route that requires registration refuses a guest with a view, not an error.**
 `assertRegistrationRequired()` returns the `login` template with a 403, so `assertReplyIsError()`
-fails on it:
+fails on it. `assertReplyIsLoginRequired()` is the assertion for it:
 
 ```php
-$reply = $this->dispatch('account');
-
-$this->assertReplyTemplate($reply, 'login');
-$this->assertSame(403, $reply->getResponseCode());
+$this->assertReplyIsLoginRequired($this->dispatch('account'));
 ```
 
 **Parameters go in `input`, not in the route path.** `dispatch('my-addon/user?user_id=1')` is a
@@ -1008,11 +1005,15 @@ Rendering is **not recursive**: a nested entity comes back as another result obj
 Without `actingAsApiKey()`, an api dispatch uses XenForo's fallback key, which is not a super user.
 A route needing a scope that key does not carry returns an error with a 403.
 
-### assertReplyIsRedirect / assertReplyIsError / assertReplyIsMessage
-Assert that a reply is a redirect, an error or a plain message.
+### assertReplyIsRedirect / assertReplyIsError / assertReplyIsMessage / assertReplyIsLoginRequired
+Assert that a reply is a redirect, an error, a plain message, or the refusal of a guest from a route
+that requires registration.
 
 A route that does not exist returns an error with a 404, and a route whose permission check refuses
-the visitor returns an error with a 403.
+the visitor returns an error with a 403. A route that requires registration refuses a guest with a
+**view**: the `login` template, the `XF:Error\RegistrationRequired` view class and a 403.
+`assertReplyIsLoginRequired()` asserts all three, since the login page itself renders the same
+template at a 200.
 
 ##### Parameters:
 
@@ -1033,6 +1034,9 @@ $this->actingAsMember(['is_admin' => true]);
 $this->assertReplyIsError($this->dispatch('options', 'admin'), 403);
 
 $this->assertReplyIsRedirect($this->dispatch('help/terms'), null, 'permanent');
+
+// a guest at a route that calls assertRegistrationRequired()
+$this->assertReplyIsLoginRequired($this->dispatch('account'));
 ```
 
 **Assert the error text when more than one guard can refuse with the same code.** A test asserting
@@ -1897,7 +1901,8 @@ A test globbing that directory and comparing it against the database catches tha
 worth having together rather than one replacing the other.
 
 **It says applied at least once.** `assertAddOnTemplateModificationsApplyTimes()` is the form for
-exactly once.
+exactly once, and `assertAddOnTemplateModificationFindsMatch()` is the one that reads the working
+copy rather than the forum.
 
 ### assertAddOnTemplateModificationsApplyTimes
 Assert that every template modification the add-on registers applies exactly this many times in
@@ -1920,6 +1925,38 @@ applied to, so the count is checked on each row rather than summed, and the fail
 modification, template and style that is off. One count for every modification the add-on
 registers; where they differ, assert them one at a time.
 
+### assertAddOnTemplateModificationFindsMatch
+Assert that the find of every template modification in the add-on's working copy matches its
+template exactly this many times, and return each modification key with its match count.
+
+##### Parameters:
+
+* `addOnId` - optional - defaults to the add-on `$addonsToLoad` isolates
+* `times` - optional - the number of matches each find must have, at least 1; 1 by default
+
+##### Example:
+
+```php
+$this->assertAddOnTemplateModificationFindsMatch();
+```
+
+**It reads `_output/template_modifications/` and the master template text, not the log.** The
+other modification assertions see a modification as the forum last compiled it, so an artifact
+edited and never imported is invisible to them, and a XenForo release that rewords the template is
+seen only once the forum has recompiled. This fails before an import, and it tells zero matches
+from more than one. The count is taken as XenForo's own repository takes it: `substr_count()` for
+`str_replace`, `preg_match_all()` for `preg_replace` and `callback`.
+
+It fails naming each artifact whose find matches the wrong number of times, whose template the
+forum does not have, or whose find XenForo could not apply, and refuses rather than passing
+vacuously where the working copy has no `_output/template_modifications/` directory or no artifact
+in it. A disabled artifact is skipped, since it would apply nowhere.
+
+**It runs where the add-on is developed.** A release zip carries no `_output/`, so on an install
+that holds the add-on as a release this refuses. Keep it beside
+`assertAddOnTemplateModificationsApply()` rather than in place of it: one reads what the working
+copy ships, the other what the forum holds, and the two catch different days.
+
 ### renderTemplateWithoutModification
 Render a template with one of its template modifications left out, so a test can show that the
 markup it asserts on is the modification's work.
@@ -1933,6 +1970,7 @@ running against the same forum.
 
 * `modificationKey` - as in `_output/template_modifications/`
 * `params` - optional - template parameters, as `renderTemplate()` takes them
+* `reply` - optional - the dispatched reply, when comparing against `renderReply()`
 
 ##### Example:
 
@@ -1946,24 +1984,20 @@ $this->assertSee($with, 'Hide adverts');
 $this->assertDontSee($without, 'Hide adverts');
 ```
 
-**To pair it with a dispatch, pass the reply's own parameters:**
+**To pair it with a dispatch, pass the reply's own parameters, and the reply:**
 
 ```php
 $reply = $this->dispatch('account/preferences');
 
 $with = $this->renderReply($reply);
-$without = $this->renderTemplateWithoutModification('myaddon_preferences', $reply->getParams());
+$without = $this->renderTemplateWithoutModification('myaddon_hint', $reply->getParams(), $reply);
 ```
 
-That is what `renderReply()` renders the template with, so the template's own parameters are the
-same on both sides.
-
-**One thing still differs: `$xf.reply` is absent here.** `renderReply()` passes the reply on to
-XenForo's global template data, which is where the `reply` entry comes from, and this renders
-without one - so a template reading `$xf.reply.template` sees null rather than the page it came
-from. In core that is a generated advertising template restricted to particular pages; most
-templates never read it. Where yours does, compare it against `renderTemplate()` rather than
-`renderReply()`, so neither side has the entry.
+The parameters are what `renderReply()` renders the template with, and the reply is what it hands
+XenForo's global template data, which is where `$xf.reply` - the controller, action and template of
+the page - comes from. With both, the two renders differ by the modification and nothing else.
+Without the reply, a template reading `$xf.reply.template` sees null on this side; in core that is
+a generated advertising template restricted to particular pages, and most templates never read it.
 
 **Nothing is written.** The template's text is read, the other modifications are applied to it by
 XenForo's own repository, and the result is compiled and rendered in memory - so the forum's
@@ -2872,7 +2906,8 @@ none
   message must contain, or a callback
 * `assertExceptionLoggedTimes`
 * `assertExceptionNotLogged` - takes the exception class, and optionally a string or a callback,
-  which narrows what it denies
+  which narrows what it denies. A count is refused: there is no number of exceptions that counts
+  as none, so a count belongs to `assertExceptionLoggedTimes()`
 * `assertNoExceptionsLogged`
 
 **The string form matches the message that was logged, prefix included.**

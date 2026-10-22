@@ -8,6 +8,22 @@
   modification whose find matches twice still passes while inserting its block twice. The count is
   checked per template rather than summed, since XenForo logs a row per style holding its own copy
   of the template, and a sum counts styles as well as matches
+* `assertAddOnTemplateModificationFindsMatch()` asserts that the find of every template
+  modification in the add-on's working copy matches its template exactly the given number of
+  times, read from `_output/template_modifications/` and the master template text rather than
+  from the forum's log - so it fails before an import, and it tells zero matches from more than
+  one. It counts as XenForo does: `substr_count()` for `str_replace`, `preg_match_all()` for
+  `preg_replace` and `callback`. A disabled artifact is skipped, and a working copy with no
+  artifacts is refused
+* `renderTemplateWithoutModification()` takes the dispatched reply as an optional third argument
+  and passes it to XenForo's global template data as `renderReply()` does, so `$xf.reply` is the
+  same on both sides of the comparison
+* `assertReplyIsLoginRequired()` asserts that a reply is the refusal of a guest from a route that
+  calls `assertRegistrationRequired()`: the `login` template, the `XF:Error\RegistrationRequired`
+  view class and a 403. It is a view, so `assertReplyIsError()` fails on it, and the login page
+  itself renders the same template at a 200
+* `assertExceptionNotLogged()` refuses a count with a `LogicException` naming
+  `assertExceptionLoggedTimes()`. An int reached the filter before and failed as not callable
 * docs: `TIPS.md` says to prefix the helpers a test class adds, because a private method of the
   same name as one of the framework's protected helpers is a fatal at class load
 * docs: `TIPS.md` says to use a whitelisted method prefix when mutating a template to prove a test

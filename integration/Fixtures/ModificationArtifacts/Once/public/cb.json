@@ -1,0 +1,9 @@
+{
+    "template": "zzfinds_template",
+    "description": "probe",
+    "execution_order": 10,
+    "enabled": true,
+    "action": "callback",
+    "find": "/A+ B/",
+    "replace": "$0"
+}

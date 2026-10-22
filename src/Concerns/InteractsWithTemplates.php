@@ -583,18 +583,20 @@ trait InteractsWithTemplates
 	 * `renderTemplateWithoutModification($key, $reply->getParams())`. That is what renderReply()
 	 * renders the template with, so the template's own parameters are the same on both sides.
 	 *
-	 * One thing still differs: renderReply() passes the reply to getGlobalTemplateData() and this
-	 * does not, so `$xf.reply` - the controller, action and template of the page - is absent here.
-	 * It matters for a template that reads it, which in core is a generated advertising template
-	 * restricted to particular pages.
+	 * **And hand it the reply itself as the third argument**, so that `$xf.reply` - the controller,
+	 * action and template of the page - is the same on both sides too. renderReply() passes the
+	 * reply to getGlobalTemplateData(), which is where that entry comes from; without it a template
+	 * reading `$xf.reply` sees null on this side and the two renders differ by more than the
+	 * modification.
 	 *
 	 * @param string $modificationKey - the modification to leave out, as
 	 *                                  assertTemplateModificationApplied() takes it
 	 * @param array $params - template parameters, as renderTemplate() takes them
+	 * @param AbstractReply|null $reply - the dispatched reply, when comparing against renderReply()
 	 *
 	 * @return string
 	 */
-	protected function renderTemplateWithoutModification($modificationKey, array $params = [])
+	protected function renderTemplateWithoutModification($modificationKey, array $params = [], ?AbstractReply $reply = null)
 	{
 		$modification = $this->app()->db()->fetchRow(
 			'SELECT modification_id, type, template, enabled
@@ -665,7 +667,7 @@ trait InteractsWithTemplates
 		$status = [];
 		$text = $repository->applyTemplateModifications($template->template, $others, $status);
 
-		return $this->renderTemplateText($type, $title, $text, $params);
+		return $this->renderTemplateText($type, $title, $text, $params, $reply);
 	}
 
 	/**
@@ -697,10 +699,11 @@ trait InteractsWithTemplates
 	 * @param string $title
 	 * @param string $text
 	 * @param array $params
+	 * @param AbstractReply|null $reply - passed on to the global template data, as renderReply() does
 	 *
 	 * @return string
 	 */
-	private function renderTemplateText($type, $title, $text, array $params)
+	private function renderTemplateText($type, $title, $text, array $params, ?AbstractReply $reply)
 	{
 		$templater = $this->app()->templater();
 		$compiled = $this->app()->templateCompiler()->compile($text);
@@ -735,7 +738,7 @@ trait InteractsWithTemplates
 
 		try
 		{
-			return $this->renderTemplate($type . ':' . $title, $params);
+			return $this->renderWithGlobalData($type . ':' . $title, $params, $reply);
 		}
 		finally
 		{
@@ -1251,7 +1254,11 @@ trait InteractsWithTemplates
 	 */
 	protected function assertAddOnTemplateModificationsApplyTimes($times, $addOnId = null)
 	{
-		$this->requireApplyTimes($times, 'assertAddOnTemplateModificationsApplyTimes()');
+		$this->requireApplyTimes(
+			$times,
+			'assertAddOnTemplateModificationsApplyTimes()',
+			'To assert only that they apply at all, use assertAddOnTemplateModificationsApply().'
+		);
 
 		$addOnId = $addOnId ?: $this->soleIsolatedAddOnId('whose template modifications to check');
 
@@ -1290,6 +1297,183 @@ trait InteractsWithTemplates
 		);
 
 		return $applied;
+	}
+
+	/**
+	 * Assert that the find of every template modification in the add-on's working copy matches
+	 * its template exactly this many times, read from `_output/template_modifications/` and the
+	 * master template text rather than from anything the forum has applied.
+	 *
+	 * The log-reading assertions see a modification as the forum last compiled it, so an edit to
+	 * an artifact that was never imported is invisible to them, and a XenForo release that rewords
+	 * the template is seen only once the forum has recompiled. This reads the artifact and the
+	 * template text directly, so it fails before an import, and it tells zero matches from more
+	 * than one. It counts as XenForo's own repository does: `substr_count()` for `str_replace`, and
+	 * `preg_match_all()` for `preg_replace` and `callback`.
+	 *
+	 * A disabled artifact is skipped, since it would apply nowhere. The working copy's artifacts
+	 * exist on a development install and not in a release zip, so this runs where the add-on is
+	 * developed.
+	 *
+	 * @param string|null $addOnId - defaults to the add-on $addonsToLoad isolates, when it names one
+	 * @param int $times - the number of matches each find must have, at least 1
+	 *
+	 * @return array<string, int> - each enabled artifact's modification key, mapped to its match count
+	 */
+	protected function assertAddOnTemplateModificationFindsMatch($addOnId = null, $times = 1)
+	{
+		$this->requireApplyTimes(
+			$times,
+			'assertAddOnTemplateModificationFindsMatch()',
+			'A find that matches nowhere is a failure, not a count to assert.'
+		);
+
+		$addOnId = $addOnId ?: $this->soleIsolatedAddOnId('whose template modification artifacts to check');
+		$directory = $this->addOnTemplateModificationArtifacts($addOnId);
+
+		if (!is_dir($directory))
+		{
+			throw new \LogicException(
+				"'$addOnId' has no _output/template_modifications/ directory at $directory. This reads"
+				. ' the working copy\'s artifacts, which a development install writes and a release'
+				. ' zip does not carry, so it runs on the install the add-on is developed in.'
+			);
+		}
+
+		$files = glob($directory . \XF::$DS . '*' . \XF::$DS . '*.json') ?: [];
+		sort($files);
+
+		if (!$files)
+		{
+			throw new \LogicException(
+				"'$addOnId' has no template modification artifact under $directory, so there is"
+				. ' nothing to assert and this would pass having checked nothing.'
+			);
+		}
+
+		$db = $this->app()->db();
+		$counts = [];
+		$wrong = [];
+
+		foreach ($files AS $file)
+		{
+			$key = basename($file, '.json');
+			$type = basename(dirname($file));
+			$artifact = json_decode((string) file_get_contents($file), true);
+
+			if (!is_array($artifact) || !isset($artifact['template'], $artifact['action'], $artifact['find']))
+			{
+				$wrong[] = "$key is not a template modification artifact ($file)";
+				continue;
+			}
+
+			if (empty($artifact['enabled']))
+			{
+				continue;
+			}
+
+			$template = $db->fetchOne(
+				'SELECT template FROM xf_template WHERE style_id = 0 AND type = ? AND title = ?',
+				[$type, $artifact['template']]
+			);
+
+			if ($template === false || $template === null)
+			{
+				$wrong[] = "$key modifies $type:{$artifact['template']}, which does not exist in this forum";
+				continue;
+			}
+
+			$count = $this->countTemplateModificationMatches($artifact['action'], $artifact['find'], (string) $template);
+
+			if ($count === null)
+			{
+				$wrong[] = "$key has a find XenForo cannot apply - its action is '{$artifact['action']}'"
+					. ' and the find is not a regex it can run';
+				continue;
+			}
+
+			$counts[$key] = $count;
+
+			if ($count !== $times)
+			{
+				$wrong[] = "$key: its find matches $type:{$artifact['template']} $count times, not $times";
+			}
+		}
+
+		PHPUnit::assertSame(
+			[],
+			$wrong,
+			"These template modification artifacts of '$addOnId' do not match their template exactly"
+			. " $times " . ($times === 1 ? 'time' : 'times')
+		);
+
+		return $counts;
+	}
+
+	/**
+	 * Where an add-on's working copy keeps its template modification artifacts.
+	 *
+	 * Its own method so that this package can point the assertion at a directory of fixtures; an
+	 * add-on has no reason to override it.
+	 *
+	 * @param string $addOnId
+	 *
+	 * @return string the `_output/template_modifications` directory
+	 */
+	protected function addOnTemplateModificationArtifacts($addOnId)
+	{
+		return \XF::getAddOnDirectory() . \XF::$DS . str_replace('/', \XF::$DS, $addOnId) . \XF::$DS
+			. '_output' . \XF::$DS . 'template_modifications';
+	}
+
+	/**
+	 * How many times a modification's find matches a template, counted as
+	 * XF\Repository\TemplateModificationRepository::applyTemplateModifications() counts it.
+	 *
+	 * @param string $action
+	 * @param string $find
+	 * @param string $template
+	 *
+	 * @return int|null null where XenForo could not apply it either: an action it does not know,
+	 *                  or a regex it refuses or cannot run
+	 */
+	private function countTemplateModificationMatches($action, $find, $template)
+	{
+		$template = str_replace("\r\n", "\n", $template);
+
+		if ($action === 'str_replace')
+		{
+			return substr_count($template, str_replace("\r\n", "\n", $find));
+		}
+
+		if ($action !== 'preg_replace' && $action !== 'callback')
+		{
+			return null;
+		}
+
+		$find = str_replace(["\r\n", '\r\n'], ["\n", '\n'], trim($find));
+
+		if (preg_match('/\W[\s\w]*e[\s\w]*$/', $find))
+		{
+			return null;
+		}
+
+		try
+		{
+			$result = @preg_match_all($find, $template, $null);
+		}
+		catch (\Throwable $e)
+		{
+			// XenForo's error handler turns the warning a malformed pattern raises into an exception
+			return null;
+		}
+
+		if ($result === false || preg_last_error() !== PREG_NO_ERROR)
+		{
+			return null;
+		}
+
+		return $result;
 	}
 
 	/**
@@ -1362,7 +1546,11 @@ trait InteractsWithTemplates
 	 */
 	protected function assertTemplateModificationAppliedTimes($modificationKey, $times, $message = null)
 	{
-		$this->requireApplyTimes($times, 'assertTemplateModificationAppliedTimes()');
+		$this->requireApplyTimes(
+			$times,
+			'assertTemplateModificationAppliedTimes()',
+			'To assert only that it applies at all, use assertTemplateModificationApplied().'
+		);
 
 		$modification = $this->app()->db()->fetchRow(
 			'SELECT modification_id, type, template, enabled
@@ -1513,17 +1701,17 @@ trait InteractsWithTemplates
 	 *
 	 * @param mixed $times - mixed on purpose, so the guard is live whatever the caller passed
 	 * @param string $helper
+	 * @param string $advice - what to reach for instead, closing the refusal
 	 *
 	 * @return void
 	 */
-	private function requireApplyTimes($times, $helper)
+	private function requireApplyTimes($times, $helper, $advice)
 	{
 		if (!is_int($times) || $times < 1)
 		{
 			throw new \LogicException(
-				"$helper takes the number of times the modification must apply in each template it"
-				. ' reaches, as a positive integer - ' . var_export($times, true) . ' given. To assert'
-				. ' only that it applies at all, use the assertion without Times.'
+				"$helper takes a count as a positive integer - " . var_export($times, true)
+				. " given. $advice"
 			);
 		}
 	}

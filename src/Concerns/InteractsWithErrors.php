@@ -151,8 +151,8 @@ trait InteractsWithErrors
 	 * Assert that no exception of the given class was logged.
 	 *
 	 * Unlike assertExceptionLogged(), a count is not accepted here - there is no number of
-	 * exceptions that counts as none - so an int reaches the filter and PHP rejects it as not
-	 * callable. Use assertExceptionLoggedTimes() to assert a count.
+	 * exceptions that counts as none - and one is refused rather than reaching the filter, where
+	 * PHP would reject it as not callable. Use assertExceptionLoggedTimes() to assert a count.
 	 *
 	 * @param string $class - the exception class
 	 * @param string|callable|null $filter - a string the logged message must contain, or a callback
@@ -166,6 +166,16 @@ trait InteractsWithErrors
 	 */
 	protected function assertExceptionNotLogged($class, $filter = null)
 	{
+		if (is_numeric($filter))
+		{
+			throw new \LogicException(
+				'assertExceptionNotLogged() takes no count: there is no number of exceptions that'
+				. ' counts as none. To assert how many times one was logged, use'
+				. ' assertExceptionLoggedTimes($class, $times); to assert none at all, pass only the'
+				. ' class.'
+			);
+		}
+
 		$loggedExceptions = $this->loggedExceptions($class, $filter);
 
 		PHPUnit::assertTrue(

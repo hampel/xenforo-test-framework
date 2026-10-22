@@ -1,0 +1,9 @@
+{
+    "template": "zzfinds_template",
+    "description": "probe",
+    "execution_order": 10,
+    "enabled": true,
+    "action": "explode",
+    "find": "BBB",
+    "replace": "$0"
+}

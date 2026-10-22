@@ -5,6 +5,7 @@ namespace Hampel\Testing\Integration;
 use Hampel\Testing\Concerns\UsesDatabaseTransactions;
 use PHPUnit\Framework\AssertionFailedError;
 use XF\Mvc\Reply\Reroute;
+use XF\Mvc\Reply\View;
 
 /**
  * Dispatching a route in process. The assertions here deliberately use XenForo's own admin pages
@@ -74,6 +75,61 @@ class RouteDispatchTest extends TestCase
 	public function test_an_api_route_outside_the_keys_scope_is_refused()
 	{
 		$this->assertReplyIsError($this->dispatch('users', 'api'), 403);
+	}
+
+	public function test_a_guest_refused_by_a_route_requiring_registration_is_recognised()
+	{
+		// a guest, and the account controller is exempt from general.view
+		$reply = $this->dispatch('account');
+
+		$this->assertReplyIsLoginRequired($reply);
+
+		// it is a view, so the error assertion is the wrong one for it - which is why this exists
+		try
+		{
+			$this->assertReplyIsError($reply, 403);
+			$this->fail('a registration-required refusal is a view, not an error reply');
+		}
+		catch (AssertionFailedError $e)
+		{
+			$this->assertStringContainsString('XF\Mvc\Reply\View', $e->getMessage());
+		}
+	}
+
+	public function test_the_login_page_itself_is_not_a_registration_required_refusal()
+	{
+		// the same template at a 200 from the login route: assertReplyTemplate() alone would
+		// pass on it, the view class and the code tell it apart
+		$reply = $this->dispatch('login');
+
+		$this->assertReplyTemplate($reply, 'login');
+
+		try
+		{
+			$this->assertReplyIsLoginRequired($reply);
+			$this->fail('the login page is not a refusal');
+		}
+		catch (AssertionFailedError $e)
+		{
+			$this->assertStringContainsString('this is the login page itself', $e->getMessage());
+		}
+	}
+
+	public function test_a_refusal_carrying_the_wrong_code_is_not_a_registration_required_refusal()
+	{
+		// the shape XenForo answers with, but at a 200: the code is the third thing checked
+		$reply = new View('XF:Error\RegistrationRequired', 'login', []);
+
+		try
+		{
+			$this->assertReplyIsLoginRequired($reply, 'zzmy own note');
+			$this->fail('a 200 is not a refusal');
+		}
+		catch (AssertionFailedError $e)
+		{
+			$this->assertStringContainsString('carries a 403', $e->getMessage());
+			$this->assertStringContainsString('zzmy own note', $e->getMessage());
+		}
 	}
 
 	public function test_an_admin_route_without_an_admin_visitor_fails_loudly()
