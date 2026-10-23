@@ -7,6 +7,10 @@
   `dispatch()`, `callAction()` and `runJobToCompletion()` already run it. An exception in deferred
   work fails the test, and XenForo's `autoJobRun` registry write is left out, so a test calling
   `\XF::triggerRunOnce()` itself should call this instead
+* the reply assertions narrow the reply's type for PHPStan: after `assertReplyIsView()`,
+  `assertReplyIsRedirect()`, `assertReplyIsError()`, `assertReplyIsMessage()`,
+  `assertReplyIsApiResult()`, `assertReplyIsLoginRequired()` or one of the view assertions, a call
+  to a method of that reply class is no longer reported
 * docs: the `assertDatabaseMissing` example plants the rows it then asserts are gone, with a row
   the code must leave alone as the control; the tip on pairing a negative assertion with a
   positive one covers the database form

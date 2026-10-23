@@ -269,7 +269,6 @@ trait InteractsWithRoutes
 			$this->replyFailure($reply, 'only a redirect reply has a url to follow')
 		);
 
-		/** @var Redirect $reply */
 		[$type, $routePath, $input] = $this->parseRedirectUrl($reply->getUrl());
 
 		return $this->dispatch($routePath, $type, $input, $server);
@@ -826,6 +825,8 @@ trait InteractsWithRoutes
 	 * @param string|null $message - added to the failure, for a test that dispatches several routes
 	 *
 	 * @return void
+	 *
+	 * @phpstan-assert View $reply
 	 */
 	protected function assertReplyIsView(AbstractReply $reply, $message = null)
 	{
@@ -840,12 +841,13 @@ trait InteractsWithRoutes
 	 * @param string|null $message
 	 *
 	 * @return void
+	 *
+	 * @phpstan-assert View $reply
 	 */
 	protected function assertReplyTemplate(AbstractReply $reply, $template, $message = null)
 	{
 		$this->assertReplyIsView($reply, $message);
 
-		/** @var View $reply */
 		PHPUnit::assertSame(
 			$template,
 			$reply->getTemplateName(),
@@ -861,12 +863,13 @@ trait InteractsWithRoutes
 	 * @param string|null $message
 	 *
 	 * @return void
+	 *
+	 * @phpstan-assert View $reply
 	 */
 	protected function assertReplyViewClass(AbstractReply $reply, $viewClass, $message = null)
 	{
 		$this->assertReplyIsView($reply, $message);
 
-		/** @var View $reply */
 		PHPUnit::assertSame(
 			$viewClass,
 			$reply->getViewClass(),
@@ -882,12 +885,13 @@ trait InteractsWithRoutes
 	 * @param string|null $message
 	 *
 	 * @return void
+	 *
+	 * @phpstan-assert View $reply
 	 */
 	protected function assertReplyParam(AbstractReply $reply, $key, $message = null)
 	{
 		$this->assertReplyIsView($reply, $message);
 
-		/** @var View $reply */
 		PHPUnit::assertArrayHasKey(
 			$key,
 			$reply->getParams(),
@@ -908,12 +912,13 @@ trait InteractsWithRoutes
 	 * @param string|null $message
 	 *
 	 * @return void
+	 *
+	 * @phpstan-assert View $reply
 	 */
 	protected function assertReplyParamSame(AbstractReply $reply, $key, $expected, $message = null)
 	{
 		$this->assertReplyParam($reply, $key, $message);
 
-		/** @var View $reply */
 		PHPUnit::assertSame(
 			$expected,
 			$reply->getParam($key),
@@ -933,7 +938,6 @@ trait InteractsWithRoutes
 	{
 		$this->assertReplyParam($reply, $key);
 
-		/** @var View $reply */
 		return $reply->getParam($key);
 	}
 
@@ -950,12 +954,13 @@ trait InteractsWithRoutes
 	 * @param string|null $message
 	 *
 	 * @return void
+	 *
+	 * @phpstan-assert Redirect $reply
 	 */
 	protected function assertReplyIsRedirect(AbstractReply $reply, $url = null, $type = null, $message = null)
 	{
 		PHPUnit::assertInstanceOf(Redirect::class, $reply, $this->replyFailure($reply, $message));
 
-		/** @var Redirect $reply */
 		if ($url !== null)
 		{
 			PHPUnit::assertSame($url, $reply->getUrl(), $this->replyFailure($reply, $message));
@@ -988,6 +993,8 @@ trait InteractsWithRoutes
 	 * @param string|null $message - added to the failure, for a test that dispatches several routes
 	 *
 	 * @return void
+	 *
+	 * @phpstan-assert Error $reply
 	 */
 	protected function assertReplyIsError(AbstractReply $reply, $code = null, $errorText = null, $message = null)
 	{
@@ -1024,12 +1031,13 @@ trait InteractsWithRoutes
 	 * @param string|null $message
 	 *
 	 * @return void
+	 *
+	 * @phpstan-assert View $reply
 	 */
 	protected function assertReplyIsLoginRequired(AbstractReply $reply, $message = null)
 	{
 		PHPUnit::assertInstanceOf(View::class, $reply, $this->replyFailure($reply, $message));
 
-		/** @var View $reply */
 		PHPUnit::assertSame(
 			'login',
 			$reply->getTemplateName(),
@@ -1064,7 +1072,6 @@ trait InteractsWithRoutes
 	{
 		PHPUnit::assertInstanceOf(Error::class, $reply, $this->describeReply($reply));
 
-		/** @var Error $reply */
 		return array_map(function ($error)
 		{
 			// XenForo's errors are usually phrases; 'raw' keeps the text unescaped
@@ -1079,6 +1086,8 @@ trait InteractsWithRoutes
 	 * @param string|null $message
 	 *
 	 * @return void
+	 *
+	 * @phpstan-assert ApiResult $reply
 	 */
 	protected function assertReplyIsApiResult(AbstractReply $reply, $message = null)
 	{
@@ -1099,7 +1108,6 @@ trait InteractsWithRoutes
 	{
 		$this->assertReplyIsApiResult($reply);
 
-		/** @var ApiResult $reply */
 		return $reply->getApiResult()->render();
 	}
 
@@ -1110,6 +1118,8 @@ trait InteractsWithRoutes
 	 * @param string|null $message
 	 *
 	 * @return void
+	 *
+	 * @phpstan-assert Message $reply
 	 */
 	protected function assertReplyIsMessage(AbstractReply $reply, $message = null)
 	{
