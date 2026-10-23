@@ -1,6 +1,6 @@
 # Changelog
 
-## 5.33.0 (unreleased)
+## 5.33.0 (2026-10-23)
 
 * `assertTemplateModificationAppliedTimes()` and `assertAddOnTemplateModificationsApplyTimes()`
   assert that a template modification applies exactly the given number of times in each template
