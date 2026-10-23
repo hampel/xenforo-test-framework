@@ -1,6 +1,6 @@
 # Changelog
 
-## 5.34.0 (unreleased)
+## 5.34.0 (2026-10-23)
 
 * `createAdministratorFixture()` creates an administrator in the database - a member and the
   administrator record XenForo reads admin permissions from - for code that reads administrators
