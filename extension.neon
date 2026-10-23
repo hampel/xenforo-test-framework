@@ -1,0 +1,7 @@
+# Include this beside hampel/xenforo-phpstan's extension.neon, which supplies the service it
+# injects, and makeEntity() and createEntity() are typed from the entity they are asked for.
+services:
+    -
+        class: Hampel\Testing\PHPStan\EntityHelperReturnTypeExtension
+        tags:
+            - phpstan.broker.dynamicMethodReturnTypeExtension

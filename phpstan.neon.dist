@@ -15,6 +15,8 @@ includes:
     # Without it the helpers here look like they return the wrong type to their own callers.
     - vendor/phpstan/phpstan-mockery/extension.neon
     - vendor/hampel/xenforo-phpstan/extension.neon
+    # The fragment this package ships to consumers, analysed here so that it is exercised.
+    - extension.neon
 
 parameters:
     # Level 5 is ten errors away and level 6 is 222, almost all of them XenForo entities, whose
@@ -60,3 +62,25 @@ parameters:
             identifier: instanceof.alwaysTrue
             count: 1
             path: src/Concerns/InteractsWithTemplates.php
+        # The same for the four entity guards after makeEntity(), which this package's own
+        # extension.neon types from the short name.
+        -
+            message: '#^Instanceof between XF\\Entity\\Admin and XF\\Entity\\Admin will always evaluate to true\.$#'
+            identifier: instanceof.alwaysTrue
+            count: 1
+            path: src/Concerns/InteractsWithEntityManager.php
+        -
+            message: '#^Instanceof between XF\\Entity\\Admin and XF\\Entity\\Admin will always evaluate to true\.$#'
+            identifier: instanceof.alwaysTrue
+            count: 1
+            path: src/Concerns/InteractsWithVisitor.php
+        -
+            message: '#^Instanceof between XF\\Entity\\ApiKey and XF\\Entity\\ApiKey will always evaluate to true\.$#'
+            identifier: instanceof.alwaysTrue
+            count: 1
+            path: src/Concerns/InteractsWithRoutes.php
+        -
+            message: '#^Instanceof between XF\\Entity\\Post and XF\\Entity\\Post will always evaluate to true\.$#'
+            identifier: instanceof.alwaysTrue
+            count: 1
+            path: src/Concerns/InteractsWithNodes.php

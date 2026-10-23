@@ -1,0 +1,9 @@
+# The configuration PhpStanEntityHelpersTest analyses its fixture with: this package's own, at the
+# level the helpers' return type first matters, over the fixture alone.
+includes:
+    - ../../../phpstan.neon.dist
+
+parameters:
+    level: 5
+    paths!:
+        - EntityHelpersFixture.php
