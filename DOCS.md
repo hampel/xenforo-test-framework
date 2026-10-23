@@ -2000,7 +2000,9 @@ worth having together rather than one replacing the other.
 
 **It says applied at least once.** `assertAddOnTemplateModificationsApplyTimes()` is the form for
 exactly once, and `assertAddOnTemplateModificationFindsMatch()` is the one that reads the working
-copy rather than the forum.
+copy rather than the forum. A modification on a template the forum does not have - one an optional
+add-on supplies - fails here as applied zero times; the map form of
+`assertAddOnTemplateModificationsApplyTimes()` takes `'absent'` for it.
 
 ### assertAddOnTemplateModificationsApplyTimes
 Assert that every template modification the add-on registers applies exactly this many times in
@@ -2009,7 +2011,8 @@ each template it reaches, and return each modification key with the number of ti
 ##### Parameters:
 
 * `times` - the apply count every modification must carry in every template, at least 1; or a map
-  of modification key to the count for that one, naming every modification the add-on registers
+  of modification key to the count for that one, naming every modification the add-on registers,
+  with `'absent'` for one whose template is not in this forum
 * `addOnId` - optional - defaults to the add-on `$addonsToLoad` isolates
 
 ##### Example:
@@ -2034,6 +2037,21 @@ A map names every modification the add-on registers and no other - one left out,
 does not have, is refused - so the map pins the inventory as well. With one count for all, a
 modification added or removed fails nothing here either; pin the returned keys, as above.
 
+**A modification on a template an optional add-on supplies** - a gallery or resource manager
+template - applies nowhere on a forum without that add-on, and fails here as applied zero times.
+Give it `'absent'` in the map:
+
+```php
+$this->assertAddOnTemplateModificationsApplyTimes([
+	'myaddon_footer' => 1,
+	'myaddon_gallery' => 'absent',
+]);
+```
+
+It passes while the template is not in the forum, and the modification comes back with a count of
+0. On a forum that has the template it fails, naming the modification as needing a count, so the
+pin stays exact wherever the add-on is installed.
+
 ### assertAddOnTemplateModificationFindsMatch
 Assert that the find of every template modification in the add-on's working copy matches its
 template exactly this many times, and return each modification key with its match count.
@@ -2042,7 +2060,8 @@ template exactly this many times, and return each modification key with its matc
 
 * `addOnId` - optional - defaults to the add-on `$addonsToLoad` isolates
 * `times` - optional - the number of matches each find must have, at least 1; 1 by default. Or a
-  map of modification key to the count for that one, naming every enabled artifact
+  map of modification key to the count for that one, naming every enabled artifact, with
+  `'absent'` for one whose template is not in this forum
 
 ##### Example:
 
@@ -2067,6 +2086,11 @@ It fails naming each artifact whose find matches the wrong number of times, whos
 forum does not have, or whose find XenForo could not apply, and refuses rather than passing
 vacuously where the working copy has no `_output/template_modifications/` directory or no artifact
 in it. A disabled artifact is skipped, since it would apply nowhere.
+
+**An artifact on a template an optional add-on supplies** fails as a template the forum does not
+have. Give it `'absent'` in the map, as for `assertAddOnTemplateModificationsApplyTimes()`: it
+passes while the template is not in the forum and comes back with 0, and on a forum that has the
+template it fails, naming the artifact as needing a count.
 
 **It runs where the add-on is developed.** A release zip carries no `_output/`, so on an install
 that holds the add-on as a release this refuses. Keep it beside
@@ -3648,6 +3672,12 @@ not among the keys.
 work fails the test here; XenForo's own loop logs it, rolls back whatever transaction is open and
 carries on, so the test passes on a transaction the server has ended. And XenForo's `autoJobRun`
 registry write is left out, for the reason given under `UsesDatabaseTransactions`.
+
+**Deferred work that throws is logged to the forum's error log** by XenForo's loop before the
+exception reaches the test, whatever threw - a lock wait on a shared forum included - and the
+transaction `UsesDatabaseTransactions` opened is rolled back first, so the row stays. Call
+`fakesErrors()` first in a test whose deferred work can throw: the exception is kept in memory,
+where `assertExceptionLogged()` reads it, and the forum's log is untouched.
 
 **The entity cache is not cleared**, as for `runJobToCompletion()`. A save and a delete in one test
 are two requests in production, and an entity the first loaded - the provider with its user entries

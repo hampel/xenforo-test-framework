@@ -36,6 +36,13 @@ trait InteractsWithTemplates
 	];
 
 	/**
+	 * The map value saying a modification's template is not in this forum - one an optional add-on
+	 * supplies - so the modification is expected to apply nowhere. Refused when the template is
+	 * present, so a forum that has the add-on still gets the exact count.
+	 */
+	private const ABSENT = 'absent';
+
+	/**
 	 * Render a template and return its HTML, without a web server.
 	 *
 	 * This is what covers the checks a reply cannot: that a template modification actually
@@ -1288,15 +1295,19 @@ trait InteractsWithTemplates
 	 * modification was applied to - one per style holding its own copy of the template - so a
 	 * sum counts styles as well as matches.
 	 *
-	 * @param int|array<string, int> $times - the apply count every row must carry, at least 1; or a
-	 *                                       map of modification key to the count for that one,
-	 *                                       with every modification the add-on registers named
+	 * @param int|array<string, int|string> $times - the apply count every row must carry, at least
+	 *                                              1; or a map of modification key to the count
+	 *                                              for that one, with every modification the
+	 *                                              add-on registers named. A map value of
+	 *                                              'absent' says the modification's template is
+	 *                                              not in this forum, and is refused when it is
 	 * @param string|null $addOnId - defaults to the add-on $addonsToLoad isolates, when it names one
 	 *
 	 * As with assertAddOnTemplateModificationsApply(), a modification added or removed fails
 	 * nothing here; pin the returned keys against the list the suite expects.
 	 *
-	 * @return array<string, int> - each modification key, in key order, mapped to its apply count
+	 * @return array<string, int> - each modification key, in key order, mapped to its apply count;
+	 *                              0 for one given as 'absent'
 	 */
 	protected function assertAddOnTemplateModificationsApplyTimes($times, $addOnId = null)
 	{
@@ -1318,6 +1329,23 @@ trait InteractsWithTemplates
 		foreach ($modifications AS $modification)
 		{
 			$times = $expected[$modification['modification_key']];
+
+			if ($times === self::ABSENT)
+			{
+				if ($this->masterTemplateExists($modification['type'], $modification['template']))
+				{
+					$wrong[] = $modification['modification_key'] . " is given as 'absent', but "
+						. $modification['type'] . ':' . $modification['template']
+						. ' exists in this forum, so it needs a count';
+				}
+				else
+				{
+					$applied[$modification['modification_key']] = 0;
+				}
+
+				continue;
+			}
+
 			$rows = $this->templateModificationLogRows($modification['modification_id']);
 			$total = array_sum(array_column($rows, 'apply_count'));
 
@@ -1367,11 +1395,15 @@ trait InteractsWithTemplates
 	 * developed.
 	 *
 	 * @param string|null $addOnId - defaults to the add-on $addonsToLoad isolates, when it names one
-	 * @param int|array<string, int> $times - the number of matches each find must have, at least 1;
-	 *                                       or a map of modification key to the count for that
-	 *                                       one, with every enabled artifact named
+	 * @param int|array<string, int|string> $times - the number of matches each find must have, at
+	 *                                              least 1; or a map of modification key to the
+	 *                                              count for that one, with every enabled
+	 *                                              artifact named. A map value of 'absent' says
+	 *                                              the artifact's template is not in this forum,
+	 *                                              and is refused when it is
 	 *
-	 * @return array<string, int> - each enabled artifact's modification key, mapped to its match count
+	 * @return array<string, int> - each enabled artifact's modification key, mapped to its match
+	 *                              count; 0 for one given as 'absent'
 	 */
 	protected function assertAddOnTemplateModificationFindsMatch($addOnId = null, $times = 1)
 	{
@@ -1441,7 +1473,24 @@ trait InteractsWithTemplates
 				[$type, $artifact['template']]
 			);
 
-			if ($template === false || $template === null)
+			$exists = ($template !== false && $template !== null);
+
+			if ($times === self::ABSENT)
+			{
+				if ($exists)
+				{
+					$wrong[] = "$key is given as 'absent', but $type:{$artifact['template']} exists in"
+						. ' this forum, so it needs a count';
+				}
+				else
+				{
+					$counts[$key] = 0;
+				}
+
+				continue;
+			}
+
+			if (!$exists)
 			{
 				$wrong[] = "$key modifies $type:{$artifact['template']}, which does not exist in this forum";
 				continue;
@@ -1728,6 +1777,22 @@ trait InteractsWithTemplates
 	}
 
 	/**
+	 * Whether the master copy of a template is in this forum.
+	 *
+	 * @param string $type
+	 * @param string $title
+	 *
+	 * @return bool
+	 */
+	private function masterTemplateExists($type, $title)
+	{
+		return (bool) $this->app()->db()->fetchOne(
+			'SELECT 1 FROM xf_template WHERE style_id = 0 AND type = ? AND title = ?',
+			[$type, $title]
+		);
+	}
+
+	/**
 	 * The log rows XenForo wrote for a modification: one per template it was applied to, each
 	 * naming that template, or its id where the template row has since gone.
 	 *
@@ -1781,9 +1846,10 @@ trait InteractsWithTemplates
 	}
 
 	/**
-	 * Refuse anything but a positive integer, or a map of modification key to one - the shape
-	 * check, made before anything is read. Whether the map's keys are the right keys is checked
-	 * once they are known, by applyTimesPerKey().
+	 * Refuse anything but a positive integer, or a map of modification key to one or to 'absent' -
+	 * the shape check, made before anything is read. Whether the map's keys are the right keys is
+	 * checked once they are known, by applyTimesPerKey(), and whether an 'absent' template is
+	 * absent by the assertion itself.
 	 *
 	 * @param mixed $times
 	 * @param string $helper
@@ -1801,10 +1867,11 @@ trait InteractsWithTemplates
 
 		foreach ($times AS $key => $count)
 		{
-			if (!is_string($key) || !is_int($count) || $count < 1)
+			if (!is_string($key) || ($count !== self::ABSENT && (!is_int($count) || $count < 1)))
 			{
 				throw new \LogicException(
-					"$helper takes a count as a positive integer, or a map of modification key to one - "
+					"$helper takes a count as a positive integer, or a map of modification key to one"
+					. " or to 'absent' for a modification whose template this forum does not have - "
 					. var_export($key, true) . ' => ' . var_export($count, true) . " given. $advice"
 				);
 			}
@@ -1822,12 +1889,12 @@ trait InteractsWithTemplates
 	 * modification added without a count, or a count left behind for one removed, is refused
 	 * rather than passed over - which makes the map the inventory pin as well.
 	 *
-	 * @param int|array<string, int> $times
+	 * @param int|array<string, int|string> $times
 	 * @param string[] $keys - the modification keys about to be checked
 	 * @param string $helper
 	 * @param string $addOnId
 	 *
-	 * @return array<string, int> key => count, for every key
+	 * @return array<string, int|string> key => count, or 'absent', for every key
 	 */
 	private function applyTimesPerKey($times, array $keys, $helper, $addOnId)
 	{
@@ -1853,18 +1920,17 @@ trait InteractsWithTemplates
 	}
 
 	/**
-	 * @param array<string, int> $expected
+	 * @param array<string, int|string> $expected
 	 *
-	 * @return string "N times", or the per-key counts where they differ
+	 * @return string "N times", or the per-key counts where they differ or one is 'absent'
 	 */
 	private function describeApplyTimes(array $expected)
 	{
 		$distinct = array_unique($expected);
+		$times = $distinct ? reset($distinct) : 1;
 
-		if (count($distinct) <= 1)
+		if (count($distinct) <= 1 && is_int($times))
 		{
-			$times = $distinct ? reset($distinct) : 1;
-
 			return $times . ' ' . ($times === 1 ? 'time' : 'times');
 		}
 

@@ -1,5 +1,16 @@
 # Changelog
 
+## 5.40.0
+
+* `assertAddOnTemplateModificationsApplyTimes()` and `assertAddOnTemplateModificationFindsMatch()`
+  take `'absent'` as a map value for a modification whose template is not in the forum - one an
+  optional add-on supplies - so the other modifications stay checked on a forum without that
+  add-on. It is refused on a forum that has the template, and the modification comes back with 0
+* docs: `runDeferred()` says that deferred work which throws is logged to the forum's error log by
+  XenForo's own loop, and to call `fakesErrors()` first
+* docs: a tip on testing the success path of an extension that replaces a core method, and one on
+  totals that agree because the sets are the same size
+
 ## 5.39.0 (2026-10-23)
 
 * fix: `mockFinder()` did not apply when the finder was named in a different spelling from the one

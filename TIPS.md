@@ -81,6 +81,26 @@ under `requireClassNotExtended()`, and the comparison it guards is tested either
 `assertAddOnClassExtensionsApply()` covers the other half: that every extension the add-on
 registers is the one XenForo resolves.
 
+## An extension that replaces a core method needs its success path tested
+
+An extension that calls the parent and adds a check is tested by the check, since the parent still
+does the work. One that copies the method and edits the copy has taken over the work as well, and
+every line of the copy is yours to prove. A login validator rewritten that way had eight tests,
+every one a refusal, and a copy that refused everyone passed all eight; coverage showed the path
+that logs a user in had never run.
+
+Test what the copy does when it succeeds: the right password logs in, a protected account logs in,
+this address's failed attempts are cleared, an outdated hash is upgraded on login without moving
+the password date. Three things in core shape those tests:
+
+- `XF\Entity\UserAuth::setPassword()` stamps `password_date` with the request time when the user
+  already exists, which is also what the upgrade writes, so a fixture given its password that way
+  cannot show whether the date moved. Set an earlier date on the profile first.
+- Login attempts are cleared per login name and IP address, so count the rows by IP.
+- `XF\Service\LoginLimitTrait` swallows the exception from logging or clearing an attempt, so a
+  login with an empty name records nothing and "nothing was recorded" cannot fail. Do not assert
+  it.
+
 ## Test an upgrade step by calling it
 
 A DML-only upgrade step - one that rewrites rows rather than tables, such as renaming a
@@ -230,6 +250,23 @@ The database form is the same trap: `assertDatabaseMissing()` passes against a t
 held the row, so a test that an account's rows are removed plants them first, and keeps a second
 account's rows as the control that the removal was scoped. A suite asserting `xf_user_tfa` holds
 no rows for an account that never had any passes with the removal deleted.
+
+## Totals that agree prove nothing when the sets are the same size
+
+A page showing four totals, each from its own finder, is tested by comparing each total with its
+finder's count. On a development forum the sets are small, and often every one is empty, so a total
+read from the wrong finder matches the right one. A list page that showed the archived count where
+the partly archived count belonged passed with both at zero, and planting one row in each set was
+not enough either: a set the test did not plant held one row of its own, and matched.
+
+Plant rows inside the transaction until every total differs from every other, and assert that
+before asserting the page:
+
+```php
+$totals = [$archived, $partial, $protected, $pending];
+
+$this->assertCount(count($totals), array_unique($totals), 'two totals coincide: plant more rows');
+```
 
 ## Plant a core row with the columns its table needs, not the ones its entity requires
 

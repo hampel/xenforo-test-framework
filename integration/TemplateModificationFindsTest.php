@@ -101,6 +101,40 @@ class TemplateModificationFindsTest extends TestCase
 		);
 	}
 
+	public function test_a_map_may_say_an_artifact_modifies_a_template_the_forum_does_not_have()
+	{
+		$this->givenTheTemplate();
+		$this->fixtureSet = 'Gone';
+
+		$this->assertSame(
+			['gone' => 0],
+			$this->assertAddOnTemplateModificationFindsMatch('Probe/Fixtures', ['gone' => 'absent'])
+		);
+	}
+
+	public function test_an_artifact_given_as_absent_whose_template_exists_fails_naming_it()
+	{
+		$this->givenTheTemplate();
+		$this->fixtureSet = 'Twice';
+
+		$reported = $this->reportFrom('Probe/Fixtures', ['ok' => 'absent', 'double' => 2, 'absent' => 1]);
+
+		$this->assertStringContainsString(
+			"ok is given as 'absent', but public:zzfinds_template exists in this forum, so it needs a count",
+			$reported
+		);
+		$this->assertStringContainsString('absent: its find matches public:zzfinds_template 0 times, not 1', $reported);
+		$this->assertStringNotContainsString('double:', $reported);
+	}
+
+	public function test_a_map_value_that_is_neither_a_count_nor_absent_is_refused_before_reading_anything()
+	{
+		$this->expectException(\LogicException::class);
+		$this->expectExceptionMessage("'gone' => 'missing' given");
+
+		$this->assertAddOnTemplateModificationFindsMatch('Probe/Fixtures', ['gone' => 'missing']);
+	}
+
 	public function test_a_template_the_forum_does_not_have_is_named()
 	{
 		$this->givenTheTemplate();
@@ -190,7 +224,7 @@ class TemplateModificationFindsTest extends TestCase
 	 * The list a failing run reports, which is the asserted value rather than the message.
 	 *
 	 * @param string $addOnId
-	 * @param int $times
+	 * @param int|array<string, int|string> $times
 	 *
 	 * @return string
 	 */

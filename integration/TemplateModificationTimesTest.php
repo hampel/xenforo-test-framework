@@ -229,6 +229,54 @@ class TemplateModificationTimesTest extends TestCase
 		);
 	}
 
+	public function test_a_map_may_say_a_modification_is_on_a_template_the_forum_does_not_have()
+	{
+		$this->givenAModification('zzt_addon_a', [1, 1]);
+		// the probe template is in no forum, so this one has no log row and applies nowhere
+		$this->givenAModification('zzt_addon_gallery', []);
+
+		$applied = $this->assertAddOnTemplateModificationsApplyTimes(
+			['zzt_addon_a' => 1, 'zzt_addon_gallery' => 'absent'],
+			self::PROBE_ADDON
+		);
+
+		$this->assertSame(['zzt_addon_a' => 2, 'zzt_addon_gallery' => 0], $applied);
+	}
+
+	public function test_a_modification_given_as_absent_whose_template_exists_fails_naming_it()
+	{
+		$this->givenAModification('zzt_addon_a', [1]);
+		$this->givenAModification('zzt_addon_real', [], null, '_ads');
+
+		try
+		{
+			$this->assertAddOnTemplateModificationsApplyTimes(
+				['zzt_addon_a' => 1, 'zzt_addon_real' => 'absent'],
+				self::PROBE_ADDON
+			);
+			$this->fail('a template the forum has should have failed the absent entry');
+		}
+		catch (ExpectationFailedException $e)
+		{
+			$reported = print_r($e->getComparisonFailure()->getActual(), true);
+
+			$this->assertStringContainsString(
+				"zzt_addon_real is given as 'absent', but public:_ads exists in this forum, so it needs a count",
+				$reported
+			);
+			$this->assertStringNotContainsString('zzt_addon_a', $reported);
+			$this->assertStringContainsString('zzt_addon_a 1, zzt_addon_real absent', $e->getMessage());
+		}
+	}
+
+	public function test_absent_is_a_map_value_not_a_count()
+	{
+		$this->expectException(\LogicException::class);
+		$this->expectExceptionMessage("positive integer - 'absent' given");
+
+		$this->assertAddOnTemplateModificationsApplyTimes('absent', 'ZzNobody/NotInstalled');
+	}
+
 	public function test_a_map_with_a_count_below_one_is_refused_before_reading_anything()
 	{
 		$this->expectException(\LogicException::class);
@@ -243,10 +291,11 @@ class TemplateModificationTimesTest extends TestCase
 	 * @param string $key
 	 * @param int[] $applyCounts - one per log row; an empty list logs nothing
 	 * @param int[]|null $templateIds - defaults to the forum's lowest template ids
+	 * @param string $template - the public template it modifies; the default is in no forum
 	 *
 	 * @return void
 	 */
-	private function givenAModification($key, array $applyCounts, ?array $templateIds = null)
+	private function givenAModification($key, array $applyCounts, ?array $templateIds = null, $template = 'zzprobe_template')
 	{
 		$db = $this->app()->db();
 
@@ -265,7 +314,7 @@ class TemplateModificationTimesTest extends TestCase
 		$db->insert('xf_template_modification', [
 			'addon_id' => self::PROBE_ADDON,
 			'type' => 'public',
-			'template' => 'zzprobe_template',
+			'template' => $template,
 			'modification_key' => $key,
 			'description' => 'probe',
 			'execution_order' => 10,
