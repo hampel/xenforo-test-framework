@@ -1,6 +1,6 @@
 # Changelog
 
-## 5.36.0 (unreleased)
+## 5.36.0 (2026-10-23)
 
 * `extension.neon`, for PHPStan: included beside `hampel/xenforo-phpstan`'s, it types what
   `makeEntity()` and `createEntity()` return from the entity they are asked for - `'XF:User'` or
