@@ -32,10 +32,10 @@
 	"suggest": {
 		"nesbot/carbon": "Gives better control when dealing with time.",
 		"league/flysystem-memory": "^1.0 - required when swapping out filesystems",
-		"hampel/xenforo-phpstan": "^0.6 - with extension.neon included, PHPStan types the entity makeEntity() and createEntity() return"
+		"hampel/xenforo-phpstan": "^0.7 - with extension.neon included, PHPStan types the entity makeEntity() and createEntity() return"
 	},
 	"require-dev": {
-		"hampel/xenforo-phpstan": "^0.6.0",
+		"hampel/xenforo-phpstan": "^0.7.0",
 		"league/flysystem": "^1.1.4",
 		"league/flysystem-memory": "^1.0",
 		"nesbot/carbon": "^2.50|^3.0",
