@@ -34,7 +34,7 @@
 		"league/flysystem-memory": "^1.0 - required when swapping out filesystems"
 	},
 	"require-dev": {
-		"hampel/xenforo-phpstan": "^0.4.1",
+		"hampel/xenforo-phpstan": "^0.5.0",
 		"league/flysystem": "^1.1.4",
 		"league/flysystem-memory": "^1.0",
 		"nesbot/carbon": "^2.50|^3.0",
