@@ -137,6 +137,8 @@ trait InteractsWithRoutes
 	 *                         or use dispatchWithoutCsrfToken() to send none
 	 *
 	 * @return AbstractReply
+	 *
+	 * @phpstan-impure
 	 */
 	protected function dispatch(
 		$routePath,
@@ -163,6 +165,8 @@ trait InteractsWithRoutes
 	 * @param string $method - pointless as a GET, which XenForo does not check
 	 *
 	 * @return AbstractReply
+	 *
+	 * @phpstan-impure
 	 */
 	protected function dispatchWithoutCsrfToken(
 		$routePath,
@@ -260,6 +264,8 @@ trait InteractsWithRoutes
 	 * @param array $server - request server values for the new request, as dispatch() takes them
 	 *
 	 * @return AbstractReply
+	 *
+	 * @phpstan-impure
 	 */
 	protected function followRedirect(AbstractReply $reply, array $server = [])
 	{
@@ -370,6 +376,8 @@ trait InteractsWithRoutes
 	 *                        here
 	 *
 	 * @return AbstractReply
+	 *
+	 * @phpstan-impure
 	 */
 	protected function callAction(
 		$controller,

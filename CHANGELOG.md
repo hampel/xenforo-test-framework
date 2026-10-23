@@ -1,5 +1,11 @@
 # Changelog
 
+## 5.36.1 (unreleased)
+
+* `dispatch()`, `dispatchWithoutCsrfToken()`, `callAction()` and `followRedirect()` are declared
+  impure for PHPStan, so a reply assertion on a second dispatch written the same way as the first
+  is no longer reported as always true - each call is a new request
+
 ## 5.36.0 (2026-10-23)
 
 * `extension.neon`, for PHPStan: included beside `hampel/xenforo-phpstan`'s, it types what
