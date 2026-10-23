@@ -1,6 +1,6 @@
 # Changelog
 
-## 5.39.0
+## 5.39.0 (2026-10-23)
 
 * fix: `mockFinder()` did not apply when the finder was named in a different spelling from the one
   that registered it. A mock registered as `'XF:User'` was not consulted by code calling
