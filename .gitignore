@@ -10,6 +10,7 @@ composer.lock
 
 # session notes and audit state - local to this clone, never published
 CLAUDE.local.md
+CLAUDE.local.archive.md
 
 # Secrets. Deliberately not anchored with a leading slash, so these match at any depth:
 # an environment file can legitimately sit in a subdirectory rather than at the root.
