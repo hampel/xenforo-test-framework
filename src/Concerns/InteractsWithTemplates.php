@@ -1136,10 +1136,9 @@ trait InteractsWithTemplates
 	 * the control panel reuses that template, so the dispatch type is not prepended to a name that
 	 * has one.
 	 *
-	 * This renders the **template**, not the page: there is no navigation, header or footer
-	 * around it, because those come from the Pub and Admin app classes rather than from the
-	 * template. Assertions about a page's furniture are still a job for a browser or a request
-	 * against a real forum.
+	 * This renders the **template**, not the page. The page's furniture is a template too -
+	 * `public:PAGE_CONTAINER`, which renderTemplate() renders given `content` and `template` -
+	 * less what the Pub app adds for a request, which is absent unless passed.
 	 *
 	 * @param AbstractReply $reply - as returned by dispatch()
 	 *
@@ -1252,7 +1251,9 @@ trait InteractsWithTemplates
 	 * modification was applied to - one per style holding its own copy of the template - so a
 	 * sum counts styles as well as matches.
 	 *
-	 * @param int $times - the apply count every row must carry, at least 1
+	 * @param int|array<string, int> $times - the apply count every row must carry, at least 1; or a
+	 *                                       map of modification key to the count for that one,
+	 *                                       with every modification the add-on registers named
 	 * @param string|null $addOnId - defaults to the add-on $addonsToLoad isolates, when it names one
 	 *
 	 * As with assertAddOnTemplateModificationsApply(), a modification added or removed fails
@@ -1262,19 +1263,24 @@ trait InteractsWithTemplates
 	 */
 	protected function assertAddOnTemplateModificationsApplyTimes($times, $addOnId = null)
 	{
-		$this->requireApplyTimes(
+		$helper = 'assertAddOnTemplateModificationsApplyTimes()';
+		$this->requireApplyTimesOrMap(
 			$times,
-			'assertAddOnTemplateModificationsApplyTimes()',
+			$helper,
 			'To assert only that they apply at all, use assertAddOnTemplateModificationsApply().'
 		);
 
 		$addOnId = $addOnId ?: $this->soleIsolatedAddOnId('whose template modifications to check');
 
+		$modifications = $this->enabledTemplateModificationsOf($addOnId);
+		$expected = $this->applyTimesPerKey($times, array_column($modifications, 'modification_key'), $helper, $addOnId);
+
 		$applied = [];
 		$wrong = [];
 
-		foreach ($this->enabledTemplateModificationsOf($addOnId) AS $modification)
+		foreach ($modifications AS $modification)
 		{
+			$times = $expected[$modification['modification_key']];
 			$rows = $this->templateModificationLogRows($modification['modification_id']);
 			$total = array_sum(array_column($rows, 'apply_count'));
 
@@ -1300,8 +1306,8 @@ trait InteractsWithTemplates
 		PHPUnit::assertSame(
 			[],
 			$wrong,
-			"These template modifications of '$addOnId' do not apply exactly $times "
-			. ($times === 1 ? 'time' : 'times') . ' in every template they reach'
+			"These template modifications of '$addOnId' do not apply exactly "
+			. $this->describeApplyTimes($expected) . ' in every template they reach'
 		);
 
 		return $applied;
@@ -1324,15 +1330,18 @@ trait InteractsWithTemplates
 	 * developed.
 	 *
 	 * @param string|null $addOnId - defaults to the add-on $addonsToLoad isolates, when it names one
-	 * @param int $times - the number of matches each find must have, at least 1
+	 * @param int|array<string, int> $times - the number of matches each find must have, at least 1;
+	 *                                       or a map of modification key to the count for that
+	 *                                       one, with every enabled artifact named
 	 *
 	 * @return array<string, int> - each enabled artifact's modification key, mapped to its match count
 	 */
 	protected function assertAddOnTemplateModificationFindsMatch($addOnId = null, $times = 1)
 	{
-		$this->requireApplyTimes(
+		$helper = 'assertAddOnTemplateModificationFindsMatch()';
+		$this->requireApplyTimesOrMap(
 			$times,
-			'assertAddOnTemplateModificationFindsMatch()',
+			$helper,
 			'A find that matches nowhere is a failure, not a count to assert.'
 		);
 
@@ -1362,11 +1371,11 @@ trait InteractsWithTemplates
 		$db = $this->app()->db();
 		$counts = [];
 		$wrong = [];
+		$artifacts = [];
 
 		foreach ($files AS $file)
 		{
 			$key = basename($file, '.json');
-			$type = basename(dirname($file));
 			$artifact = json_decode((string) file_get_contents($file), true);
 
 			if (!is_array($artifact) || !isset($artifact['template'], $artifact['action'], $artifact['find']))
@@ -1379,6 +1388,16 @@ trait InteractsWithTemplates
 			{
 				continue;
 			}
+
+			$artifacts[$key] = $artifact + ['type' => basename(dirname($file))];
+		}
+
+		$expected = $this->applyTimesPerKey($times, array_keys($artifacts), $helper, $addOnId);
+
+		foreach ($artifacts AS $key => $artifact)
+		{
+			$type = $artifact['type'];
+			$times = $expected[$key];
 
 			$template = $db->fetchOne(
 				'SELECT template FROM xf_template WHERE style_id = 0 AND type = ? AND title = ?',
@@ -1411,8 +1430,8 @@ trait InteractsWithTemplates
 		PHPUnit::assertSame(
 			[],
 			$wrong,
-			"These template modification artifacts of '$addOnId' do not match their template exactly"
-			. " $times " . ($times === 1 ? 'time' : 'times')
+			"These template modification artifacts of '$addOnId' do not match their template exactly "
+			. $this->describeApplyTimes($expected)
 		);
 
 		return $counts;
@@ -1722,6 +1741,103 @@ trait InteractsWithTemplates
 				. " given. $advice"
 			);
 		}
+	}
+
+	/**
+	 * Refuse anything but a positive integer, or a map of modification key to one - the shape
+	 * check, made before anything is read. Whether the map's keys are the right keys is checked
+	 * once they are known, by applyTimesPerKey().
+	 *
+	 * @param mixed $times
+	 * @param string $helper
+	 * @param string $advice
+	 *
+	 * @return void
+	 */
+	private function requireApplyTimesOrMap($times, $helper, $advice)
+	{
+		if (!is_array($times))
+		{
+			$this->requireApplyTimes($times, $helper, $advice);
+			return;
+		}
+
+		foreach ($times AS $key => $count)
+		{
+			if (!is_string($key) || !is_int($count) || $count < 1)
+			{
+				throw new \LogicException(
+					"$helper takes a count as a positive integer, or a map of modification key to one - "
+					. var_export($key, true) . ' => ' . var_export($count, true) . " given. $advice"
+				);
+			}
+		}
+
+		if (!$times)
+		{
+			throw new \LogicException("$helper was given an empty map, so there is nothing to assert. $advice");
+		}
+	}
+
+	/**
+	 * The count each modification must carry: one count for all of them, or the map's count for
+	 * each. A map has to name every key the assertion will check and no other, so that a
+	 * modification added without a count, or a count left behind for one removed, is refused
+	 * rather than passed over - which makes the map the inventory pin as well.
+	 *
+	 * @param int|array<string, int> $times
+	 * @param string[] $keys - the modification keys about to be checked
+	 * @param string $helper
+	 * @param string $addOnId
+	 *
+	 * @return array<string, int> key => count, for every key
+	 */
+	private function applyTimesPerKey($times, array $keys, $helper, $addOnId)
+	{
+		if (!is_array($times))
+		{
+			return array_fill_keys($keys, $times);
+		}
+
+		$missing = array_values(array_diff($keys, array_keys($times)));
+		$unknown = array_values(array_diff(array_keys($times), $keys));
+
+		if ($missing || $unknown)
+		{
+			throw new \LogicException(
+				"The counts given to $helper do not match the template modifications of '$addOnId'"
+				. ($missing ? ' - no count for ' . implode(', ', $missing) : '')
+				. ($unknown ? ' - a count for ' . implode(', ', $unknown) . ', which it does not have' : '')
+				. '. A map names every modification the assertion checks, with its count, and nothing else.'
+			);
+		}
+
+		return array_intersect_key($times, array_flip($keys));
+	}
+
+	/**
+	 * @param array<string, int> $expected
+	 *
+	 * @return string "N times", or the per-key counts where they differ
+	 */
+	private function describeApplyTimes(array $expected)
+	{
+		$distinct = array_unique($expected);
+
+		if (count($distinct) <= 1)
+		{
+			$times = $distinct ? reset($distinct) : 1;
+
+			return $times . ' ' . ($times === 1 ? 'time' : 'times');
+		}
+
+		$parts = [];
+		foreach ($expected AS $key => $times)
+		{
+			$parts[] = "$key $times";
+		}
+
+		return 'the times given (' . implode(', ', $parts) . ')';
 	}
 
 	/**

@@ -169,6 +169,74 @@ class TemplateModificationTimesTest extends TestCase
 		$this->assertAddOnTemplateModificationsApplyTimes(0, 'ZzNobody/NotInstalled');
 	}
 
+	public function test_a_map_gives_each_modification_its_own_count()
+	{
+		$this->givenAModification('zzt_addon_once', [1, 1]);
+		$this->givenAModification('zzt_addon_twice', [2, 2]);
+
+		$applied = $this->assertAddOnTemplateModificationsApplyTimes(
+			['zzt_addon_once' => 1, 'zzt_addon_twice' => 2],
+			self::PROBE_ADDON
+		);
+
+		$this->assertSame(['zzt_addon_once' => 2, 'zzt_addon_twice' => 4], $applied);
+	}
+
+	public function test_a_map_entry_that_is_off_fails_naming_that_modification_and_its_own_count()
+	{
+		$this->givenAModification('zzt_addon_once', [1, 1]);
+		$this->givenAModification('zzt_addon_twice', [2, 1]);
+
+		try
+		{
+			$this->assertAddOnTemplateModificationsApplyTimes(
+				['zzt_addon_once' => 1, 'zzt_addon_twice' => 2],
+				self::PROBE_ADDON
+			);
+			$this->fail('a row applied once where two were expected should have failed');
+		}
+		catch (ExpectationFailedException $e)
+		{
+			$reported = print_r($e->getComparisonFailure()->getActual(), true);
+
+			$this->assertStringContainsString('zzt_addon_twice applied 1 times in', $reported);
+			$this->assertStringContainsString(', not 2', $reported);
+			$this->assertStringNotContainsString('zzt_addon_once', $reported);
+		}
+	}
+
+	public function test_a_map_missing_a_registered_modification_is_refused()
+	{
+		$this->givenAModification('zzt_addon_a', [1]);
+		$this->givenAModification('zzt_addon_b', [1]);
+
+		$this->expectException(\LogicException::class);
+		$this->expectExceptionMessage('no count for zzt_addon_b');
+
+		$this->assertAddOnTemplateModificationsApplyTimes(['zzt_addon_a' => 1], self::PROBE_ADDON);
+	}
+
+	public function test_a_map_naming_a_modification_the_add_on_does_not_have_is_refused()
+	{
+		$this->givenAModification('zzt_addon_a', [1]);
+
+		$this->expectException(\LogicException::class);
+		$this->expectExceptionMessage('a count for zzt_addon_gone, which it does not have');
+
+		$this->assertAddOnTemplateModificationsApplyTimes(
+			['zzt_addon_a' => 1, 'zzt_addon_gone' => 1],
+			self::PROBE_ADDON
+		);
+	}
+
+	public function test_a_map_with_a_count_below_one_is_refused_before_reading_anything()
+	{
+		$this->expectException(\LogicException::class);
+		$this->expectExceptionMessage("'zzt_x' => 0 given");
+
+		$this->assertAddOnTemplateModificationsApplyTimes(['zzt_x' => 0], 'ZzNobody/NotInstalled');
+	}
+
 	/**
 	 * Register a modification for the probe add-on with one log row per apply count given.
 	 *

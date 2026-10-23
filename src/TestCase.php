@@ -6,6 +6,7 @@ use Carbon\Carbon;
 use Carbon\CarbonImmutable;
 use Mockery\MockInterface;
 use PHPUnit\Framework\TestCase as BaseTestCase;
+use XF\Db\DeadlockException;
 
 abstract class TestCase extends BaseTestCase
 {
@@ -311,6 +312,47 @@ abstract class TestCase extends BaseTestCase
 		}
 
 		return $uses;
+	}
+
+	/**
+	 * A deadlock, or a row that changed under the test, reaches PHPUnit as a database error with a
+	 * trace into the code under test and nothing naming the cause - which on a development forum
+	 * shared between suites is usually another suite writing the same rows at the same time, and
+	 * reads as a regression until the other process is found. The error is rethrown with that said
+	 * and the original as its cause, so the class and the trace are still reported beneath it.
+	 */
+	protected function onNotSuccessfulTest(\Throwable $t): never
+	{
+		if ($this->isLostToAnotherTransaction($t))
+		{
+			throw new \RuntimeException(
+				'Another transaction on this database held a row this test needed. On a development'
+				. " forum shared between suites that is usually another add-on's suite running at the"
+				. ' same time: re-run on an idle forum before reading it as a defect. See'
+				. ' UsesDatabaseTransactions in DOCS.md. ' . get_class($t) . ': ' . $t->getMessage(),
+				(int) $t->getCode(),
+				$t
+			);
+		}
+
+		parent::onNotSuccessfulTest($t);
+	}
+
+	/**
+	 * @param \Throwable $t
+	 *
+	 * @return bool a deadlock (1213), a lock wait that timed out (1205), or a row that changed since
+	 *              the transaction read it (1020, snapshot isolation)
+	 */
+	private function isLostToAnotherTransaction(\Throwable $t): bool
+	{
+		if ($t instanceof DeadlockException)
+		{
+			return true;
+		}
+
+		return $t instanceof \XF\Db\Exception
+			&& (bool) preg_match('/\\[(1020|1205|1213)\\]/', $t->getMessage());
 	}
 
 	/**

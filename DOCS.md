@@ -1335,8 +1335,28 @@ macro or included template, or an exception.
 A template that throws is detected in either debug mode: with `$config['debug'] = true` XenForo
 renders the exception as markup, which is recognised, and without it the render is empty.
 
-**This renders the template, not the page** - no navigation, header or footer. `pageParam()` reads
-the values the template set for the page, such as its title.
+**This renders the template, not the page.** The page's furniture - navigation, header, footer,
+the staff bar - is itself a template, `public:PAGE_CONTAINER`, and `renderTemplate()` renders it
+given the content and the name of the template it wraps:
+
+```php
+$this->actingAsMember(['is_moderator' => true], ['general' => ['view' => true]]);
+$this->app()->session()->set('unapprovedCounts', ['total' => 3]);
+
+$page = $this->renderTemplate('public:PAGE_CONTAINER', [
+	'content' => 'the content',
+	'template' => 'thread_view',
+]);
+
+$this->assertSee($page, 'the content');
+$this->assertSee($page, 'p-staffBar');
+```
+
+What the public app adds for a request - `pageSection`, `controller`, `action`, `classType`,
+`containerKey`, `contentKey`, `view` - is absent unless passed, so a block reading one of them does
+not render. **`$xf.session` is the container's session**: a value set on it before the render, as
+above, is what a template reads from it. `pageParam()` reads the values the template set for the
+page, such as its title.
 
 **Markup a template sets through `<xf:title>`, `<xf:h1>`, `<xf:description>` or `<xf:pageaction>` is
 not in the returned HTML**, and a template modification whose find sits inside one of those tags
@@ -1979,7 +1999,8 @@ each template it reaches, and return each modification key with the number of ti
 
 ##### Parameters:
 
-* `times` - the apply count every modification must carry in every template, at least 1
+* `times` - the apply count every modification must carry in every template, at least 1; or a map
+  of modification key to the count for that one, naming every modification the add-on registers
 * `addOnId` - optional - defaults to the add-on `$addonsToLoad` isolates
 
 ##### Example:
@@ -1993,9 +2014,16 @@ $this->assertSame(['myaddon_footer', 'myaddon_header'], array_keys($applied));
 The same refusals as `assertAddOnTemplateModificationsApply()`, and the same per-template check as
 `assertTemplateModificationAppliedTimes()`: XenForo logs a row per template a modification was
 applied to, so the count is checked on each row rather than summed, and the failure names each
-modification, template and style that is off. One count for every modification the add-on
-registers; where they differ, assert them one at a time. A modification added or removed fails
-nothing here either - pin the returned keys, as above.
+modification, template and style that is off. One count covers every modification the add-on
+registers; where they differ, give a map of modification key to count instead:
+
+```php
+$this->assertAddOnTemplateModificationsApplyTimes(['myaddon_footer' => 1, 'myaddon_header' => 2]);
+```
+
+A map names every modification the add-on registers and no other - one left out, or one the add-on
+does not have, is refused - so the map pins the inventory as well. With one count for all, a
+modification added or removed fails nothing here either; pin the returned keys, as above.
 
 ### assertAddOnTemplateModificationFindsMatch
 Assert that the find of every template modification in the add-on's working copy matches its
@@ -2004,12 +2032,19 @@ template exactly this many times, and return each modification key with its matc
 ##### Parameters:
 
 * `addOnId` - optional - defaults to the add-on `$addonsToLoad` isolates
-* `times` - optional - the number of matches each find must have, at least 1; 1 by default
+* `times` - optional - the number of matches each find must have, at least 1; 1 by default. Or a
+  map of modification key to the count for that one, naming every enabled artifact
 
 ##### Example:
 
 ```php
 $this->assertAddOnTemplateModificationFindsMatch();
+
+// where one find legitimately matches its template more than once
+$this->assertAddOnTemplateModificationFindsMatch(null, [
+	'myaddon_footer' => 1,
+	'myaddon_header' => 2,
+]);
 ```
 
 **It reads `_output/template_modifications/` and the master template text, not the log.** The
@@ -2546,6 +2581,12 @@ statistic, which rewrites one row in `xf_member_stat` and clears its expiry - an
 row your test does, and a test holding a transaction open across one of those runs loses it: the
 row has changed since the transaction first read it, which the server reports as
 `MySQL query error [1020]`.
+
+**Either error is reported with the cause named.** A deadlock, a lock wait that timed out or a row
+that changed since the transaction read it reaches PHPUnit wrapped in one sentence saying another
+transaction held the row and that on a shared forum it is usually another suite, with the original
+error and its trace beneath - so the report says to re-run on an idle forum before reading it as a
+defect.
 
 The column XenForo checks is `is_staff`, and an insert sets every column that has a default, so
 this happens for an ordinary member rather than only for a member of staff. Where you want the

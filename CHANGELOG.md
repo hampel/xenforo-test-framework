@@ -1,7 +1,16 @@
 # Changelog
 
-## 5.36.1 (unreleased)
+## 5.37.0 (unreleased)
 
+* `assertAddOnTemplateModificationsApplyTimes()` and `assertAddOnTemplateModificationFindsMatch()`
+  take a map of modification key to count as well as one count for all, for an add-on whose
+  modifications legitimately apply different numbers of times. A map names every modification
+  the assertion checks: one left out, or one the add-on does not have, is refused
+* a test that ends in a deadlock, a lock wait that timed out or a row that changed since the
+  transaction read it is reported with the cause named - another transaction on the same
+  database, usually another suite against the same forum - and the original error beneath it
+* docs: the page's furniture is a template, `public:PAGE_CONTAINER`, and `renderTemplate()`
+  renders it; a value put in the session before a render is what `$xf.session` reads
 * `dispatch()`, `dispatchWithoutCsrfToken()`, `callAction()` and `followRedirect()` are declared
   impure for PHPStan, so a reply assertion on a second dispatch written the same way as the first
   is no longer reported as always true - each call is a new request

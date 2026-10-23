@@ -5,6 +5,12 @@ Most releases need nothing beyond `composer update`. `CHANGELOG.md` lists everyt
 
 `tests/TestCase.php` is copied into your add-on, so a change to it has to be merged by hand.
 
+## 5.37.0
+
+Nothing to do. A database error that means another transaction held a row now reaches PHPUnit
+wrapped, with the cause named and the original error as its cause; it happens only once the test
+has failed, so a test that catches `XF\Db\DeadlockException` from the code under test is unaffected.
+
 ## 5.36.0
 
 Nothing to do. To type the entities `makeEntity()` and `createEntity()` return under PHPStan,

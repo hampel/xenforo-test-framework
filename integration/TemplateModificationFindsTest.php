@@ -63,6 +63,44 @@ class TemplateModificationFindsTest extends TestCase
 		$this->assertStringContainsString('ok: its find matches public:zzfinds_template 1 times, not 2', $reported);
 	}
 
+	public function test_a_map_gives_each_artifact_its_own_count()
+	{
+		$this->givenTheTemplate();
+		$this->fixtureSet = 'Twice';
+
+		// ok matches once and double twice; absent matches nowhere, so it is the one named
+		$reported = $this->reportFrom('Probe/Fixtures', ['ok' => 1, 'double' => 2, 'absent' => 1]);
+
+		$this->assertStringContainsString('absent: its find matches public:zzfinds_template 0 times, not 1', $reported);
+		$this->assertStringNotContainsString('ok:', $reported);
+		$this->assertStringNotContainsString('double:', $reported);
+	}
+
+	public function test_a_map_missing_an_enabled_artifact_is_refused()
+	{
+		$this->givenTheTemplate();
+		$this->fixtureSet = 'Twice';
+
+		$this->expectException(\LogicException::class);
+		$this->expectExceptionMessage('no count for absent');
+
+		$this->assertAddOnTemplateModificationFindsMatch('Probe/Fixtures', ['ok' => 1, 'double' => 2]);
+	}
+
+	public function test_a_map_naming_an_artifact_the_add_on_does_not_have_is_refused()
+	{
+		$this->givenTheTemplate();
+		$this->fixtureSet = 'Twice';
+
+		$this->expectException(\LogicException::class);
+		$this->expectExceptionMessage('a count for gone, which it does not have');
+
+		$this->assertAddOnTemplateModificationFindsMatch(
+			'Probe/Fixtures',
+			['ok' => 1, 'double' => 2, 'absent' => 1, 'gone' => 1]
+		);
+	}
+
 	public function test_a_template_the_forum_does_not_have_is_named()
 	{
 		$this->givenTheTemplate();
