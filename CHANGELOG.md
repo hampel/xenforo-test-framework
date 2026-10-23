@@ -1,6 +1,6 @@
 # Changelog
 
-## 5.35.1 (unreleased)
+## 5.35.1 (2026-10-23)
 
 * a reply assertion that checks more than the reply's type - `assertReplyTemplate()`,
   `assertReplyViewClass()`, `assertReplyParam()`, `assertReplyParamSame()`,
