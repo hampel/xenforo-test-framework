@@ -1,6 +1,6 @@
 # Changelog
 
-## 5.35.0 (unreleased)
+## 5.35.0 (2026-10-23)
 
 * `runDeferred()` runs the work queued with `\XF::runOnce()` and returns the keys of what was
   queued - for a test that saves or deletes an entity directly, where nothing else runs the queue.
