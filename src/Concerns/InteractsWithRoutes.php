@@ -844,6 +844,12 @@ trait InteractsWithRoutes
 	/**
 	 * Assert that the reply is a view rendering the given template.
 	 *
+	 * The template can be named bare, as a controller names it ('account_upgrades'), or with its
+	 * type, as the template helpers take it ('public:account_upgrades'). A typed name is checked
+	 * against the type of the application the reply was dispatched through, so
+	 * 'admin:account_upgrades' fails against a public reply. A reply can carry a typed name itself,
+	 * as core's delete plugin does; that name is compared as the reply gave it.
+	 *
 	 * @param AbstractReply $reply
 	 * @param string $template
 	 * @param string|null $message
@@ -856,9 +862,32 @@ trait InteractsWithRoutes
 	{
 		$this->assertReplyIsView($reply, $message);
 
+		$expected = (string) $template;
+		$actual = (string) $reply->getTemplateName();
+
+		// one side typed and the other bare: type the bare one from the app the reply came through,
+		// which a dispatch sets to Pub or Admin. Outside a dispatch there is no type to add, and the
+		// names are compared as given
+		if ((strpos($expected, ':') === false) !== (strpos($actual, ':') === false))
+		{
+			$classType = $this->app()->container('app.classType');
+			if (isset(self::TEMPLATE_TYPES[$classType]))
+			{
+				$type = self::TEMPLATE_TYPES[$classType] . ':';
+				if (strpos($expected, ':') === false)
+				{
+					$expected = $type . $expected;
+				}
+				else
+				{
+					$actual = $type . $actual;
+				}
+			}
+		}
+
 		PHPUnit::assertSame(
-			$template,
-			$reply->getTemplateName(),
+			$expected,
+			$actual,
 			$this->replyFailure($reply, $message)
 		);
 	}

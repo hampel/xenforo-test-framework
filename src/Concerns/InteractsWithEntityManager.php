@@ -42,7 +42,7 @@ trait InteractsWithEntityManager
 	}
 
 	/**
-	 * @param $shortName string - shortname for finder class being mocked
+	 * @param string $shortName - the entity short name, eg 'XF:User', or the finder or entity class
 	 * @param \Closure|null $mock - (optional) mock closure to set expectations on
 	 *
 	 * @return Mockery\MockInterface
@@ -69,7 +69,7 @@ trait InteractsWithEntityManager
 	 * find() reads the cache before it builds a finder at all and would otherwise hand back an
 	 * entity an earlier part of the test loaded.
 	 *
-	 * @param string $shortName - the entity short name, eg 'XF:User'
+	 * @param string $shortName - the entity short name, eg 'XF:User', or the entity or finder class
 	 * @param mixed $id - the id find() will be called with
 	 * @param Entity|null $entity - what find() should return; null for "no such record"
 	 *
@@ -78,7 +78,15 @@ trait InteractsWithEntityManager
 	 */
 	protected function mockFind($shortName, $id, ?Entity $entity = null)
 	{
-		$this->app()->em()->clearEntityCache($shortName);
+		$em = $this->app()->em();
+		if (!($em instanceof Manager))
+		{
+			throw new \Exception('Unable to mock finder. Extended entity manager not set up.');
+		}
+
+		// clearEntityCache() takes a short name or an entity class, not a finder class
+		$shortName = $em->finderShortName($shortName);
+		$em->clearEntityCache($shortName);
 
 		return $this->mockFinder($shortName, function ($finder) use ($id, $entity)
 		{
@@ -89,7 +97,7 @@ trait InteractsWithEntityManager
 	}
 
 	/**
-	 * @param $shortName string - shortname for finder class being mocked
+	 * @param string $shortName - the entity short name, eg 'XF:User'
 	 * @param bool $inherit - set to true (default) to inherit from the mocked entity, or false to mock a standalone class
 	 * @param \Closure|null $mock
 	 *

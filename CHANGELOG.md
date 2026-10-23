@@ -1,5 +1,18 @@
 # Changelog
 
+## 5.39.0
+
+* fix: `mockFinder()` did not apply when the finder was named in a different spelling from the one
+  that registered it. A mock registered as `'XF:User'` was not consulted by code calling
+  `finder(\XF\Finder\UserFinder::class)`, and the real finder ran with every expectation unmet.
+  The three spellings `finder()` takes - the entity short name, the finder class and the entity
+  class - now register and find the same mock, and `mockFind()` takes the same three
+* `assertReplyTemplate()` takes the template with its type, `'public:account_upgrades'`, as the
+  template helpers do, as well as bare. A typed name is checked against the application the reply
+  was dispatched through
+* docs: a tip on what a rendered template cannot prove about the controller, and one on stubbing a
+  finder's chain, with a finder that never runs dry as the way to test a loop guard
+
 ## 5.38.0 (2026-10-23)
 
 * `renderReplyPage()` renders a View reply as the page a request would produce: the reply's

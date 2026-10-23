@@ -986,6 +986,12 @@ $this->assertReplyTemplate($reply, 'option_group_list');
 $this->assertReplyViewClass($reply, 'XF:Option\GroupList');
 ```
 
+The template can be named bare, as the controller names it, or with its type, as the template
+helpers take it - `'admin:option_group_list'` above. A typed name is checked against the
+application the reply was dispatched through, so `'public:option_group_list'` fails against that
+reply. A reply that names its template with the type already on it, as core's delete plugin does
+with `'public:delete_confirm'`, is compared as it named it.
+
 When the reply is not the view expected, the failure message describes what it was, including an
 error reply's text.
 
@@ -1023,6 +1029,9 @@ $this->assertReplyParamSame($reply, 'canAdd', true);
 // or read it and assert however you like
 $this->assertNotEmpty($this->replyParam($reply, 'groups'));
 ```
+
+A parameter holding an entity collection counts with `assertCount()` as an array does, since a
+collection is `Countable`.
 
 The page title is not a reply parameter - it is set by the template, so `pageParam()` reads it.
 
@@ -2955,9 +2964,11 @@ Mock a Finder.
 
 ##### Parameters
 
-* `identifier` - the entity short name, `Vendor:Name`, or a finder class name. Anything else is
-  refused: XenForo cannot turn it into a finder class, and a placeholder string is a mistake in the
-  test rather than something to guess at
+* `identifier` - the entity short name, `Vendor:Name`, the entity class or the finder class - the
+  three spellings `finder()` takes. The mock applies whichever of them registered it and whichever
+  the code under test asks by, and a second call for the same finder returns the first mock.
+  Anything else is refused: XenForo cannot turn it into a finder class, and a placeholder string is
+  a mistake in the test rather than something to guess at
 * `mock` - optional - the mock closure to define expectations on
 
 ##### Example:
@@ -3006,7 +3017,7 @@ Decide what `\XF::em()->find()` returns for one id.
 
 ##### Parameters:
 
-* `shortName` - the entity short name, eg `'XF:User'`
+* `shortName` - the entity short name, eg `'XF:User'`, or the entity or finder class
 * `id` - the id `find()` will be called with
 * `entity` - optional - the entity to return, or `null` for "no such record"
 

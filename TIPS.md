@@ -41,6 +41,22 @@ only where skipping them is the point.
 
 The same applies to console commands and jobs.
 
+## A rendered template does not prove the controller reaches it
+
+`renderTemplate()` answers whether a template, and the modifications your add-on makes to it,
+render correctly given the parameters you pass. It cannot answer whether the controller passes
+those parameters, or renders that template at all. A controller returns a message or an error
+from a guard before it reaches the view, and a modification behind that guard is never seen by
+anyone the guard turns away.
+
+The guard can be in core, and it can be one that does not fire. XenForo's account upgrades page
+returns a message when there is nothing available and nothing purchased; the available list is a
+collection, which is truthy when empty, so that branch is not taken. A template test of a
+modification to that page passes while saying nothing about the dependency. Only a `dispatch()`
+pins that the route reaches the template: assert the template with `assertReplyTemplate()`, the
+parameter the modification reads with `assertReplyParam()`, and what it holds with `assertCount()`
+on `replyParam()`, which takes a collection as well as an array.
+
 ## Assert that your console commands load
 
 One test, `assertConsoleCommandsLoad()`, and it protects more than your own add-on. XenForo loads
@@ -136,6 +152,31 @@ repository itself, use `UsesDatabaseTransactions` and let its real queries run, 
 
 If you do mock the database, call `mockDatabase()` **before** `mockRepository()`, `mockFinder()` or
 `mockEntity()` — mocks registered before it are discarded.
+
+## Stub a finder's chain before its fetch
+
+A finder is fluent: `with()`, `where()`, `order()` and `limit()` each return the finder, and a mock
+returns `null` from any of them until told otherwise, so the first call in the chain hands nothing
+to the second. Stub every method the code under test chains with `andReturnSelf()`, then set the
+expectation that matters on the call that fetches:
+
+```php
+$this->mockFinder('XF:User', function ($mock) use ($users) {
+	$mock->shouldReceive('with', 'where', 'order', 'limit')->andReturnSelf();
+	$mock->expects()->fetch()->once()->andReturns($users);
+});
+```
+
+A finder that never runs dry is also how to test a loop guard. Code that fetches a batch, acts on
+it and fetches again until nothing comes back spins for ever when a row it cannot act on keeps
+coming back, and a limit on the iterations is what stops it. Have the mock answer the same row
+every time and throw on the call past the limit, so that removing the guard fails the test instead
+of hanging the suite:
+
+```php
+$mock->shouldReceive('fetchColumns')->with('user_id')->twice()->andReturn([42]);
+$mock->shouldReceive('fetchColumns')->andThrow(new \LogicException('the loop was not stopped'));
+```
 
 ## Don't mock everything
 

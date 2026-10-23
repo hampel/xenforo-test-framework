@@ -57,43 +57,82 @@ class Manager extends BaseManager
 	 */
 	public function getFinder($shortName, $includeDefaultWith = true)
 	{
-		if ($shortName && isset($this->mockedFinders[$shortName]))
+		if ($shortName && $this->mockedFinders)
 		{
-			return $this->mockedFinders[$shortName];
+			$key = $this->finderShortName($shortName);
+			if (isset($this->mockedFinders[$key]))
+			{
+				return $this->mockedFinders[$key];
+			}
 		}
 
 		return parent::getFinder($shortName, $includeDefaultWith);
 	}
 
 	/**
-	 * @param $shortName string
+	 * The entity short name a finder is known by, from any spelling XenForo's getFinder() accepts:
+	 * the short name, the finder class, or the entity class.
+	 *
+	 * getFinder() normalises its argument before it does anything else, so a mock has to be stored
+	 * and looked up under the same normalised key. Without this a mock registered as 'XF:User' is
+	 * never consulted by code that asks for \XF\Finder\UserFinder::class - XenForo's own idiom -
+	 * and the real finder runs with every expectation unmet in silence. Mirror XF's normalisation
+	 * exactly, including its trailing-suffix trim.
+	 *
+	 * @param string $name
+	 *
+	 * @return string
+	 */
+	public function finderShortName($name)
+	{
+		$name = (string) $name;
+
+		try
+		{
+			if (strpos($name, ':') === false && strpos($name, '\\Entity\\') !== false)
+			{
+				return \XF::classToString($name, '%s\Entity\%s');
+			}
+
+			$name = \XF::classToString($name, '%s\Finder\%s');
+		}
+		catch (\InvalidArgumentException $e)
+		{
+			// XenForo 2.3 refuses a name it cannot turn into a finder class, from a depth that names
+			// neither the test nor the argument. A name that resolves to no class gets the base
+			// finder from mockFinder(); a name of the wrong shape is a mistake in the test, refused
+			throw new \LogicException(
+				"mockFinder() needs an entity short name of the form 'Vendor:Name', an entity class"
+				. " name or a finder class name - '" . $name . "' is none of them.",
+				0,
+				$e
+			);
+		}
+
+		if (substr($name, -6) === 'Finder')
+		{
+			$name = substr($name, 0, -6);
+		}
+
+		return $name;
+	}
+
+	/**
+	 * @param string $shortName - the entity short name, the finder class or the entity class
 	 * @param \Closure|null $mock
 	 *
 	 * @return mixed|Mockery\MockInterface
 	 */
 	public function mockFinder($shortName, ?\Closure $mock = null)
 	{
-		if ($shortName && isset($this->mockedFinders[$shortName]))
+		$shortName = $this->finderShortName($shortName);
+
+		if (isset($this->mockedFinders[$shortName]))
 		{
 			return $this->mockedFinders[$shortName];
 		}
 
-		try
-		{
-			$finderClass = \XF::stringToClass($shortName, '%s\Finder\%s');
-		}
-		catch (\InvalidArgumentException $e)
-		{
-			// XenForo 2.3 refuses a name it cannot turn into a finder class, from a depth that names
-			// neither the test nor the argument. The fallback below is for a name that resolves to no
-			// class; a name of the wrong shape is a mistake in the test, so it is refused
-			throw new \LogicException(
-				"mockFinder() needs an entity short name of the form 'Vendor:Name', or a finder class"
-				. " name - '" . (string) $shortName . "' is neither.",
-				0,
-				$e
-			);
-		}
+		$finderClass = \XF::stringToClass($shortName, '%s\Finder\%s');
 		$finderClass = $this->extension->extendClass($finderClass, '\XF\Mvc\Entity\Finder');
 		if (!$finderClass || !class_exists($finderClass))
 		{

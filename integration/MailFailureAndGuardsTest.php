@@ -100,7 +100,7 @@ class MailFailureAndGuardsTest extends TestCase
 	public function test_a_finder_short_name_of_the_wrong_shape_is_refused_by_name()
 	{
 		$this->expectException(\LogicException::class);
-		$this->expectExceptionMessage("'entity id' is neither");
+		$this->expectExceptionMessage("'entity id' is none of them");
 
 		$this->mockFinder('entity id');
 	}
