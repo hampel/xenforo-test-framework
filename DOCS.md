@@ -684,6 +684,10 @@ exempts itself per action. Those are also the routes a test is most likely to re
 dispatch to `account/preferences` that works without `general.view` is not evidence that the grant
 is unnecessary anywhere else.
 
+**Api routes need it too.** `XF\Api\Controller\AbstractController` checks `general.view` ahead
+of the controller's own `preDispatchController()`, with only the error controller exempt, and its
+refusal is the same reply an add-on's gate gives - see `actingAsApiKey()`.
+
 **`dispatch()` sends a `GET` unless you ask for something else.** Pass the method as the fifth
 argument. XenForo asserts a CSRF token in `preDispatch()` for anything that is not a `GET`, so a
 non-GET dispatch carries a token the request has a matching cookie for - which means the action
@@ -1191,13 +1195,29 @@ Run api dispatches as a given api key.
 ##### Example:
 
 ```php
-$this->actingAsMember();
+$this->actingAsMember([], ['general' => ['view' => true]]);
 $this->actingAsApiKey();                              // a super-user key with all scopes
 $this->actingAsApiKey(['is_super_user' => false]);    // one that is not
+$this->actingAsApiKey([                               // a user key holding one scope
+    'is_super_user' => false,
+    'allow_all_scopes' => false,
+    'scopes' => ['node:read'],
+]);
 ```
 
 `is_super_user` sets the key type that `assertSuperUserKey()` checks, and `allow_all_scopes`
 grants every scope.
+
+**The default is the most powerful key there is**, a super user holding every scope, so a guard
+that refuses super-user keys, or a scope check, is never reached by it. A test of either passes
+the fields explicitly, as the last call above does; `scopes` takes the scope ids as a list.
+
+**An api dispatch needs `general.view`, and core's refusal reads as an add-on's own.** Core checks
+it before the controller's `preDispatchController()` runs, and the 403 carries the same
+*do not have permission* sentence a gate's `noPermission()` gives, so a test that a gate refuses
+passes on core's refusal and keeps passing with the gate deleted. Grant `general.view` first, and
+pair the refusal with the same dispatch succeeding once the gate is satisfied. A key with no scope
+is refused differently, naming the scope, so that one cannot be mistaken for the other.
 
 `\XF::$apiKey` is restored after each test.
 

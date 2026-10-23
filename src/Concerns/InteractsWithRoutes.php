@@ -61,7 +61,17 @@ trait InteractsWithRoutes
 	 * drives the key_type getter that assertSuperUserKey() reads, and allow_all_scopes
 	 * short-circuits hasScope() ahead of the scopes array.
 	 *
-	 * @param array $values - columns for the key, eg ['is_super_user' => true]
+	 * The default is the most powerful key there is - a super user holding every scope - so a
+	 * guard that refuses super-user keys, or a scope check, is never reached by it. The
+	 * least-privilege form is a user key carrying only the scopes the route needs:
+	 * ['is_super_user' => false, 'allow_all_scopes' => false, 'scopes' => ['node:read']].
+	 *
+	 * An api dispatch needs general.view like a public one, checked by core before the
+	 * controller's own preDispatchController() runs, and the refusal reads exactly as an add-on's
+	 * own noPermission() does. A test that a gate refuses therefore grants general.view first,
+	 * and shows the same dispatch succeeding when the gate is satisfied.
+	 *
+	 * @param array $values - columns for the key, eg ['is_super_user' => false]
 	 *
 	 * @return ApiKey
 	 */
