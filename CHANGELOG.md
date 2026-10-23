@@ -1,5 +1,14 @@
 # Changelog
 
+## 5.35.1 (unreleased)
+
+* a reply assertion that checks more than the reply's type - `assertReplyTemplate()`,
+  `assertReplyViewClass()`, `assertReplyParam()`, `assertReplyParamSame()`,
+  `assertReplyIsLoginRequired()`, and `assertReplyIsRedirect()` or `assertReplyIsError()` with an
+  argument - is no longer reported by PHPStan as always true when it follows `assertReplyIsView()`,
+  `assertReplyIsRedirect()` or `assertReplyIsError()`. The type still narrows, and a second
+  `assertReplyIsView()` on an already-asserted view is still reported
+
 ## 5.35.0 (2026-10-23)
 
 * `runDeferred()` runs the work queued with `\XF::runOnce()` and returns the keys of what was

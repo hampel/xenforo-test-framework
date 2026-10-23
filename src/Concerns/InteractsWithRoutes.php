@@ -842,7 +842,7 @@ trait InteractsWithRoutes
 	 *
 	 * @return void
 	 *
-	 * @phpstan-assert View $reply
+	 * @phpstan-assert =View $reply
 	 */
 	protected function assertReplyTemplate(AbstractReply $reply, $template, $message = null)
 	{
@@ -864,7 +864,7 @@ trait InteractsWithRoutes
 	 *
 	 * @return void
 	 *
-	 * @phpstan-assert View $reply
+	 * @phpstan-assert =View $reply
 	 */
 	protected function assertReplyViewClass(AbstractReply $reply, $viewClass, $message = null)
 	{
@@ -886,7 +886,7 @@ trait InteractsWithRoutes
 	 *
 	 * @return void
 	 *
-	 * @phpstan-assert View $reply
+	 * @phpstan-assert =View $reply
 	 */
 	protected function assertReplyParam(AbstractReply $reply, $key, $message = null)
 	{
@@ -913,7 +913,7 @@ trait InteractsWithRoutes
 	 *
 	 * @return void
 	 *
-	 * @phpstan-assert View $reply
+	 * @phpstan-assert =View $reply
 	 */
 	protected function assertReplyParamSame(AbstractReply $reply, $key, $expected, $message = null)
 	{
@@ -955,7 +955,7 @@ trait InteractsWithRoutes
 	 *
 	 * @return void
 	 *
-	 * @phpstan-assert Redirect $reply
+	 * @phpstan-assert =Redirect $reply
 	 */
 	protected function assertReplyIsRedirect(AbstractReply $reply, $url = null, $type = null, $message = null)
 	{
@@ -994,7 +994,7 @@ trait InteractsWithRoutes
 	 *
 	 * @return void
 	 *
-	 * @phpstan-assert Error $reply
+	 * @phpstan-assert =Error $reply
 	 */
 	protected function assertReplyIsError(AbstractReply $reply, $code = null, $errorText = null, $message = null)
 	{
@@ -1032,7 +1032,7 @@ trait InteractsWithRoutes
 	 *
 	 * @return void
 	 *
-	 * @phpstan-assert View $reply
+	 * @phpstan-assert =View $reply
 	 */
 	protected function assertReplyIsLoginRequired(AbstractReply $reply, $message = null)
 	{
