@@ -8,6 +8,10 @@
   the container: `['skipSidebarWidgets' => true]` leaves the widgets out, `['template' => ...]`
   wraps with another container
 * docs: a tip on testing a DML-only upgrade step by calling it inside the transaction
+* a test that ends in a deadlock, a lock wait that timed out or a row that changed since the
+  transaction read it is followed in the run's output by a line naming the cause. 5.37.0 said the
+  error was reported wrapped with the cause named and the original beneath; it was not, since
+  PHPUnit records an error before the test case can see it. The error is reported as it was thrown
 
 ## 5.37.0 (2026-10-23)
 

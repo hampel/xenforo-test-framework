@@ -2624,11 +2624,11 @@ row your test does, and a test holding a transaction open across one of those ru
 row has changed since the transaction first read it, which the server reports as
 `MySQL query error [1020]`.
 
-**Either error is reported with the cause named.** A deadlock, a lock wait that timed out or a row
-that changed since the transaction read it reaches PHPUnit wrapped in one sentence saying another
-transaction held the row and that on a shared forum it is usually another suite, with the original
-error and its trace beneath - so the report says to re-run on an idle forum before reading it as a
-defect.
+**Either error is followed in the run's output by its cause.** When a test ends in a deadlock, a
+lock wait that timed out or a row that changed since the transaction read it, a line naming the
+test says another transaction held the row, that on a shared forum it is usually another suite,
+and to re-run on an idle forum before reading it as a defect. It is written to standard error
+beside the progress, since PHPUnit reports the error itself as it was thrown.
 
 The column XenForo checks is `is_staff`, and an insert sets every column that has a default, so
 this happens for an ordinary member rather than only for a member of staff. Where you want the

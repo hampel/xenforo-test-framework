@@ -15,11 +15,14 @@ same name is a fatal at class load.
 grep -rn 'function renderReplyPage(' tests/
 ```
 
+A test that ends in a deadlock, a lock wait that timed out or a row that changed since the
+transaction read it is now followed in the run's output by a line naming the cause. 5.37.0 said
+the error reached PHPUnit wrapped with the cause named; it did not, because PHPUnit records an
+error before the test case can see it. The error is reported as it was thrown.
+
 ## 5.37.0
 
-Nothing to do. A database error that means another transaction held a row now reaches PHPUnit
-wrapped, with the cause named and the original error as its cause; it happens only once the test
-has failed, so a test that catches `XF\Db\DeadlockException` from the code under test is unaffected.
+Nothing to do.
 
 ## 5.36.0
 
