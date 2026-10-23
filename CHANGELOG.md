@@ -5,6 +5,9 @@
 * `createAdministratorFixture()` creates an administrator in the database - a member and the
   administrator record XenForo reads admin permissions from - for code that reads administrators
   rather than the visitor. A permission id the forum does not define is refused
+* `phpunit.xml` declares a `<source>` block - the add-on's PHP, with `vendor/`, `tests/`, `_build/`,
+  `_data/` and `_output/` excluded - so `--coverage-text` reports on the add-on without a filter on
+  the command line. Re-copy it, or add the block
 * docs: `actingAsApiKey()` defaults to a super-user key holding every scope, so a guard that
   refuses super-user keys or checks a scope is never reached by it; the least-privilege form is
   documented

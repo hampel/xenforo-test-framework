@@ -15,6 +15,14 @@ methods of those names, and a private one of the same name is a fatal at class l
 grep -rnE 'function (createAdministratorFixture|requireAdminPermissionsExist)\(' tests/
 ```
 
+**Re-copy `phpunit.xml`, or add its `<source>` block to yours**, if you want a coverage report:
+
+```bash
+cp vendor/hampel/xenforo-test-framework/phpunit.xml .
+```
+
+Without the block the suite runs as before; only `--coverage-text` and its siblings read it.
+
 ## 5.33.0
 
 Nothing to do, unless one of your test classes already defines a method named

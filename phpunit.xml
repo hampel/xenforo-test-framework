@@ -22,4 +22,17 @@
       <directory suffix="Test.php">./tests/Feature</directory>
     </testsuite>
   </testsuites>
+
+  <source>
+    <include>
+      <directory suffix=".php">.</directory>
+    </include>
+    <exclude>
+      <directory>./_build</directory>
+      <directory>./_data</directory>
+      <directory>./_output</directory>
+      <directory>./tests</directory>
+      <directory>./vendor</directory>
+    </exclude>
+  </source>
 </phpunit>

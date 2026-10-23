@@ -661,6 +661,19 @@ options - they tell PHPUnit where to find our unit tests.
       <directory suffix="Test.php">./tests/Feature</directory>
     </testsuite>
   </testsuites>
+
+  <source>
+    <include>
+      <directory suffix=".php">.</directory>
+    </include>
+    <exclude>
+      <directory>./_build</directory>
+      <directory>./_data</directory>
+      <directory>./_output</directory>
+      <directory>./tests</directory>
+      <directory>./vendor</directory>
+    </exclude>
+  </source>
 </phpunit>
 ```
 
@@ -673,6 +686,15 @@ configuration fails validation and `failOnWarning` then fails every run.
 `failOnEmptyTestSuite` fires on an empty run, not an empty suite. A Feature suite that collects nothing - or misses a
 test file not named `*Test.php` - still exits 0 while the Unit suite passes. When you add your first feature test, run
 `vendor/bin/phpunit --testsuite Feature` and check the test count includes it.
+
+The `<source>` block is what a coverage report covers: your add-on's PHP, with `vendor/`, `tests/`, `_build/`,
+`_data/` and `_output/` left out. Without it `--coverage-text` has nothing to report on, and a filter of `.` given on
+the command line counts Composer's autoloader and this framework as your code. Coverage needs a driver - `pcov`, or
+Xdebug with `coverage` in its mode:
+
+```bash
+vendor/bin/phpunit --coverage-text
+```
 
 Finally, update your `build.json` file to clean up unit test code when we build our addon releases. Assuming you only 
 use Composer for unit testing:
