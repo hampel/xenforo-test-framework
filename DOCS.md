@@ -955,7 +955,8 @@ $this->assertArrayHasKey('title', $this->replyErrors($reply));
 A reply thrown as `XF\Mvc\Reply\Exception` - by `assertPostOnly()`, `assertRecordExists()` or a
 permission check - comes back as that reply. The request is placed in the container as well as
 passed to the controller. A `Reroute` is followed, and the action it leads to does run its
-`preDispatch()`. Work queued with `\XF::runOnce()` has run by the time the reply is returned.
+`preDispatch()`. Work queued with `\XF::runOnce()` has run by the time the reply is returned, as
+`runDeferred()` runs it.
 
 **A toggle's input is keyed by the column it toggles** - `active` unless the controller says
 otherwise - so turning a notice off is `['active' => [$id => false]]` to the `toggle` action. With
@@ -2495,10 +2496,10 @@ Neither development command helps here, and one of them is dangerous:
   holds an edit the database may not have, so exporting can overwrite the edit with the older copy.
 
 A transaction also puts the test in a race with the rest of the forum for any row both write. On
-MariaDB 11.8 and later, where snapshot isolation is on by default, the loser gets
-`Record has changed since last read`, on some runs and not others; holding the row long enough
-instead gets a deadlock, which the server resolves by rolling your transaction back. `dispatch()`,
-`callAction()` and `runJobToCompletion()` leave XenForo's own `autoJobRun` registry row alone for
+MariaDB 11.8 and later, where snapshot isolation is on by default, the loser gets `Record has
+changed since last read`, on some runs and not others; holding the row long enough instead gets a
+deadlock, which the server resolves by rolling your transaction back. `dispatch()`, `callAction()`,
+`runJobToCompletion()` and `runDeferred()` leave XenForo's own `autoJobRun` registry row alone for
 that reason.
 
 **The data registry is the first surface to watch.** `DataRegistry::set()` is a read-modify-write
@@ -2623,17 +2624,31 @@ use Tests\TestCase;
 
 class ThingTest extends TestCase
 {
-	public function test_database_state()
+	public function test_removing_an_account_removes_its_things_and_nobody_elses()
 	{
-		$this->assertDatabaseHas('xf_user', ['user_id' => 1]);
-		$this->assertDatabaseMissing('xf_user', ['username' => 'nobody']);
-		$this->assertDatabaseCount('xf_user', 1, ['user_id' => 1]);
+		$user = $this->createUserAccount('alice');
+		$other = $this->createUserAccount('bob');
 
-		// no criteria counts the whole table
-		$this->assertDatabaseCount('xf_myaddon_thing', 0);
+		// plant the rows first: an assertion that a row is missing passes against a table that
+		// never held it, with the code under test deleted
+		$this->createEntity('MyVendor\MyAddon:Thing', ['user_id' => $user->user_id]);
+		$this->createEntity('MyVendor\MyAddon:Thing', ['user_id' => $other->user_id]);
+		$this->assertDatabaseCount('xf_myaddon_thing', 2);
+
+		$this->app()->service('MyVendor\MyAddon:Remover', $user)->remove();
+
+		$this->assertDatabaseMissing('xf_myaddon_thing', ['user_id' => $user->user_id]);
+		// the other user keeps theirs: the control that the removal was scoped, not total
+		$this->assertDatabaseHas('xf_myaddon_thing', ['user_id' => $other->user_id]);
 	}
 }
 ```
+
+**Plant the row before asserting it is gone.** `assertDatabaseMissing()` passes against a table that
+never held the row, and `assertDatabaseCount()` of zero passes against an empty one, with the code
+under test deleted. A row the code must leave alone, asserted present afterwards, is the control
+that the removal was scoped. A criteria-free `assertDatabaseCount('xf_myaddon_thing', 0)` counts the
+whole table.
 
 ### mockDatabase
 Mock the database adapter.
@@ -3454,7 +3469,7 @@ Run a job until it completes, and return its final `JobResult` - to test what th
 
 Each pass builds a new instance of the job from the data the previous pass returned, as XenForo's
 job manager does, so a job that keeps its position only on the instance never completes here either.
-Work queued with `\XF::runOnce()` runs after each pass.
+Work queued with `\XF::runOnce()` runs after each pass, through `runDeferred()`.
 
 ##### Parameters:
 
@@ -3483,6 +3498,50 @@ when it runs several jobs in one request. So if one job creates a related row wi
 relation on an entity it loaded, a second job run in the same test - or the same request in
 production - finds that entity with the relation still empty. Clear it yourself with
 `$this->app()->em()->clearEntityCache()` if you want each job to start fresh.
+
+### runDeferred
+Run the work queued with `\XF::runOnce()`, and return the keys of what was queued, in queue order.
+
+XenForo defers side effects this way - an entity's `_postSave()` queuing a cache rebuild,
+`XF:Passkey` queuing the update of the user's passkey provider on save and on delete - and a
+request runs the queue at the end of its dispatch. `dispatch()`, `callAction()` and
+`runJobToCompletion()` run it too. A test that saves or deletes an entity directly is the case this
+is for: nothing else runs the queue, and teardown discards it, so the side effect never happens.
+
+##### Example:
+
+```php
+$user = $this->createUserAccount('alice');
+
+$this->createEntity('XF:Passkey', [
+	'user_id' => $user->user_id,
+	'name' => 'Laptop',
+	'credential_id' => 'credential',
+	'credential_public_key' => 'public-key',
+	'aaguid' => str_repeat('0', 32), // nullable on the entity, NOT NULL in the table
+]);
+
+$row = ['user_id' => $user->user_id, 'provider_id' => 'passkey'];
+$this->assertDatabaseMissing('xf_user_tfa', $row);
+
+$this->assertSame(['updateUserPasskeyProvider-' . $user->user_id], $this->runDeferred());
+
+$this->assertDatabaseHas('xf_user_tfa', $row);
+```
+
+**The keys say what was queued**, so assert them: a call that finds nothing queued returns `[]` and
+runs nothing. Work that deferred work queues in turn runs as well, as it would in a request, and is
+not among the keys.
+
+**Calling `\XF::triggerRunOnce()` yourself is not the same thing.** An exception thrown by deferred
+work fails the test here; XenForo's own loop logs it, rolls back whatever transaction is open and
+carries on, so the test passes on a transaction the server has ended. And XenForo's `autoJobRun`
+registry write is left out, for the reason given under `UsesDatabaseTransactions`.
+
+**The entity cache is not cleared**, as for `runJobToCompletion()`. A save and a delete in one test
+are two requests in production, and an entity the first loaded - the provider with its user entries
+- still holds what it had before the deferred work ran, so the second finds nothing to remove.
+Clear it with `$this->app()->em()->clearEntityCache()` between the two.
 
 ### runRunnerStep
 Run one step of a XenForo multi-part runner to completion, and return how many times the step ran.

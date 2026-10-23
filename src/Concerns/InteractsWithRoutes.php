@@ -221,7 +221,7 @@ trait InteractsWithRoutes
 		// go through it - so without this, deferred work a controller queued during the dispatch
 		// never runs. Entity postSave cache rebuilds are the common case. Rethrows, so a failure in
 		// deferred work fails the test rather than being logged and swallowed.
-		$this->drainRunOnce();
+		$this->runDeferred();
 
 		return $reply;
 	}
@@ -450,7 +450,7 @@ trait InteractsWithRoutes
 			$reply = $this->resolveReply($dispatcher, $reply->getMatch(), "$controller::$action");
 		}
 
-		$this->drainRunOnce();
+		$this->runDeferred();
 
 		return $reply;
 	}

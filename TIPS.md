@@ -48,6 +48,23 @@ every command class on the install simply to list them, so a class of yours that
 `cmd.php` down for everybody — and nothing else in a test suite loads these classes at all, so a
 broken parent or a renamed namespace goes unnoticed until someone runs a command.
 
+## Testing a check that your extensions apply
+
+An add-on that checks its own class extensions are in place - a validate command reporting that its
+extension of `XF\Entity\User` is not applied - has a branch that only runs when the extension is
+absent, and the framework cannot make it absent for one test: once any test in the run has resolved
+the class, the extension stays, for the reason `DOCS.md` gives under *Unit Test Configuration*.
+`requireClassNotExtended()` lets such a test run alone under `--filter` and skip in a full run,
+which is honest, and is not coverage.
+
+Make the branch testable by not depending on the resolution. Give the check an injectable list of
+what it expects - a protected method returning the extensions, or a constructor argument - so one
+test hands it an entry nothing registers and asserts the report, and another hands it the real list
+and asserts the check is clean. The one test that goes through XenForo's real resolution stays
+under `requireClassNotExtended()`, and the comparison it guards is tested either way.
+`assertAddOnClassExtensionsApply()` covers the other half: that every extension the add-on
+registers is the one XenForo resolves.
+
 ## Avoid static functions
 
 A Cron task has to be static, but keep the static part short. XenForo's own Cron tasks hand
@@ -107,6 +124,8 @@ core functionality without side effects run for real, and mock only what you nee
 - `XF\Job\Manager` — `fakesJobs()`, or `runJobToCompletion()` to run a job. `runRunnerStep()` runs
   one step of a multi-part runner to completion, for work your add-on contributes to someone else's
   clean-up or merge service
+- work deferred with `\XF::runOnce()` — `runDeferred()`, for a test that saves or deletes an entity
+  directly rather than through a dispatch or a job
 - `XF\Logger` — `fakesLogger()` for XenForo's moderator log. For a `Psr\Log\LoggerInterface` of
   your own, under your own container key, `recordsLog()`
 - `XF\Mail\Transport` — `fakesMail()`, which also captures mail sent with `queue()`. `failWith()`
@@ -139,6 +158,24 @@ permission is *denied* passes for a visitor with no permissions at all.
 `assertNoUnresolvedPhrases()` is the shape to reach for when checking phrases resolved, rather than
 searching for your own prefix. Assert what should be there in the same test. For permissions,
 remove the grant and check the positive test fails.
+
+The database form is the same trap: `assertDatabaseMissing()` passes against a table that never
+held the row, so a test that an account's rows are removed plants them first, and keeps a second
+account's rows as the control that the removal was scoped. A suite asserting `xf_user_tfa` holds
+no rows for an account that never had any passes with the removal deleted.
+
+## Plant a core row with the columns its table needs, not the ones its entity requires
+
+An entity's structure and its table can disagree, and the entity is the looser of the two.
+`XF:Passkey` declares `aaguid` nullable with a null default, and `xf_passkey.aaguid` is `NOT NULL`,
+so creating one without it fails with "Column 'aaguid' cannot be null" - a message naming the
+column and nothing about why the entity allowed it. `xf_oauth_token.scopes` is a `blob`, which has
+no default, so a raw insert without it fails with "Field 'scopes' doesn't have a default value".
+Core's own flows always set both.
+
+So when a fixture needs a row core normally writes - a passkey, a token, a two-step entry - read the
+table in `src/XF/Install/Data/MySql.php` beside the entity's structure, and set every column the
+table needs. Each miss costs a run, and the entity is not where the answer is.
 
 ## Mutate a template with a method name the compiler accepts
 

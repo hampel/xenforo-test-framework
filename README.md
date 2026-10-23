@@ -414,7 +414,8 @@ We have helpers to mock many of the key subsystems:
 We also have fake systems which log interactions with the subsystem and then allow us to query that after the fact:
 
 * `fakesErrors`
-* `fakesJobs` - and `runJobToCompletion`, which runs a job until it completes
+* `fakesJobs` - and `runJobToCompletion`, which runs a job until it completes, and `runDeferred`,
+  which runs work queued with `\XF::runOnce()`
 * `fakesLogger`
 * `fakesMail`
 * `fakesSimpleCache`

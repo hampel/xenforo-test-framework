@@ -1,5 +1,20 @@
 # Changelog
 
+## 5.35.0 (unreleased)
+
+* `runDeferred()` runs the work queued with `\XF::runOnce()` and returns the keys of what was
+  queued - for a test that saves or deletes an entity directly, where nothing else runs the queue.
+  `dispatch()`, `callAction()` and `runJobToCompletion()` already run it. An exception in deferred
+  work fails the test, and XenForo's `autoJobRun` registry write is left out, so a test calling
+  `\XF::triggerRunOnce()` itself should call this instead
+* docs: the `assertDatabaseMissing` example plants the rows it then asserts are gone, with a row
+  the code must leave alone as the control; the tip on pairing a negative assertion with a
+  positive one covers the database form
+* docs: a tip on planting a row core normally writes, where the entity declares a column more
+  loosely than its table - `XF:Passkey`'s `aaguid`, `xf_oauth_token`'s `scopes`
+* docs: a tip on testing an add-on's own check that its class extensions apply, whose failing
+  branch cannot be reached in a full run
+
 ## 5.34.0 (2026-10-23)
 
 * `createAdministratorFixture()` creates an administrator in the database - a member and the

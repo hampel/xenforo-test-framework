@@ -5,6 +5,24 @@ Most releases need nothing beyond `composer update`. `CHANGELOG.md` lists everyt
 
 `tests/TestCase.php` is copied into your add-on, so a change to it has to be merged by hand.
 
+## 5.35.0
+
+Nothing to do, unless one of your test classes already defines a method named `runDeferred()`.
+Rename it: `TestCase` now has a method of that name, and a private one of the same name is a fatal
+at class load.
+
+```bash
+grep -rn 'function runDeferred(' tests/
+```
+
+A test that calls `\XF::triggerRunOnce()` itself keeps working. Replace the call with
+`runDeferred()`: an exception in deferred work then fails the test instead of being logged with a
+rollback, and XenForo's `autoJobRun` registry write stays out of the test's transaction.
+
+```bash
+grep -rn 'triggerRunOnce' tests/
+```
+
 ## 5.34.0
 
 Nothing to do, unless one of your test classes already defines a method named
