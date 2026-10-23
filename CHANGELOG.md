@@ -1,6 +1,6 @@
 # Changelog
 
-## 5.37.0 (unreleased)
+## 5.37.0 (2026-10-23)
 
 * `assertAddOnTemplateModificationsApplyTimes()` and `assertAddOnTemplateModificationFindsMatch()`
   take a map of modification key to count as well as one count for all, for an add-on whose
