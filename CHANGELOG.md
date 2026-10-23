@@ -1,5 +1,14 @@
 # Changelog
 
+## 5.38.0 (unreleased)
+
+* `renderReplyPage()` renders a View reply as the page a request would produce: the reply's
+  template wrapped in the page container of the application it was dispatched through, with the
+  parameters XenForo adds for a request read from the reply. Page parameters passed to it reach
+  the container: `['skipSidebarWidgets' => true]` leaves the widgets out, `['template' => ...]`
+  wraps with another container
+* docs: a tip on testing a DML-only upgrade step by calling it inside the transaction
+
 ## 5.37.0 (2026-10-23)
 
 * `assertAddOnTemplateModificationsApplyTimes()` and `assertAddOnTemplateModificationFindsMatch()`

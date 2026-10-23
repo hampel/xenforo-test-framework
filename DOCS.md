@@ -2064,6 +2064,48 @@ that holds the add-on as a release this refuses. Keep it beside
 `assertAddOnTemplateModificationsApply()` rather than in place of it: one reads what the working
 copy ships, the other what the forum holds, and the two catch different days.
 
+### renderReplyPage
+Render a View reply as the page a request would produce: the reply's template wrapped in the page
+container of the application it was dispatched through - navigation, header, footer, the staff bar
+- with the parameters XenForo adds for a request read from the reply: `pageSection`, `controller`,
+`action`, `classType`, `containerKey`, `contentKey`, `view` and `template`.
+
+##### Parameters:
+
+* `reply` - a View, as `dispatch()` or `callAction()` returned it
+* `pageParams` - optional - merged over the page parameters the reply's template set, as the
+  container reads them: `section`, `skipSidebarWidgets`, `breadcrumbPath`, or `template` to wrap
+  with another container
+
+##### Example:
+
+```php
+$this->fakesErrors();
+$this->actingAsMember([], ['general' => ['view' => true]]);
+$reply = $this->dispatch('help');
+
+$page = $this->renderReplyPage($reply);
+
+$this->assertSee($page, 'data-template="help_index"', false);
+$this->assertSee($page, 'p-nav', false);
+```
+
+The wrap is XenForo's own: `public:PAGE_CONTAINER` for a public reply and `admin:PAGE_CONTAINER`
+for an admin one - or the login container unless the visitor is an administrator. Where
+`renderReply()` gives the template and `renderTemplate('public:PAGE_CONTAINER', ...)` gives the
+furniture around content of your own, this gives the two together with the reply read into the
+container, so a modification or a condition on the page that depends on the request - the
+section, the controller, the template name - renders as it does in a browser.
+
+**The container renders the forum's real navigation, notices and sidebar widgets.** On a shared
+forum a sibling add-on's modification or widget can raise a template error here that the reply
+alone did not: call `fakesErrors()`, and filter `assertNoTemplateErrors()` to your own templates.
+`['skipSidebarWidgets' => true]` leaves the widgets out.
+
+It refuses what `renderReply()` refuses: anything but a View, and a reply under the Cli
+application, whose page render wraps nothing - a reply from `dispatch()` or `callAction()` carries
+its type, one built by hand needs `setAppClassType()` first.
+
 ### renderTemplateWithoutModification
 Render a template with one of its template modifications left out, so a test can show that the
 markup it asserts on is the modification's work.

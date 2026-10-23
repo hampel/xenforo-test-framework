@@ -476,6 +476,8 @@ the public and api forms but not the admin one
 and `renderReply` renders the template a dispatched reply named, with `assertSee`, `assertDontSee`, `assertSeeText`,
 `assertDontSeeText` and `assertSeeInOrder` to assert on the output, and `textOf` to read that output back with
 its markup stripped and its entities decoded
+* `renderReplyPage` renders a dispatched reply as the page a request would produce - the template wrapped in its page
+container, with the parameters XenForo adds for a request
 * `assertTemplateModificationApplied` asserts that a template modification has applied, using its apply count
 * `assertAddOnTemplateModificationsApply` asserts that every template modification your add-on registers still
 applies, which a suite with no assertion on the markup they insert cannot otherwise notice - XenForo records a

@@ -65,6 +65,32 @@ under `requireClassNotExtended()`, and the comparison it guards is tested either
 `assertAddOnClassExtensionsApply()` covers the other half: that every extension the add-on
 registers is the one XenForo resolves.
 
+## Test an upgrade step by calling it
+
+A DML-only upgrade step - one that rewrites rows rather than tables, such as renaming a
+permission and carrying its grants across - runs inside the test's transaction, so it is tested
+against planted state and leaves nothing behind:
+
+```php
+$this->fakesJobs();
+$this->fakesRegistry();
+
+$setup = new Setup($this->app()->addOnManager()->getById('MyVendor/MyAddon'), $this->app());
+$setup->upgrade1000270Step1();
+
+$this->assertDatabaseHas('xf_permission_entry', ['permission_id' => 'newName']);
+$this->assertDatabaseMissing('xf_permission_entry', ['permission_id' => 'oldName']);
+$this->assertJobQueued('XF:PermissionRebuild');
+```
+
+Three things keep it honest. Plant the old state with plain writes rather than through the entity
+the step rewrites, or that entity's own behaviour runs on the way in and the step meets something
+it never meets in an upgrade. Fake the jobs and the registry first where the step queues a rebuild
+or writes a cache, since those reach rows the live forum also writes. And clear the entity cache
+with `$this->app()->em()->clearEntityCache()` between two runs of the step in one test, or the
+second reads what the first loaded. A step that changes the schema cannot be tested this way: DDL
+commits the transaction, and the teardown check says so.
+
 ## Avoid static functions
 
 A Cron task has to be static, but keep the static part short. XenForo's own Cron tasks hand

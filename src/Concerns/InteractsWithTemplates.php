@@ -1173,6 +1173,43 @@ trait InteractsWithTemplates
 	}
 
 	/**
+	 * Render a View reply as the page a request would produce: the reply's template wrapped in the
+	 * page container of the application it was dispatched through - navigation, header, footer, the
+	 * staff bar - with the parameters XenForo adds for a request read from the reply: `pageSection`,
+	 * `controller`, `action`, `classType`, `containerKey`, `contentKey`, `view` and `template`.
+	 *
+	 * The wrap is XenForo's own renderPage(), on the application dispatch() installed for the reply's
+	 * type: `public:PAGE_CONTAINER` for a public reply, `admin:PAGE_CONTAINER` for an admin one - or
+	 * the login container unless the visitor is an administrator. The container renders the forum's
+	 * real navigation, notices and sidebar widgets, so on a shared forum a sibling add-on's
+	 * modification or widget can raise a template error here that the reply alone did not: filter
+	 * assertNoTemplateErrors() to your own templates, and pass `['skipSidebarWidgets' => true]` to
+	 * leave the widgets out.
+	 *
+	 * Refuses what renderReply() refuses: anything but a View, and a reply rendered under the Cli
+	 * application, which would wrap nothing - a reply from dispatch() or callAction() carries its
+	 * type, one built by hand needs setAppClassType() first.
+	 *
+	 * @param AbstractReply $reply
+	 * @param array $pageParams - merged over the page parameters the reply's template set, as the
+	 *                            container reads them: `section`, `skipSidebarWidgets`,
+	 *                            `breadcrumbPath`, or `template` to wrap with another container
+	 *
+	 * @return string the whole page
+	 */
+	protected function renderReplyPage(AbstractReply $reply, array $pageParams = [])
+	{
+		// refuses anything but a View, and a reply under the Cli application - the one whose
+		// renderPage() would wrap nothing
+		$content = $this->renderReply($reply);
+
+		$templater = $this->app()->templater();
+		$templater->pageParams = array_replace($templater->pageParams, $pageParams);
+
+		return (string) \XF::app()->renderPage($content, $reply, $this->app()->renderer('html'));
+	}
+
+	/**
 	 * Assert that every template modification the add-on registers still applies.
 	 *
 	 * A modification whose `find` no longer matches is silent: XenForo logs it with status `ok`

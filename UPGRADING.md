@@ -5,6 +5,16 @@ Most releases need nothing beyond `composer update`. `CHANGELOG.md` lists everyt
 
 `tests/TestCase.php` is copied into your add-on, so a change to it has to be merged by hand.
 
+## 5.38.0
+
+Nothing to do, unless one of your test classes already defines a method named
+`renderReplyPage()`. Rename it: `TestCase` now has a method of that name, and a private one of the
+same name is a fatal at class load.
+
+```bash
+grep -rn 'function renderReplyPage(' tests/
+```
+
 ## 5.37.0
 
 Nothing to do. A database error that means another transaction held a row now reaches PHPUnit
