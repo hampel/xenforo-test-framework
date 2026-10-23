@@ -1,6 +1,6 @@
 # Changelog
 
-## 5.38.0 (unreleased)
+## 5.38.0 (2026-10-23)
 
 * `renderReplyPage()` renders a View reply as the page a request would produce: the reply's
   template wrapped in the page container of the application it was dispatched through, with the
