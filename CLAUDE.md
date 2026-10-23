@@ -118,6 +118,15 @@ the shortcut is typed, and are kept under scoped `ignoreErrors` entries rather t
 type is the extension's claim about the install, and the guard turns an undefined-method fatal
 on a forum that resolves the identifier to something else into a named error.
 
+**`extension.neon` at the root is shipped to consumers**, and is the one PHPStan fragment this
+package publishes: a return-type extension under `src/PHPStan/` that types `makeEntity()` and
+`createEntity()` from the entity name, through `hampel/xenforo-phpstan`'s `ShortcutTypes` service.
+That is a dependency on a class in a `0.x` package, coordinated with that package: a signature
+change there is a minor there and a move here. The fragment is included from `phpstan.neon.dist` so
+this package's own analysis exercises it, which is why four entity guards after `makeEntity()` sit
+under scoped ignores beside the three repository ones. `integration/PhpStanEntityHelpersTest.php`
+runs PHPStan over a marked fixture and asserts what a consumer's analysis reports.
+
 ### Do not add the dependency checks
 
 `composer-require-checker` and a dev-free PHPStan run can never be green here, and are deliberately

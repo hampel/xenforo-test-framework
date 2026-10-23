@@ -978,3 +978,7 @@ vendor/bin/xenforo-phpstan generate
 Its README has the `phpstan.neon` to start from, and the add-on's `vendor/` must be excluded from
 PHPStan's scan there, or the `tests/` scaffold this framework ships is read beside the add-on's own
 `Tests\` classes.
+
+This framework ships a fragment of its own, `extension.neon`, which types the entities
+`makeEntity()` and `createEntity()` return from the name they are given. Include it beside
+hampel/xenforo-phpstan's; `DOCS.md` has the detail under `makeEntity`.

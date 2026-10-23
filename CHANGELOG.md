@@ -1,5 +1,13 @@
 # Changelog
 
+## 5.36.0 (unreleased)
+
+* `extension.neon`, for PHPStan: included beside `hampel/xenforo-phpstan`'s, it types what
+  `makeEntity()` and `createEntity()` return from the entity they are asked for - `'XF:User'` or
+  `User::class` gives `XF\Entity\User`, or the analysing add-on's own extension of it - so an
+  entity built in a test is accepted where the concrete entity is wanted and its methods resolve,
+  from level 5. A variable, or a name the forum does not have, is still `Entity`
+
 ## 5.35.1 (2026-10-23)
 
 * a reply assertion that checks more than the reply's type - `assertReplyTemplate()`,

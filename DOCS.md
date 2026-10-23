@@ -2797,6 +2797,23 @@ $thread->hydrateRelation('Forum', $forum);
 ```
 
 
+##### Typing under PHPStan
+
+Both are declared to return `XF\Mvc\Entity\Entity`, which is wide: an entity built here and handed
+to a parameter that wants the concrete entity, or asked for one of its methods, is reported from
+level 5. The `extension.neon` this package ships types them from the argument instead, through
+[hampel/xenforo-phpstan](https://github.com/hampel/xenforo-phpstan), so include both:
+
+```neon
+includes:
+    - vendor/hampel/xenforo-phpstan/extension.neon
+    - vendor/hampel/xenforo-test-framework/extension.neon
+```
+
+`'XF:User'` and `User::class` both give `XF\Entity\User`, or your add-on's own extension of it where
+the forum resolves to one, as `create()` does. A variable, or a name the forum does not have,
+leaves `Entity` standing.
+
 ##### Parameters:
 
 * `shortName` - eg `XF:User`, or `MyVendor\MyAddon:Thing`

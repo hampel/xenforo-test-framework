@@ -5,6 +5,22 @@ Most releases need nothing beyond `composer update`. `CHANGELOG.md` lists everyt
 
 `tests/TestCase.php` is copied into your add-on, so a change to it has to be merged by hand.
 
+## 5.36.0
+
+Nothing to do. To type the entities `makeEntity()` and `createEntity()` return under PHPStan,
+include the shipped fragment in your `phpstan.neon` beside `hampel/xenforo-phpstan`'s, which
+supplies what it needs:
+
+```neon
+includes:
+    - vendor/hampel/xenforo-phpstan/extension.neon
+    - vendor/hampel/xenforo-test-framework/extension.neon
+```
+
+With it included, an `instanceof` guard on an entity built from a short name is reported at level
+4 as always true, because the type now says what the guard checked. The guard is redundant in a
+test and can go.
+
 ## 5.35.0
 
 Nothing to do, unless one of your test classes already defines a method named `runDeferred()`.
