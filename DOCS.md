@@ -494,6 +494,45 @@ $html = $this->renderReply($this->dispatch("users/{$user->user_id}/edit", 'admin
 $this->assertSee($html, 'probebob');
 ```
 
+### createAdministratorFixture
+Create an administrator in the database: a member, and the administrator record XenForo reads admin
+permissions from.
+
+`setVisitorAdminPermissions()` and `actingAsAdministrator()` grant the visitor alone, in memory.
+Code that reads administrators from the database - a command listing who may do something, a page
+of administrators - needs rows, and this is `createUserAccount()` plus `createEntity('XF:Admin')`
+as one call. The record is saved through XenForo's own entity, which marks the member `is_admin`
+and writes the permission entries the control panel reads beside the cache.
+
+The rows are real, so call it from a class using `UsesDatabaseTransactions`; the user save is the
+contended write `createUserAccount()` describes.
+
+**A permission id this forum does not define is refused**, naming it. The cache would answer true
+for it while no control panel could grant it, so a test would pass on a permission that cannot
+exist. The ids are the `admin_permission_id` values of `xf_admin_permission`.
+
+##### Parameters:
+
+* `permissions` - optional - permission id => bool, as `hasAdminPermission()` reads them; a plain
+  list of ids is accepted too
+* `adminValues` - optional - extra columns for the administrator record, eg
+  `['is_super_admin' => true]`
+* `userValues` - optional - columns for the user, eg `['username' => 'alice']`
+
+##### Example:
+
+```php
+$granted = $this->createAdministratorFixture(['user' => true], [], ['username' => 'alice']);
+$other = $this->createAdministratorFixture(['option' => true]);
+
+[, $output] = $this->runConsoleCommand(new Config());
+
+$this->assertStringContainsString('alice', $output);
+```
+
+The user is returned with its `Admin` relation loaded. It is not the visitor; `actingAs($user)`
+makes it one.
+
 ### createNodeFixture
 Create a node and its type data row, without rebuilding the forum's node tree.
 

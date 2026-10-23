@@ -1,7 +1,10 @@
 # Changelog
 
-## 5.33.1 (unreleased)
+## 5.34.0 (unreleased)
 
+* `createAdministratorFixture()` creates an administrator in the database - a member and the
+  administrator record XenForo reads admin permissions from - for code that reads administrators
+  rather than the visitor. A permission id the forum does not define is refused
 * docs: `actingAsApiKey()` defaults to a super-user key holding every scope, so a guard that
   refuses super-user keys or checks a scope is never reached by it; the least-privilege form is
   documented

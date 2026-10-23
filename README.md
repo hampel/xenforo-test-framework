@@ -454,6 +454,8 @@ from the database
 transaction every node on the forum is locked until the test ends
 * `createThreadFixture` creates a thread in a node, with its first post - a thread without one has a null
 `FirstPost`, so it fails wherever anything reads through it
+* `createAdministratorFixture` creates an administrator in the database, for code that reads administrators rather
+than the visitor - `actingAsAdministrator` grants the visitor alone, in memory
 * `dispatch` runs one of your routes the way XenForo does and hands back the reply its controller produced, with
 `assertReplyIsView`, `assertReplyTemplate`, `assertReplyViewClass`, `assertReplyParam`, `replyParam`,
 `assertReplyIsRedirect`, `assertReplyIsError`, `assertReplyIsLoginRequired`, `assertReplyIsMessage`,

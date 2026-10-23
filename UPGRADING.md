@@ -5,6 +5,16 @@ Most releases need nothing beyond `composer update`. `CHANGELOG.md` lists everyt
 
 `tests/TestCase.php` is copied into your add-on, so a change to it has to be merged by hand.
 
+## 5.34.0
+
+Nothing to do, unless one of your test classes already defines a method named
+`createAdministratorFixture()` or `requireAdminPermissionsExist()`. Rename it: `TestCase` now has
+methods of those names, and a private one of the same name is a fatal at class load.
+
+```bash
+grep -rnE 'function (createAdministratorFixture|requireAdminPermissionsExist)\(' tests/
+```
+
 ## 5.33.0
 
 Nothing to do, unless one of your test classes already defines a method named

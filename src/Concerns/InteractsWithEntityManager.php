@@ -6,6 +6,7 @@ use Closure;
 use Hampel\Testing\Mvc\Entity\Manager;
 use Mockery;
 use XF\Container;
+use XF\Entity\Admin;
 use XF\Entity\User;
 use XF\Mvc\Entity\Entity;
 use XF\Repository\UserRepository;
@@ -318,5 +319,95 @@ trait InteractsWithEntityManager
 		$user->save();
 
 		return $user;
+	}
+
+	/**
+	 * Create an administrator in the database: the administrator record XenForo reads admin
+	 * permissions from, on a member XenForo's own save of that record marks is_admin.
+	 *
+	 * setVisitorAdminPermissions() and actingAsAdministrator() grant the visitor alone, in memory.
+	 * Code that reads administrators from the database - a command listing who may do something,
+	 * a page of administrators - needs rows, and this is the createUserAccount() plus
+	 * `createEntity('XF:Admin')` pair as one call. The record is saved through XenForo's own
+	 * entity, so the permission entries the control panel reads are written beside the cache.
+	 *
+	 * The rows are real, so call it from a test class using UsesDatabaseTransactions; the user
+	 * save is the contended write createUserAccount() describes.
+	 *
+	 * A permission id this forum does not define is refused. The cache would answer true for it
+	 * while no control panel could grant it, so a test would be passing on a permission that
+	 * cannot exist.
+	 *
+	 * @param array $permissions - permission id => bool, as hasAdminPermission() reads them; a
+	 *                             plain list of ids is accepted too
+	 * @param array $adminValues - extra columns for the administrator record, eg
+	 *                             ['is_super_admin' => true]
+	 * @param array $userValues - columns for the user, eg ['username' => 'alice']
+	 *
+	 * @return User - with its Admin relation loaded
+	 */
+	protected function createAdministratorFixture(array $permissions = [], array $adminValues = [], array $userValues = [])
+	{
+		if (array_key_exists('is_admin', $userValues) && !$userValues['is_admin'])
+		{
+			throw new \LogicException(
+				'An administrator has is_admin set: saving the administrator record sets it,'
+				. ' so a value of false would not survive. A user without the record is a member,'
+				. ' which createUserAccount() creates.'
+			);
+		}
+
+		$this->requireAdminPermissionsExist($permissions);
+
+		$username = $userValues['username'] ?? null;
+		unset($userValues['username']);
+
+		$user = $this->createUserAccount($username, $userValues);
+
+		$admin = $this->makeEntity('XF:Admin', $adminValues + [
+			'user_id' => $user->user_id,
+			'permission_cache' => $permissions,
+		]);
+
+		if (!($admin instanceof Admin))
+		{
+			throw new \LogicException(
+				'Expected XF:Admin to resolve to a ' . Admin::class . ', got ' . get_class($admin)
+			);
+		}
+
+		$admin->save();
+		$user->hydrateRelation('Admin', $admin);
+
+		return $user;
+	}
+
+	/**
+	 * Refuse a permission id this forum does not define, naming it.
+	 *
+	 * @param array $permissions - as createAdministratorFixture() takes them
+	 *
+	 * @return void
+	 */
+	private function requireAdminPermissionsExist(array $permissions)
+	{
+		$ids = [];
+		foreach ($permissions AS $key => $value)
+		{
+			$ids[] = (is_int($key) && is_string($value)) ? $value : (string) $key;
+		}
+
+		$defined = $this->app()->db()->fetchAllColumn('SELECT admin_permission_id FROM xf_admin_permission');
+		$unknown = array_diff($ids, $defined);
+
+		if ($unknown)
+		{
+			throw new \LogicException(
+				'This forum defines no admin permission ' . implode(', ', $unknown)
+				. ' - the ids are the admin_permission_id values of xf_admin_permission, and an'
+				. ' administrator granted one that is not there would pass hasAdminPermission()'
+				. ' for a permission nothing can grant.'
+			);
+		}
 	}
 }
