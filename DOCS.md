@@ -1890,10 +1890,19 @@ modification key with the number of times it applied.
 
 ```php
 $applied = $this->assertAddOnTemplateModificationsApply('MyVendor/MyAddOn');
+
+$this->assertSame(['myaddon_footer', 'myaddon_header'], array_keys($applied),
+    'a modification was added or removed - give it a test, or take one away');
 ```
 
 With no argument it uses the add-on `$addonsToLoad` isolates, and refuses when that names more than
 one or none.
+
+**A modification added or removed fails nothing.** Every enabled modification the add-on registers
+is gathered, so a new one joins the set this checks and a deleted one leaves it. The assertion
+holds the property; the returned keys are what a suite pins its own inventory against, as the
+second line above does, so a modification that arrives without a test, or leaves while its test
+remains, is named. The keys come back ordered by modification key.
 
 **A modification whose `find` stops matching is silent.** XenForo records it with status `ok` and an
 apply count of zero, so nothing fails, and the markup it inserts is simply absent from every
@@ -1937,13 +1946,16 @@ each template it reaches, and return each modification key with the number of ti
 
 ```php
 $applied = $this->assertAddOnTemplateModificationsApplyTimes(1);
+
+$this->assertSame(['myaddon_footer', 'myaddon_header'], array_keys($applied));
 ```
 
 The same refusals as `assertAddOnTemplateModificationsApply()`, and the same per-template check as
 `assertTemplateModificationAppliedTimes()`: XenForo logs a row per template a modification was
 applied to, so the count is checked on each row rather than summed, and the failure names each
 modification, template and style that is off. One count for every modification the add-on
-registers; where they differ, assert them one at a time.
+registers; where they differ, assert them one at a time. A modification added or removed fails
+nothing here either - pin the returned keys, as above.
 
 ### assertAddOnTemplateModificationFindsMatch
 Assert that the find of every template modification in the add-on's working copy matches its

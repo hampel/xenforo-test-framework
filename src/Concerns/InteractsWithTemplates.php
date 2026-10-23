@@ -1192,7 +1192,12 @@ trait InteractsWithTemplates
 	 *
 	 * @param string|null $addOnId - defaults to the add-on $addonsToLoad isolates, when it names one
 	 *
-	 * @return array<string, int> - each modification key, mapped to the number of times it applied
+	 * A modification added or removed changes the set this checks and fails nothing, since every
+	 * enabled modification the add-on registers is gathered. The returned keys are what a suite
+	 * pins its own inventory against: assert them equal to the list it expects, so a modification
+	 * that arrives without a test, or leaves while its test remains, is named.
+	 *
+	 * @return array<string, int> - each modification key, in key order, mapped to its apply count
 	 */
 	protected function assertAddOnTemplateModificationsApply($addOnId = null)
 	{
@@ -1250,7 +1255,10 @@ trait InteractsWithTemplates
 	 * @param int $times - the apply count every row must carry, at least 1
 	 * @param string|null $addOnId - defaults to the add-on $addonsToLoad isolates, when it names one
 	 *
-	 * @return array<string, int> - each modification key, mapped to the number of times it applied
+	 * As with assertAddOnTemplateModificationsApply(), a modification added or removed fails
+	 * nothing here; pin the returned keys against the list the suite expects.
+	 *
+	 * @return array<string, int> - each modification key, in key order, mapped to its apply count
 	 */
 	protected function assertAddOnTemplateModificationsApplyTimes($times, $addOnId = null)
 	{

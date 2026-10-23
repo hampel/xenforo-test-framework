@@ -8,6 +8,9 @@
 * docs: an api dispatch needs `general.view`, checked by core before the add-on's own
   `preDispatchController()`, and the refusal is the same reply an add-on's gate gives - so a test
   that a gate refuses grants it first and pairs the refusal with the gate being satisfied
+* docs: `assertAddOnTemplateModificationsApply()` and `assertAddOnTemplateModificationsApplyTimes()`
+  gather every modification the add-on registers, so one added or removed fails nothing; the
+  returned keys are what a suite pins its inventory against, and the examples show it
 
 ## 5.33.0 (2026-10-23)
 
