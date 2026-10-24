@@ -1,6 +1,6 @@
 # Changelog
 
-## 5.40.0
+## 5.40.0 (2026-10-24)
 
 * `assertAddOnTemplateModificationsApplyTimes()` and `assertAddOnTemplateModificationFindsMatch()`
   take `'absent'` as a map value for a modification whose template is not in the forum - one an
