@@ -2,7 +2,7 @@
 
 namespace Hampel\Testing\Mvc\Entity;
 
-use Mockery;
+use Mockery\MockInterface;
 use XF\Mvc\Entity\Entity;
 use XF\Mvc\Entity\Finder;
 use XF\Mvc\Entity\Manager as BaseManager;
@@ -17,9 +17,9 @@ class Manager extends BaseManager
 
 	/**
 	 * @param $identifier string
-	 * @param \Closure|null $mock
+	 * @param (\Closure(MockInterface): mixed)|null $mock
 	 *
-	 * @return Mockery\MockInterface
+	 * @return MockInterface
 	 */
 	public function mockRepository($identifier, ?\Closure $mock = null)
 	{
@@ -119,9 +119,9 @@ class Manager extends BaseManager
 
 	/**
 	 * @param string $shortName - the entity short name, the finder class or the entity class
-	 * @param \Closure|null $mock
+	 * @param (\Closure(MockInterface): mixed)|null $mock
 	 *
-	 * @return mixed|Mockery\MockInterface
+	 * @return mixed|MockInterface
 	 */
 	public function mockFinder($shortName, ?\Closure $mock = null)
 	{
@@ -173,9 +173,9 @@ class Manager extends BaseManager
 	/**
 	 * @param $shortName string
 	 * @param bool $inherit - set to true (default) to inherit from the mocked entity, or false to mock a standalone class
-	 * @param \Closure|null $mock
+	 * @param (\Closure(MockInterface): mixed)|null $mock
 	 *
-	 * @return Mockery\MockInterface
+	 * @return MockInterface
 	 */
 	public function mockEntity($shortName, $inherit = true, ?\Closure $mock = null)
 	{

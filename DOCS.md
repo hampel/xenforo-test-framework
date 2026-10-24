@@ -2301,11 +2301,11 @@ class MockTest extends TestCase
 	{		
 		// mock our Request object so we can control what actually goes in there
 		$this->mock('request', Request::class, function ($mock) {
-		   $mock->expects()->getIp(false)->once()->andReturns('10.0.0.1');
+		   $mock->expects()->getIp()->once()->andReturns('10.0.0.1');
 		});
 		
 		// execute some test code which causes the Request object to be queried, for example
-		$ip = $this->app->request()->getIp();
+		$ip = $this->app()->request()->getIp();
 		
 		// validate we received the expected data in response
 		$this->assertEquals('10.0.0.1', $ip);
@@ -3563,7 +3563,7 @@ class JobTest extends TestCase
 		$this->fakesJobs();
 		
 		// execute some test code which queues a job, for example:
-		$this->app->jobManager()->enqueue('MyVendor/MyAddon:MyJob', [
+		$this->app()->jobManager()->enqueue('MyVendor/MyAddon:MyJob', [
 			'key1' => 'value1',
 			'key2' => 'value2'
 		]);
@@ -3807,15 +3807,14 @@ class LoggerTest extends TestCase
 		$user = $this->mockEntity('XF:User');
 		
 		// execute some test code which logs a moderator action, for example:
-		$this->app->logger()->logModeratorAction('user', $user, 'rejected', ['reason' => 'foo']);
+		$this->app()->logger()->logModeratorAction('user', $user, 'rejected', ['reason' => 'foo']);
 
 		// assert our action was logged as expected		
 		$this->assertActionLogged('user');
 		
 		// alternatively, assert our action was logged with specific attributes - return a truth test
 		$this->assertActionLogged('user', function ($log) {
-			$data = $log->getActions();
-			return $data['action'] == 'rejected' && $data['params']['reason'] == 'foo';
+			return $log['action'] == 'rejected' && $log['params']['reason'] == 'foo';
 		});
 	}
 }	
@@ -3975,10 +3974,10 @@ class MailTest extends TestCase
 		$email = 'foo@example.com';
 		
 		// execute some test code which sends an email, for example:
-		$this->app->mailer()
+		$this->app()->mailer()
 				  ->newMail()
 				  ->setTo($email)
-				  ->setTempate('foo_template')
+				  ->setContent('The subject of our mail', '<p>The body of our mail</p>')
 				  ->send();
 		
 		// assert some mail was sent as expected		
@@ -3986,7 +3985,7 @@ class MailTest extends TestCase
 		
 		// alternatively, assert our mail was sent with specific attributes - return a truth test
 		$this->assertMailSent(function ($mail) use ($email) {
-			return $mail->getSubject() == "The subject from our mail template"
+			return $mail->getSubject() == "The subject of our mail"
 				   && in_array($email, array_map(
 						  function ($address) { return $address->getAddress(); },
 						  $mail->getTo()
@@ -4189,11 +4188,11 @@ class RequestTest extends TestCase
 	{		
 		// mock our Request object so we can control what actually goes in there
 		$this->mock('request', Request::class, function ($mock) {
-		   $mock->expects()->getIp(false)->once()->andReturns('10.0.0.1');
+		   $mock->expects()->getIp()->once()->andReturns('10.0.0.1');
 		});
 		
 		// execute some test code which causes the Request object to be queried, for example
-		$ip = $this->app->request()->getIp();
+		$ip = $this->app()->request()->getIp();
 		
 		// validate we received the expected data in response
 		$this->assertEquals('10.0.0.1', $ip);

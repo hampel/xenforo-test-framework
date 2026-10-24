@@ -4,7 +4,7 @@ namespace Hampel\Testing\Concerns;
 
 use Closure;
 use Hampel\Testing\Mvc\Entity\Manager;
-use Mockery;
+use Mockery\MockInterface;
 use XF\Container;
 use XF\Entity\Admin;
 use XF\Entity\User;
@@ -23,9 +23,9 @@ trait InteractsWithEntityManager
 
 	/**
 	 * @param $identifier string - shortname for repository class being mocked
-	 * @param \Closure|null $mock - (optional) mock closure to set expectations on
+	 * @param (\Closure(MockInterface): mixed)|null $mock - (optional) mock closure to set expectations on
 	 *
-	 * @return Mockery\MockInterface
+	 * @return MockInterface
 	 * @throws \Exception
 	 */
 	protected function mockRepository($identifier, ?\Closure $mock = null)
@@ -43,9 +43,9 @@ trait InteractsWithEntityManager
 
 	/**
 	 * @param string $shortName - the entity short name, eg 'XF:User', or the finder or entity class
-	 * @param \Closure|null $mock - (optional) mock closure to set expectations on
+	 * @param (\Closure(MockInterface): mixed)|null $mock - (optional) mock closure to set expectations on
 	 *
-	 * @return Mockery\MockInterface
+	 * @return MockInterface
 	 * @throws \Exception
 	 */
 	protected function mockFinder($shortName, ?\Closure $mock = null)
@@ -73,7 +73,7 @@ trait InteractsWithEntityManager
 	 * @param mixed $id - the id find() will be called with
 	 * @param Entity|null $entity - what find() should return; null for "no such record"
 	 *
-	 * @return Mockery\MockInterface - the finder mock, for any further expectations
+	 * @return MockInterface - the finder mock, for any further expectations
 	 * @throws \Exception
 	 */
 	protected function mockFind($shortName, $id, ?Entity $entity = null)
@@ -99,9 +99,9 @@ trait InteractsWithEntityManager
 	/**
 	 * @param string $shortName - the entity short name, eg 'XF:User'
 	 * @param bool $inherit - set to true (default) to inherit from the mocked entity, or false to mock a standalone class
-	 * @param \Closure|null $mock
+	 * @param (\Closure(MockInterface): mixed)|null $mock
 	 *
-	 * @return Mockery\MockInterface
+	 * @return MockInterface
 	 * @throws \Exception
 	 */
 	protected function mockEntity($shortName, $inherit = true, ?\Closure $mock = null)

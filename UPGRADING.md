@@ -5,6 +5,16 @@ Most releases need nothing beyond `composer update`. `CHANGELOG.md` lists everyt
 
 `tests/TestCase.php` is copied into your add-on, so a change to it has to be merged by hand.
 
+## 5.40.1
+
+Nothing to do, unless a closure you pass to one of the mock helpers declares its parameter with
+a class other than `Mockery\MockInterface`. PHPStan now reports it; drop the type, or use
+`Mockery\MockInterface`.
+
+```bash
+grep -rnE '(mock|mockFactory|mockService|spy|mockDatabase|mockRepository|mockFinder|mockEntity|mockFs|mockRequest)\(.*function \([A-Za-z\\]+ \$' tests/
+```
+
 ## 5.40.0
 
 Nothing to do.

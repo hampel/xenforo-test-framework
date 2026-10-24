@@ -623,10 +623,10 @@ $ cp -r vendor/hampel/xenforo-test-framework/tests .
 Inside the tests directory, you'll find the following directories and files:
 
 * `/tests/Feature` this is where feature tests go, if you write any
-* `/tests/Feature/ExampleTest.php` a placeholder that keeps the directory in git - `phpunit.xml` will not run without
-  it. If you delete it before adding a feature test, commit a `.gitkeep` instead
+* `/tests/Feature/ExampleTest.php` a test that the application boots. It also keeps the directory in git -
+  `phpunit.xml` will not run without it. If you delete it before adding a feature test, commit a `.gitkeep` instead
 * `/tests/Unit` this is where all of your unit tests should go
-* `/tests/Unit/ExampleTest.php` this is a simple example test - edit or copy it as the basis for your own test classes
+* `/tests/Unit/ExampleTest.php` the same test - edit or copy it as the basis for your own test classes
 * `/tests/TestCase.php` this is our base test class (`Tests\TestCase`) that all unit test classes should inherit from if you want to boot the XenForo application framework for use in your tests. It is the only file here you own and edit
 
 Third step is to copy the `phpunit.xml` file from `{addon_root}/vendor/hampel/xenforo-test-framework/phpunit.xml` into the root of your addon:

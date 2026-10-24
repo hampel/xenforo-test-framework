@@ -3,6 +3,7 @@
 namespace Hampel\Testing\Concerns;
 
 use Closure;
+use Mockery\MockInterface;
 use XF\Http\Request;
 
 trait InteractsWithRequest
@@ -11,7 +12,7 @@ trait InteractsWithRequest
 	 * Mock the request - given there are no HTTP requests created from the console, this is useful if we need to
 	 * simulate certain attributes on a request.
 	 *
-	 * @param \Closure|null $mock - mock closure to set expectations
+	 * @param (\Closure(MockInterface): mixed)|null $mock - mock closure to set expectations
 	 *
 	 * @return mixed
 	 */

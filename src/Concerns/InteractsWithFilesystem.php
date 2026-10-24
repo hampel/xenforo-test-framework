@@ -6,6 +6,7 @@ use Closure;
 use League\Flysystem\AdapterInterface;
 use League\Flysystem\Filesystem;
 use League\Flysystem\Memory\MemoryAdapter;
+use Mockery\MockInterface;
 use PHPUnit\Framework\Assert as PHPUnit;
 
 trait InteractsWithFilesystem
@@ -63,7 +64,7 @@ trait InteractsWithFilesystem
 	 * being made
 	 *
 	 * @param $fs - the name of the filesystem to mock (eg `data`, `internal-data`, `code-cache`)
-	 * @param \Closure|null $mock - the mock closure to set expectations on
+	 * @param (\Closure(MockInterface): mixed)|null $mock - the mock closure to set expectations on
 	 *
 	 * @return mixed
 	 */

@@ -3,6 +3,7 @@
 namespace Hampel\Testing\Concerns;
 
 use Closure;
+use Mockery\MockInterface;
 use PHPUnit\Framework\Assert as PHPUnit;
 use XF\SubContainer\AbstractSubContainer;
 
@@ -69,7 +70,7 @@ trait InteractsWithContainer
 	 *
 	 * @param  mixed  $key - the container key to be swapped with a mock
 	 * @param  string $abstract - the base class or interface to use for the mock
-	 * @param  \Closure|null  $mock - (optional) the mock closure to define expectations on
+	 * @param  (\Closure(MockInterface): mixed)|null  $mock - (optional) the mock closure to define expectations on
 	 * @return object - the mock object
 	 */
 	protected function mock($key, $abstract, ?\Closure $mock = null)
@@ -85,7 +86,7 @@ trait InteractsWithContainer
 	 *
 	 * @param  mixed  $key - the container key to be swapped with a mock
 	 * @param  string $abstract - the base class or interface to use for the mock
-	 * @param  \Closure|null  $mock - (optional) the mock closure to define expectations on
+	 * @param  (\Closure(MockInterface): mixed)|null  $mock - (optional) the mock closure to define expectations on
 	 * @return object
 	 */
 	protected function mockFactory($key, $abstract, ?\Closure $mock = null)
@@ -102,7 +103,7 @@ trait InteractsWithContainer
 	 * Mock a Service class
 	 *
 	 * @param string $shortName - shortname for the class in Addon_Id:Class format
-	 * @param \Closure|null $mock - (optional) the mock closure to define expectations on
+	 * @param (\Closure(MockInterface): mixed)|null $mock - (optional) the mock closure to define expectations on
 	 *
 	 * @return object
 	 */
@@ -130,7 +131,7 @@ trait InteractsWithContainer
 	 *
 	 * @param  mixed  $key
 	 * @param  string $abstract
-	 * @param  \Closure|null  $mock
+	 * @param  (\Closure(MockInterface): mixed)|null  $mock
 	 * @return object
 	 */
 	protected function spy($key, $abstract, ?\Closure $mock = null)

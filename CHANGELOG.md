@@ -1,5 +1,20 @@
 # Changelog
 
+## 5.40.1
+
+* the mock helpers declare what their closure is given, so PHPStan types an untyped closure
+  parameter as the Mockery mock instead of `mixed`: `mock()`, `mockFactory()`, `mockService()`,
+  `spy()`, `mockDatabase()`, `mockRepository()`, `mockFinder()`, `mockEntity()`, `mockFs()` and
+  `mockRequest()`. A closure whose parameter is typed as something other than
+  `Mockery\MockInterface`, or a type it extends, is now reported
+* the scaffold's `tests/Feature/ExampleTest.php` and `tests/Unit/ExampleTest.php` assert that the
+  application booted, in place of `assertTrue(true)`, which PHPStan reports as always true
+* docs: the examples call `$this->app()`, which is typed as the application, rather than reading
+  `$this->app`, which is nullable. Four of those examples did not run as written and do now: the
+  two `mock()` examples expect `getIp()` with the arguments the call makes, the `fakesLogger()`
+  truth test reads the entry as the array it is given, and the `fakesMail()` example sends a mail
+  that renders
+
 ## 5.40.0 (2026-10-24)
 
 * `assertAddOnTemplateModificationsApplyTimes()` and `assertAddOnTemplateModificationFindsMatch()`

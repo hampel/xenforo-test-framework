@@ -11,7 +11,7 @@ trait InteractsWithDatabase
 	/**
 	 * Mock the database class
 	 *
-	 * @param \Closure|null $mock
+	 * @param (\Closure(MockInterface): mixed)|null $mock
 	 *
 	 * @return mixed
 	 */
