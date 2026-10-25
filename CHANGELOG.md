@@ -1,5 +1,16 @@
 # Changelog
 
+## 5.41.0
+
+* the second test in a process boots on a XenForo whose `src/utf8.php` declares its functions
+  without `function_exists()` guards, as 2.3.0 does. It failed there with
+  `Cannot redeclare utf8_isASCII()`, and only `--process-isolation` got past the first test. A
+  `createApplication()` of your own does not get this: see `UPGRADING.md`
+* a controller, entity or service constructed with `new` before anything resolved its extension
+  chain is refused with a message that names the remedy, building it through the application or
+  calling `$app->extendClass()` first, and says why the same test passed when another test class ran
+  before it. XenForo's own message is kept as the previous exception
+
 ## 5.40.2 (2026-10-25)
 
 * a test that skips before `parent::setUp()` has run no longer errors in teardown with

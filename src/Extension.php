@@ -507,6 +507,30 @@ class Extension extends BaseExtension
 			$this->inverseExtensionMap[$class] = self::$globalInverseExtensionMap[$class];
 		}
 
-		return parent::resolveExtendedClassToRoot($originalClass);
+		try
+		{
+			return parent::resolveExtendedClassToRoot($originalClass);
+		}
+		catch (\LogicException $e)
+		{
+			if (!str_contains($e->getMessage(), 'extendClass was never called'))
+			{
+				throw $e;
+			}
+
+			// XenForo's message names the mechanism; the test writer needs the remedy, and the
+			// reason the same test passed when another test class ran first
+			throw new \LogicException(
+				"{$class} was asked for its root class, but nothing in this process has resolved its "
+					. 'extension chain. XenForo resolves a class\'s extensions when the application is '
+					. 'asked for it - $app->controller(), $app->service(), $app->repository(), '
+					. '$app->em()->create(), $app->extendClass() - and a plain new skips that, so a test '
+					. 'that constructs one directly passes when an earlier test in the run resolved the '
+					. 'class and fails when none did. Build it through the application, or call '
+					. '$app->extendClass() on the class first. XenForo said: ' . $e->getMessage(),
+				0,
+				$e
+			);
+		}
 	}
 }

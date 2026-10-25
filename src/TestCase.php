@@ -98,9 +98,75 @@ abstract class TestCase extends BaseTestCase
 	{
 		require_once "{$this->rootDir}/src/XF.php";
 
-		\XF::start($this->rootDir);
+		$this->startXenForo();
 
 		return \XF::setupApp(App::class, ['xf-addons' => $this->addonsToLoad]);
+	}
+
+	/**
+	 * \XF::start() - or, for the second boot in a process on a XenForo whose src/utf8.php cannot be
+	 * required twice, the same steps without that require.
+	 *
+	 * @return void
+	 */
+	private function startXenForo()
+	{
+		if (function_exists('utf8_isASCII') && !self::utf8FunctionsAreGuardedIn("{$this->rootDir}/src/utf8.php"))
+		{
+			$this->replayXenForoStart();
+			return;
+		}
+
+		\XF::start($this->rootDir);
+	}
+
+	/**
+	 * The steps of \XF::start() apart from the require of src/utf8.php. XenForo 2.3.0 declares the
+	 * functions in that file without function_exists() guards, and \XF::start() requires it on every
+	 * call, so booting a second time in one process is a fatal error there; later 2.3 releases guard
+	 * them. Everything else start() does can be repeated: the autoloader returns early once it is
+	 * installed, the class aliases are idempotent, and the handlers and shutdown functions are the
+	 * ones the first boot installed. The root and source directories are left as the first boot set
+	 * them.
+	 *
+	 * @return void
+	 */
+	protected function replayXenForoStart()
+	{
+		\XF::$time = time();
+
+		\XF::standardizeEnvironment();
+		\XF::startAutoloader();
+		\XF::setupClassAliases();
+
+		if (property_exists(\XF::class, 'reservedMemory'))
+		{
+			$this->writeStaticProperty(\XF::class, 'reservedMemory', str_repeat('x', 32768));
+		}
+
+		register_shutdown_function(['XF', 'triggerRunOnce']);
+
+		set_error_handler(['XF', 'handlePhpError']);
+		set_exception_handler(['XF', 'handleException']);
+		register_shutdown_function(['XF', 'handleFatalError']);
+	}
+
+	/**
+	 * Whether a utf8.php guards its function declarations with function_exists(), as XenForo 2.3.12
+	 * and later do and 2.3.0 does not. A file that cannot be read is reported guarded, so that
+	 * \XF::start() meets it and reports the problem itself. Read once per file in a process.
+	 */
+	private static function utf8FunctionsAreGuardedIn(string $file): bool
+	{
+		static $guarded = [];
+
+		if (!array_key_exists($file, $guarded))
+		{
+			$contents = is_file($file) ? file_get_contents($file) : false;
+			$guarded[$file] = ($contents === false) || str_contains($contents, 'function_exists');
+		}
+
+		return $guarded[$file];
 	}
 
 	/**

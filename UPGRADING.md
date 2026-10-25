@@ -5,6 +5,18 @@ Most releases need nothing beyond `composer update`. `CHANGELOG.md` lists everyt
 
 `tests/TestCase.php` is copied into your add-on, so a change to it has to be merged by hand.
 
+## 5.41.0
+
+Nothing to do, unless your suite overrides `createApplication()` - the `CreatesApplication` trait
+the scaffold carried before 5.0 - and runs against a XenForo whose `src/utf8.php` has no
+`function_exists()` guards. The second boot in a process now goes through `replayXenForoStart()`
+when the file is unguarded, and an override of `createApplication()` that calls `\XF::start()`
+itself bypasses that. Delete the override, or call `parent::createApplication()` from it.
+
+```bash
+grep -rn 'function createApplication' tests/
+```
+
 ## 5.40.2
 
 Nothing to do.
