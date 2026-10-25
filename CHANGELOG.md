@@ -1,6 +1,6 @@
 # Changelog
 
-## 5.40.1
+## 5.40.1 (2026-10-25)
 
 * the mock helpers declare what their closure is given, so PHPStan types an untyped closure
   parameter as the Mockery mock instead of `mixed`: `mock()`, `mockFactory()`, `mockService()`,
