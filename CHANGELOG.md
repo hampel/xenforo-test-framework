@@ -9,6 +9,8 @@
   `Mockery\MockInterface`, or a type it extends, is now reported
 * the scaffold's `tests/Feature/ExampleTest.php` and `tests/Unit/ExampleTest.php` assert that the
   application booted, in place of `assertTrue(true)`, which PHPStan reports as always true
+* `renderTemplateWithoutModification()` renders a phrase as its text. It rendered every phrase as
+  its key, so an assertion on phrase text against the render without the modification could not pass
 * docs: the examples call `$this->app()`, which is typed as the application, rather than reading
   `$this->app`, which is nullable. Four of those examples did not run as written and do now: the
   two `mock()` examples expect `getIp()` with the arguments the call makes, the `fakesLogger()`

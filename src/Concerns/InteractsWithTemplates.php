@@ -702,6 +702,10 @@ trait InteractsWithTemplates
 	 * disk or in the forum changes. The entry is put back as it was afterwards, so a later render of
 	 * the same template in the same test gets the real one.
 	 *
+	 * The text is compiled for the templater's language, as XenForo compiles a template for each
+	 * language it has: the compiler inlines a phrase's text at compile time, and without a language
+	 * it inlines the phrase's key instead.
+	 *
 	 * @param string $type
 	 * @param string $title
 	 * @param string $text
@@ -713,7 +717,12 @@ trait InteractsWithTemplates
 	private function renderTemplateText($type, $title, $text, array $params, ?AbstractReply $reply)
 	{
 		$templater = $this->app()->templater();
-		$compiled = $this->app()->templateCompiler()->compile($text);
+		$language = $this->app()->language();
+
+		$compiler = $this->app()->templateCompiler();
+		$ast = $compiler->compileToAst($text);
+		$language->requirePhrases($ast->analyzePhrases());
+		$compiled = $compiler->compileAst($ast, $language);
 
 		// tempnam() creates the file, so this writes to that same path rather than appending an
 		// extension to the name - include() does not care about the extension, and a suffixed path

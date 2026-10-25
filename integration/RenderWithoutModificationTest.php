@@ -86,6 +86,47 @@ class RenderWithoutModificationTest extends TestCase
 	}
 
 	/**
+	 * A phrase renders as its text on both sides, so a with/without comparison can be made on
+	 * phrase text. The modification leaves the phrase alone, which is what makes the text on the
+	 * modification-free side the compile's work rather than the modification's.
+	 */
+	public function test_a_phrase_renders_as_its_text_without_the_modification_too()
+	{
+		$this->fakesErrors();
+
+		$title = 'zzwithoutmod_' . substr(md5(uniqid('', true)), 0, 6);
+		$key = 'zzwithoutmod_' . substr(md5(uniqid('', true)), 0, 6);
+
+		$this->createEntity('XF:Template', [
+			'style_id' => 0,
+			'type' => 'public',
+			'title' => $title,
+			'template' => '<h3>{{ phrase(\'followers\') }}</h3><div>ORIGINAL_MARKER</div>',
+			'addon_id' => '',
+		]);
+
+		$this->createEntity('XF:TemplateModification', [
+			'type' => 'public',
+			'template' => $title,
+			'modification_key' => $key,
+			'description' => 'leaves the phrase alone',
+			'execution_order' => 10,
+			'enabled' => true,
+			'action' => 'str_replace',
+			'find' => 'ORIGINAL_MARKER',
+			'replace' => 'MODIFIED_MARKER',
+			'addon_id' => '',
+		]);
+
+		$with = $this->renderTemplate('public:' . $title);
+		$without = $this->renderTemplateWithoutModification($key);
+
+		$this->assertSee($with, '<h3>Followers</h3>', false);
+		$this->assertSee($without, '<h3>Followers</h3>', false);
+		$this->assertDontSee($without, '<h3>followers</h3>', false);
+	}
+
+	/**
 	 * Handed the reply, the render without the modification sees the same $xf.reply as the
 	 * renderReply() it is compared against - so the two differ by the modification alone. Without
 	 * it, a template reading $xf.reply differs on both counts.
