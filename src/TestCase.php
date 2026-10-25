@@ -392,7 +392,13 @@ abstract class TestCase extends BaseTestCase
 			$this->destroyProperty(\XF::class, 'app');
 		}
 
-		Extension::forgetClassExtensionsAddedByTest();
+		// a test that skipped before the application booted has no XenForo to autoload XF\Extension
+		// against, and a class that was never loaded has had nothing added to it; the false stops the
+		// check itself loading it
+		if (class_exists(Extension::class, false))
+		{
+			Extension::forgetClassExtensionsAddedByTest();
+		}
 		$this->restoreStaticProperties();
 		$this->restoreErrorHandlers();
 

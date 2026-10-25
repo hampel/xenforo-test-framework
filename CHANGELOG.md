@@ -1,5 +1,11 @@
 # Changelog
 
+## 5.40.2
+
+* a test that skips before `parent::setUp()` has run no longer errors in teardown with
+  `Class "XF\Extension" not found`. The integration suite without `XF_ROOT` skips every test and
+  exits 0 again
+
 ## 5.40.1 (2026-10-25)
 
 * the mock helpers declare what their closure is given, so PHPStan types an untyped closure
