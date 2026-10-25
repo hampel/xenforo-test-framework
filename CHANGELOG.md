@@ -1,6 +1,6 @@
 # Changelog
 
-## 5.40.2
+## 5.40.2 (2026-10-25)
 
 * a test that skips before `parent::setUp()` has run no longer errors in teardown with
   `Class "XF\Extension" not found`. The integration suite without `XF_ROOT` skips every test and
