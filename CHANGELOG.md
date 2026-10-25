@@ -1,6 +1,6 @@
 # Changelog
 
-## 5.41.0
+## 5.41.0 (2026-10-26)
 
 * the second test in a process boots on a XenForo whose `src/utf8.php` declares its functions
   without `function_exists()` guards, as 2.3.0 does. It failed there with
