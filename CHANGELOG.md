@@ -1,5 +1,10 @@
 # Changelog
 
+## 5.41.1
+
+* docs: the README's limitations no longer say that the whole page is out of reach, which
+  `renderReplyPage()` renders, or that no data can be seeded, which the fixture helpers do
+
 ## 5.41.0 (2026-10-26)
 
 * the second test in a process boots on a XenForo whose `src/utf8.php` declares its functions

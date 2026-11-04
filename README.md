@@ -855,10 +855,10 @@ There are still things we can't effectively test, or which are problematic to te
 It covers the view returned, the parameters passed to the template, and the controller's access checks in
 `preDispatch()` - which a controller invoked directly never runs. `renderReply()` renders the template the reply named.
 
-Out of reach: the **whole page** - navigation, header and footer come from XenForo's own app classes rather than from
-the template, though `pageParam()` reads the values the template set for that wrapper, such as the page title. Also
-anything needing the real front controller - `index.php`'s bootstrap order, session cookies, web server rewrites - and
-JavaScript and visual appearance.
+`renderReplyPage()` wraps the reply in the whole page - navigation, header and footer - and `pageParam()` reads the
+values the template set for that wrapper, such as the page title. Out of reach: anything needing the real front
+controller - `index.php`'s bootstrap order, session cookies, web server rewrites - and JavaScript and visual
+appearance.
 
 `dispatch()` sends a `GET` by default and any method you ask for. XenForo asserts a CSRF token in `preDispatch()` for
 anything that is not a `GET`, so a non-GET dispatch carries one, with a matching cookie - which puts a write path behind
@@ -905,7 +905,7 @@ in the forum the tests run against. On a development install, a template with an
 copy, so an edit to it is seen without `xf-dev:import`, and a change made only in the database is not - see
 `renderTemplate()` in DOCS.md.
 
-The whole page, appearance and JavaScript behaviour still need checking by hand.
+Appearance and JavaScript behaviour still need checking by hand.
 
 ### Code which checks what kind of application is running
 
@@ -933,8 +933,9 @@ can open and commit its own. Two things it cannot roll back: DDL commits implici
 schema must clean up after itself - `$db->emptyTable()` counts, since it issues a `TRUNCATE`; and uncommitted rows are
 visible only to the connection that wrote them.
 
-There is no way to seed a known set of data for a test to work against. Tests that rely on data already in your
-development forum are fragile.
+There is no way to seed a whole forum, and tests that rely on data already in your development forum are fragile.
+Create what a test needs under the transaction instead: `createUserAccount()`, `createAdministratorFixture()`,
+`createNodeFixture()`, `createNodeTreeFixture()` and `createThreadFixture()` exist for that.
 
 ### Filesystem paths which aren't abstracted
 
