@@ -9,3 +9,4 @@ phpstan.neon.dist export-ignore
 /integration export-ignore
 /bin export-ignore
 .php-cs-fixer.dist.php export-ignore
+/tutorial export-ignore

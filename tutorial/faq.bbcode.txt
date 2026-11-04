@@ -1,0 +1,121 @@
+[SIZE=6]Framework Documentation[/SIZE]
+
+Every helper is documented in [URL='https://github.com/hampel/xenforo-test-framework/blob/master/DOCS.md']DOCS.md[/URL]. [URL='https://github.com/hampel/xenforo-test-framework/blob/master/TIPS.md']TIPS.md[/URL] covers writing testable code and what to reach for instead of mocking XenForo.
+
+[B][SIZE=6]FAQs[/SIZE]
+
+Q: I'm getting an error: [ICODE]XF\Db\Exception: Too many connections[/ICODE] when I run my tests[/B]
+
+A: Your tests make many queries in a short time. Either make fewer queries, or raise MySQL's [ICODE]max_connections[/ICODE] on your development server. If that causes memory or performance problems, tune the server with a tool such as [URL='https://github.com/major/MySQLTuner-perl']MySQLTuner[/URL].
+
+[B]Q: Every test fails with [ICODE]This suite sets $addonsToLoad to [...], but the application was booted without it[/ICODE][/B]
+
+A: Your [ICODE]tests/CreatesApplication.php[/ICODE] predates [ICODE]$addonsToLoad[/ICODE] and does not pass it on, so no isolation is in effect. Delete that file and the [ICODE]use CreatesApplication;[/ICODE] line in [ICODE]tests/TestCase.php[/ICODE] — the framework boots XenForo itself.
+
+[B]Q: Tests fail with Mockery expectation counts of zero[/B]
+
+A: Another installed addon ships its own PHPUnit and Mockery, and the two copies collide. Set [ICODE]$addonsToLoad[/ICODE] to your own addon id in [ICODE]tests/TestCase.php[/ICODE].
+
+[B]Q: The run dies with exit 255 and a message about a readonly PHPUnit class[/B]
+
+A: [ICODE]Readonly class PHPUnit\Framework\TestStatus\Known cannot extend non-readonly class[/ICODE], or something like it, means two copies of PHPUnit are on the class loader and a class has come from one with its parent from the other. The versions do not have to differ by a major — two patch releases of the same minor are enough. Set [ICODE]$addonsToLoad[/ICODE] to your own addon id, and no other addon's autoloader is registered. Note that XenForo's error handler writes that fatal to [ICODE]xf_error_log[/ICODE] as a real row, so an addon which reports on the error log will mail it onward.
+
+[B]Q: [ICODE]composer update[/ICODE] refuses to install [ICODE]league/flysystem-memory[/ICODE] for [ICODE]swapFs()[/ICODE][/B]
+
+A: [I]"not loaded, because they are affected by security advisories"[/I]. Every flysystem release up to 3.35.2 carries a low-severity advisory and Composer blocks an affected package by default; XenForo supplies flysystem 1.x, which has no patched release, so the version you need is the version that is flagged. The installation section of the resource post has the two lines your own [ICODE]composer.json[/ICODE] needs — accept that one advisory by id, and keep a [ICODE]league/flysystem: ^1.1.4[/ICODE] floor so the critical advisory that [I]is[/I] patched stays enforced. Do not ignore [ICODE]PKSA-pwh8-d4fr-nywn[/ICODE].
+
+[B]Q: A reply assertion throws saying its last argument is a failure message[/B]
+
+A: [ICODE]assertReplyParam($reply, $key, $expected)[/ICODE] has no expected-value argument — the trailing argument of every reply assertion is a failure message, so the value was never compared and the assertion passed whatever the reply held. [ICODE]assertReplyParamSame($reply, $key, $expected)[/ICODE] is what it meant. A grep finds only the ones written as a literal; where the value is a variable or a method call, this refusal is what finds them.
+
+Note what is [B]not[/B] refused: a [B]string[/B] there cannot be told apart from a failure message and is taken as one. So [ICODE]assertReplyParam($reply, 'key', 'a value')[/ICODE] still asserts no more than that the key exists, silently. Only a non-string is refused.
+
+[B]Q: I dumped a reply to see what it held and my database password is in the test output[/B]
+
+A: [B]Do not [ICODE]var_export()[/ICODE] or [ICODE]print_r()[/ICODE] a reply or a phrase.[/B] An error reply's errors are [ICODE]XF\Phrase[/ICODE] objects, and a phrase holds the language, which holds the database adapter, which holds its own configuration — so one phrase is enough to print your database password and user in plain text, into the test output and from there into any build log that captured it. [ICODE]describeReply()[/ICODE] is the safe way to look: it renders each error phrase to its text. So are [ICODE]replyErrors()[/ICODE] and the reply assertions, which compare rendered text, so their own failure output is safe to paste. If you have already done it, treat the log as carrying a credential.
+
+[B]Q: An output assertion refuses the argument I gave it[/B]
+
+A: You wrote a value into a slot that means something else, and it used to be accepted silently. [ICODE]assertSee()[/ICODE], [ICODE]assertDontSee()[/ICODE] and [ICODE]assertSeeInOrder()[/ICODE] take the escaping flag third and the failure message fourth, while [ICODE]assertSeeText()[/ICODE] and [ICODE]assertDontSeeText()[/ICODE] take no flag at all — so a message written third was merely truthy, leaving the assertion behaving as it does by default with your message gone. An empty value is refused too, since it is found at position 0 of anything: a positive assertion could not fail and a negative one could not pass. The refusal prints that assertion's own argument list.
+
+[B]Q: [ICODE]callAction()[/ICODE] refuses my controller class name[/B]
+
+A: You named your own extension of a controller. Name the class your addon [B]extends[/B] instead — [ICODE]'XF:Tools'[/ICODE], not [ICODE]MyVendor\MyAddon\XF\Admin\Controller\Tools[/ICODE]. XenForo resolves the base to the most derived class, which is yours, so passing the base is equivalent and order-independent — and resolving through it is itself proof the extension applied. Naming the extension worked only when something earlier in the run had resolved the class being extended, which is why the same call passed in a full suite and failed under [ICODE]--filter[/ICODE] with [ICODE]Class "...\XFCP_..." not found[/ICODE].
+
+[B]Q: [ICODE]Cannot declare class ... XFCP_... because the name is already in use[/ICODE][/B]
+
+A: A class was extended twice in one process. The XFCP proxy is a [ICODE]class_alias()[/ICODE], and PHP cannot declare that name twice. If this is intermittent and you are below 5.10.0, upgrade: the extension cache was keyed by the spelling it was asked for rather than the class XenForo would actually extend, so a class reached by more than one name was extended once per spelling. If you are adding extensions in tests, each test that needs one now adds it — and where more than one test does, extend a class no other test resolves.
+
+[B]Q: A test asserting that an extension is absent passes alone and fails in a full run[/B]
+
+A: [ICODE]$addonsToLoad[/ICODE] cannot remove a class extension something earlier in the process has already resolved — XenForo caches the resolution and aliases a proxy, and a proxy cannot be undeclared. So a test proving a column stays nullable for a forum without your addon exercises the extension anyway once anything else has resolved that class. Guard it with [ICODE]requireClassNotExtended()[/ICODE], which skips rather than passing.
+
+[B]Q: A test class is refused in [ICODE]setUp()[/ICODE], naming a class extension that will not reach it[/B]
+
+A: That class names more addons in [ICODE]$addonsToLoad[/ICODE] than its siblings do, and the list cannot [B]add[/B] an extension to a class the run has already resolved any more than it can remove one. So those extensions reached it only when it happened to run first, and otherwise it exercised XenForo's own class with the extension's methods missing — failing somewhere inside XenForo rather than at your test. Running that class on its own still passes, which is why the refusal is about the suite rather than the class. [B]Declare one [ICODE]$addonsToLoad[/ICODE] for the whole suite[/B], naming every addon whose class extensions or content types any test reaches. One addon is worth thinking about before you add it: booting one that vendors its own PHPUnit puts a second copy on XenForo's class loader.
+
+[B]Q: A dispatch ignored the [ICODE]REQUEST_METHOD[/ICODE] I put in [ICODE]$server[/ICODE] — now it is refused[/B]
+
+A: The request method comes from the [ICODE]$method[/ICODE] argument, which also decides whether a CSRF token is minted — so a method supplied through [ICODE]$server[/ICODE] could only ever have produced a request XenForo refuses. It was being discarded and the request sent with the method the argument named, which a test asserting on a view could pass against. Pass the method as the argument. Building an [ICODE]XF\Http\Request[/ICODE] yourself and swapping it into the container is a different thing and is unaffected — there the key is how the method gets set, so do not go looking for it with a grep and remove it.
+
+[B]Q: A test passes in a full run but fails alone with [ICODE]Class "..." not found[/ICODE][/B]
+
+A: It extends plain [ICODE]PHPUnit\Framework\TestCase[/ICODE], so it relies on an earlier test having booted XenForo, whose autoloader loads your addon's classes. Extend [ICODE]Tests\TestCase[/ICODE] instead. To find such tests, run each test class on its own:
+
+[CODE=bash]for f in $(find tests/Unit tests/Feature -name '*Test.php' | sort); do
+    ./vendor/bin/phpunit "$f" >/dev/null 2>&1 || echo "FAILS ALONE: $f"
+done[/CODE]
+
+[B]Q: The whole run stops with [ICODE]Class "XF\..." not found[/ICODE] before any test runs[/B]
+
+A: A test file declares a class extending a XenForo or addon class at file scope. PHPUnit loads every test file before XenForo boots. Declare it as an anonymous class inside the test method, or put a named class in a file PHPUnit does not collect, such as [ICODE]tests/Support/[/ICODE], and [ICODE]require_once[/ICODE] it from the test method.
+
+The same applies to a [B]data provider[/B], which PHPUnit also runs while building the suite — a class constant such as [ICODE]OutputInterface::VERBOSITY_DEBUG[/ICODE] fails there with [ICODE]Class "Symfony\Component\Console\Output\OutputInterface" not found[/ICODE]. Return the literal value from the provider, or resolve it inside the test.
+
+[B]Q: A template render started failing after upgrading to v5.4[/B]
+
+A: From v5.4, rendered templates see [ICODE]$xf[/ICODE], as they would on a page, so code the template runs through [ICODE]$xf[/ICODE] now actually runs. Pass the parameters the template needs — for example [ICODE]renderTemplate('admin:user_edit', ['user' => \XF::visitor()])[/ICODE].
+
+[B]Q: [ICODE]assertNoTemplateErrors()[/ICODE] fails naming another addon's template[/B]
+
+A: It is describing the forum, not your addon. Template modifications are compiled into the install's shared template cache and apply to every render, whatever [ICODE]$addonsToLoad[/ICODE] says — so a sibling addon's modification reading a column its own class extension declares warns on every render, for a page of yours that is faultless in a browser. Pass the prefix of the templates you own, or a list of prefixes. The blanket form is meaningful on a single-addon install.
+
+[B]Q: I changed a phrase to prove my phrase assertion can fail, and nothing changed[/B]
+
+A: Two causes, and both look like the assertion not working. A render resolves phrases from the [B]database[/B], so editing [ICODE]_output/phrases/[/ICODE] proves nothing — change it through its [ICODE]XF:Phrase[/ICODE] entity. And do that [B]before[/B] the render under test: the language keeps every phrase it has already resolved, so a mutation after a render in the same test is not seen. Mutating the template is the easier control. One more trap: [ICODE]renderMacro()[/ICODE] never reaches content placed after [ICODE]</xf:macro>[/ICODE], so a reference put there passes vacuously.
+
+[B]Q: [ICODE]assertNoUnresolvedPhrases()[/ICODE] reports every option on my admin option page[/B]
+
+A: You passed your addon's bare prefix, and with development mode on XenForo displays each option's [B]id[/B] as ordinary text — so every option on that page matches, whether or not its phrase resolved. Pass the keys instead. Worth knowing why it matters beyond the noise: the ids are displayed [B]only[/B] in development mode, so an assertion written that way passes on an install with it off and fails on one with it on, which makes the result a fact about the install rather than about your addon.
+
+[B]Q: A test fails with "This test's transaction did not survive"[/B]
+
+A: Everything the test wrote before that point is now permanent in the database. The message says which of three things happened.
+
+[I]Something committed it[/I] — any DDL does, MySQL commits those implicitly, and [ICODE]$db->emptyTable()[/ICODE] counts because it issues a [ICODE]TRUNCATE[/ICODE]. On a development install the usual cause is rendering a template whose [ICODE]_output/[/ICODE] file does not match the hash in [ICODE]_metadata.json[/ICODE], which is the state an edit leaves it in: XenForo re-imports and compiles it, and that truncates the CSS cache. Load a page that renders the template, outside any test, and the watcher writes the hash. [ICODE]xf-dev:import[/ICODE] does not clear it — it reads that file without writing it — and [ICODE]xf-dev:export[/ICODE] would write the database over your edited file.
+
+[I]The code under test ended it[/I] with [ICODE]rollbackAll()[/ICODE] or [ICODE]commit()[/ICODE]. XenForo calls [ICODE]rollbackAll()[/ICODE] on its own error paths, so running a failing job through the job manager is the common case. Test the method directly, or leave the trait off that class and undo the writes yourself.
+
+[I]The server rolled it back[/I], which a deadlock does, leaving nothing behind to say so. The check stays quiet when the test has already failed, so the deadlock's own error is what you see rather than a second wrong explanation on top of it.
+
+[B]Q: An intermittent "Record has changed since last read in table 'xf_data_registry'"[/B]
+
+A: Your test wrote a registry row the rest of the forum also writes, inside its transaction, and on MariaDB 11.8 or later snapshot isolation refuses the write if anything touched the row first. Upgrade to 5.7.0 or later, which stops the framework's own deferred work writing that row, and use [ICODE]fakesRegistry()[/ICODE] for a row your own code writes. Call it from the [ICODE]setUp()[/ICODE] of any class that creates or deletes content under a transaction, not only in a test about the registry.
+
+[B]Q: An intermittent deadlock naming [ICODE]xf_user_group_relation[/ICODE] when tests create users[/B]
+
+A: Saving an [ICODE]XF:User[/ICODE] rewrites that user's rows in that table, and the delete that precedes the insert locks the index gap above the last row for the rest of the transaction — so two tests creating users against the same database deadlock there even on different user ids. [ICODE]createEntity('XF:User')[/ICODE] reaches it as well as [ICODE]createUserAccount()[/ICODE], and [ICODE]fakesRegistry()[/ICODE] does not cover it. Saving a user is the most contended write this framework makes and a transaction does not make it reliable: it is dependable against a forum nothing else is writing to, and intermittent against a shared one. Where a test needs a visitor rather than a row, [ICODE]actingAsMember()[/ICODE] builds one in memory and touches nothing.
+
+[B]Q: [ICODE]makeEntity()[/ICODE] throws saying the entity did not take a value[/B]
+
+A: XenForo verifies many columns as they are set rather than at save time — a unique key already in use, an invalid email, a username below the minimum length — and records a failure instead of throwing. The value was simply missing before; it now fails loudly. Use [ICODE]setTrusted()[/ICODE] to set one anyway.
+
+A read-only or auto-increment column — an entity's own id, typically — is a separate refusal with the same remedy, and it names the [ICODE]setTrusted()[/ICODE] call to write. That one already failed before the refusal existed, with XenForo's own message naming [ICODE]forceSet[/ICODE], which is not an option this framework surfaces.
+
+[B]Q: A second [ICODE]fakesHttp()[/ICODE] in one test does nothing, and the first queue reports [ICODE]Mock queue is empty[/ICODE][/B]
+
+A: Upgrade to 5.22.0 or later. Each fake used to build its own handler stack, and a Guzzle client holds the stack it was built with — so a client your addon's sub-container had already built, or a shared one your test kept in a variable, went on using the first fake's queue. The second fake installed responses nothing read, and the first queue, by then drained, answered from inside the code under test. The stack is now built once per test and its handler replaced, so a second fake reaches every client the first one covered, and switching from [ICODE]fakesHttp()[/ICODE] to [ICODE]fakesHttpByUrl()[/ICODE] mid-test takes effect everywhere. The one case that still cannot work is a fake installed after a client was built with no fake in place at all.
+
+[B][SIZE=6]Writing testable code and other unit testing tips[/SIZE][/B]
+
+Those have moved to [URL='https://github.com/hampel/xenforo-test-framework/blob/master/TIPS.md']TIPS.md[/URL], where they are kept up to date with the framework.
