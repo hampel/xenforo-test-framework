@@ -58,6 +58,29 @@ A: That class names more addons in [ICODE]$addonsToLoad[/ICODE] than its sibling
 
 A: The request method comes from the [ICODE]$method[/ICODE] argument, which also decides whether a CSRF token is minted — so a method supplied through [ICODE]$server[/ICODE] could only ever have produced a request XenForo refuses. It was being discarded and the request sent with the method the argument named, which a test asserting on a view could pass against. Pass the method as the argument. Building an [ICODE]XF\Http\Request[/ICODE] yourself and swapping it into the container is a different thing and is unaffected — there the key is how the method gets set, so do not go looking for it with a grep and remove it.
 
+[B]Q: Do my tests depend on whether [I]Use full friendly URLs[/I] is on?[/B]
+
+A: Not since 5.19.0, as long as no test writes a url out. [ICODE]dispatch()[/ICODE] builds its request in whichever form the forum is configured for: a public controller compares the url it builds against the url the request carries, and a request in the other form is answered with a redirect to its own canonical url instead of with the page. [ICODE]followRedirect()[/ICODE] reads the route out of either form (5.25.0 and later). The admin router never reads the option, so an [ICODE]admin.php[/ICODE] url has one shape.
+
+What does depend on it is a literal. With the option off a public link is [ICODE]/index.php?help/terms[/ICODE] and an api one [ICODE]/index.php?api/users/[/ICODE]; with it on they are [ICODE]/help/terms[/ICODE] and [ICODE]/api/users/[/ICODE]. A test asserting one spelling passes on one forum and fails on another, so build the url with the router and match it as a substring, since a redirect's url may be absolute or carry a fragment:
+
+[CODE=php]$reply = $this->dispatch('whats-new/posts/', 'public', ['unread' => 1]);
+
+$this->assertReplyIsRedirect($reply);
+$this->assertStringContainsString(
+    $this->app()->router('public')->buildLink('whats-new/posts'),
+    $reply->getUrl()
+);[/CODE]
+
+To run a test with the option in the other state, set it before the test builds a link or dispatches anything: [ICODE]setOption('useFriendlyUrls', true)[/ICODE] is restored afterwards, and the next test boots afresh. Each router holds its url formatter by value from when it was built, so once anything in the test has built one, the option alone changes nothing a link shows, and a dispatch is then answered with a redirect — its request is in the new form and the canonical url it is checked against is in the old. Decache the routers after setting it:
+
+[CODE=php]$this->setOption('useFriendlyUrls', true);
+
+foreach (['router.public.formatter', 'router.api.formatter', 'router.public', 'router.api', 'router.admin', 'router'] as $key)
+{
+    $this->app()->container()->decache($key);
+}[/CODE]
+
 [B]Q: A test passes in a full run but fails alone with [ICODE]Class "..." not found[/ICODE][/B]
 
 A: It extends plain [ICODE]PHPUnit\Framework\TestCase[/ICODE], so it relies on an earlier test having booted XenForo, whose autoloader loads your addon's classes. Extend [ICODE]Tests\TestCase[/ICODE] instead. To find such tests, run each test class on its own:
@@ -96,7 +119,7 @@ A: Everything the test wrote before that point is now permanent in the database.
 
 [I]The code under test ended it[/I] with [ICODE]rollbackAll()[/ICODE] or [ICODE]commit()[/ICODE]. XenForo calls [ICODE]rollbackAll()[/ICODE] on its own error paths, so running a failing job through the job manager is the common case. Test the method directly, or leave the trait off that class and undo the writes yourself.
 
-[I]The server rolled it back[/I], which a deadlock does, leaving nothing behind to say so. The check stays quiet when the test has already failed, so the deadlock's own error is what you see rather than a second wrong explanation on top of it.
+[I]The server rolled it back[/I], which a deadlock does. The check stays quiet when the test has already failed, so the deadlock's own error is what you see rather than a second wrong explanation on top of it — and from 5.38.0 a line after it names the cause, usually another suite running against the same forum.
 
 [B]Q: An intermittent "Record has changed since last read in table 'xf_data_registry'"[/B]
 

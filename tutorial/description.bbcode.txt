@@ -19,11 +19,14 @@ Moving from v4 to v5: delete [ICODE]tests/CreatesApplication.php[/ICODE] and the
 These releases within v5 ask something of you beyond [ICODE]composer update[/ICODE]:
 
 [LIST]
-[*][B]5.13.0 — re-copy [ICODE]phpunit.xml[/ICODE].[/B] It no longer sets [ICODE]failOnPhpunitDeprecation[/ICODE], which PHPUnit 10.5 does not have: on the oldest supported version the configuration fails validation, and [ICODE]failOnWarning[/ICODE] turns that into a failed run with every test passing.
-[*][B]5.15.0 — a [ICODE]POST[/ICODE] dispatch asserting a refusal changes meaning.[/B] [ICODE]dispatch()[/ICODE] now sends a valid CSRF token for anything that is not a [ICODE]GET[/ICODE], so the check passes and your controller's own reply comes back. Use [ICODE]dispatchWithoutCsrfToken()[/ICODE] where the refusal is the point. Such a test does not fail, it changes what it proves, so find them with [ICODE]git grep -nE "dispatch\(.*'POST'" -- tests/[/ICODE] and decide for each which layer you meant to be refusing.
-[*][B]5.19.0 — a redirect url from an [ICODE]admin[/ICODE] or [ICODE]api[/ICODE] route is built by that route's own router.[/B] It was built by the public one, so an assertion on such a url was asserting the wrong script. And if your development forum has [I]Use full friendly URLs[/I] on, a dispatch that was answering with a redirect to itself now reaches the controller — the request url the framework builds follows the option, as link building always did.
-[*][B]5.25.0 — declare one [ICODE]$addonsToLoad[/ICODE] for the whole suite.[/B] A test class naming more addons than its siblings is refused in [ICODE]setUp()[/ICODE], because the extensions it asks for reach it only when it happens to run first: the resolution is cached for the process and the proxy XenForo aliases cannot be declared twice. Running that class on its own still passes, so the refusal is about the suite. This release also makes [ICODE]assertNoUnresolvedPhrases()[/ICODE] report a key that ends at the prefix it was given, which can turn an admin option page's assertion red — see that helper below.
-[*][B]5.23.0, 5.24.0 and 5.26.0 — refusals that need nothing from you in advance.[/B] Between them: a [ICODE]REQUEST_METHOD[/ICODE] in [ICODE]$server[/ICODE], an empty value given to an output assertion, a failure message written where [ICODE]assertSee()[/ICODE] takes its escaping flag, a bool where [ICODE]assertSeeText()[/ICODE] takes its message, and a read-only or auto-increment column given to an entity helper. Each one can only turn red a test that was not checking what it looked like it checked, and each names the helper and the call it wanted. 5.24.0 also renames [ICODE]assertExceptionLogged()[/ICODE]'s second parameter to [ICODE]$filter[/ICODE], which affects only a call passing it by name — and PHP refuses an unknown named parameter outright, so that cannot fail quietly either.
+[*][B]5.13.0 — re-copy [ICODE]phpunit.xml[/ICODE].[/B] It no longer sets [ICODE]failOnPhpunitDeprecation[/ICODE], which PHPUnit 10.5 does not have, so on the oldest supported version the configuration failed validation.
+[*][B]5.15.0 — a [ICODE]POST[/ICODE] dispatch asserting a refusal changes meaning.[/B] [ICODE]dispatch()[/ICODE] now sends a valid CSRF token for anything that is not a [ICODE]GET[/ICODE], so your controller's own reply comes back. Use [ICODE]dispatchWithoutCsrfToken()[/ICODE] where the refusal is the point. Find them with [ICODE]git grep -nE "dispatch\(.*'POST'" -- tests/[/ICODE].
+[*][B]5.19.0 — a redirect url from an [ICODE]admin[/ICODE] or [ICODE]api[/ICODE] route is built by that route's own router.[/B] It was built by the public one. And if your development forum has [I]Use full friendly URLs[/I] on, a dispatch that was answering with a redirect to itself now reaches the controller — the FAQ has the detail.
+[*][B]5.25.0 — declare one [ICODE]$addonsToLoad[/ICODE] for the whole suite.[/B] A test class naming more addons than its siblings is refused in [ICODE]setUp()[/ICODE], because the extensions it asks for reach it only when it happens to run first. This release also makes [ICODE]assertNoUnresolvedPhrases()[/ICODE] report a key that ends at the prefix it was given — see that helper below.
+[*][B]5.23.0, 5.24.0 and 5.26.0 — refusals that need nothing from you in advance.[/B] A [ICODE]REQUEST_METHOD[/ICODE] in [ICODE]$server[/ICODE], an empty value given to an output assertion, a failure message written where [ICODE]assertSee()[/ICODE] takes its escaping flag, and a read-only or auto-increment column given to an entity helper. Each can only turn red a test that was not checking what it looked like it checked, and each names the call it wanted.
+[*][B]5.29.0 to 5.41.0 — new helper names.[/B] Every release adding a helper lists its names in UPGRADING.md with a grep to run first: a private method of the same name in one of your test classes is a fatal at class load.
+[*][B]5.34.0 — re-copy [ICODE]phpunit.xml[/ICODE] for a coverage report.[/B] It declares a [ICODE]<source>[/ICODE] block, so [ICODE]--coverage-text[/ICODE] reports on your addon without a filter on the command line. Without it the suite runs as before.
+[*][B]5.41.0 — delete a [ICODE]createApplication()[/ICODE] of your own[/B], or call the parent from it. On a XenForo whose [ICODE]src/utf8.php[/ICODE] has no [ICODE]function_exists()[/ICODE] guards, 2.3.0 among them, the second test in a process now boots through a replay that an override bypasses.
 [/LIST]
 
 [SIZE=6][B]1. Introduction[/B][/SIZE]
@@ -154,7 +157,7 @@ The framework was heavily inspired by the test framework in the [URL='https://la
 
 If you're new to PHPUnit, read [URL='https://docs.phpunit.de/en/12.5/writing-tests-for-phpunit.html']Writing Tests for PHPUnit[/URL] first.
 
-[ICODE]Hampel\Testing\TestCase[/ICODE] extends [ICODE]PHPUnit\Framework\TestCase[/ICODE] and provides the framework. It is in the Composer package. You copy one file into your addon, [ICODE]{addon_root}/tests/TestCase.php[/ICODE], and your tests extend that:
+[ICODE]Hampel\Testing\TestCase[/ICODE] extends [ICODE]PHPUnit\Framework\TestCase[/ICODE] and provides the framework. It is in the Composer package. You copy one file into your addon, [ICODE]{addon_root}/tests/TestCase.php[/ICODE], and your tests extend that. Abridged:
 
 [CODE=php]<?php
 
@@ -164,42 +167,20 @@ use Hampel\Testing\TestCase as BaseTestCase;
 
 abstract class TestCase extends BaseTestCase
 {
-/**
-* @var string $rootDir path to your XenForo root directory, relative to the addon path
-*
-     * Set $rootDir to '../../../..' if you use a vendor in your addon id (ie <Vendor/AddonId>)
-* Otherwise, set this to '../../..' for no vendor
-*
-* No trailing slash!
-*/
-protected $rootDir = '../../../..';
+    /**
+     * @var string $rootDir path to your XenForo root directory, relative to the addon path:
+     *      '../../../..' with a vendor in your addon id (Vendor/AddonId), '../../..' without.
+     *      No trailing slash.
+     */
+    protected $rootDir = '../../../..';
 
     /**
-     * @var array $addonsToLoad an array of XenForo addon ids to load
-     *
-     * Name your own addon here, eg ['MyVendor/MyAddon']. Only those addons are loaded, which keeps
-     * other addons' class extensions, code event listeners and Composer autoloading out of your
-     * tests.
-     *
-     * Leaving it empty loads every installed addon. On a forum where another addon vendors its own
-     * copy of PHPUnit, that copy can win on the class loader and the run dies before the first test
-     * with an error naming PHPUnit internals rather than anything about isolation.
+     * @var array $addonsToLoad the XenForo addon ids to load, eg ['MyVendor/MyAddon'].
+     *      Only those addons are loaded. Leaving it empty loads every installed addon.
      */
     protected $addonsToLoad = [];
 
-    /**
-     * Helper function to load mock data from a file (eg json)
-     * To use, create a "mock" folder relative to the tests folder, eg:
-     * 'src/addons/MyVendor/MyAddon/tests/mock'
-     *
-     * @param $file
-     *
-     * @return false|string
-     */
-    protected function getMockData($file)
-    {
-        return file_get_contents(__DIR__ . '/mock/' . $file);
-    }
+    // getMockData($file) reads a file from tests/mock/, for mock data such as json
 }[/CODE]
 
 [ICODE]$rootDir[/ICODE] is the path to your forum root, relative to the addon directory. Change it to [ICODE]'../../..'[/ICODE] if your addon id has no vendor.
@@ -208,7 +189,7 @@ protected $rootDir = '../../../..';
 
 The framework boots XenForo in [ICODE]setUp()[/ICODE], the same way XenForo's own entry points do. To boot differently, override [ICODE]createApplication()[/ICODE] in your [ICODE]tests/TestCase.php[/ICODE] and pass [ICODE]['xf-addons' => $this->addonsToLoad][/ICODE] to [ICODE]XF::setupApp()[/ICODE].
 
-A test extending plain [ICODE]PHPUnit\Framework\TestCase[/ICODE] cannot load your addon's classes by itself, because XenForo's autoloader only exists once a test has booted the application. Such a test passes in a full run and fails when run alone. Extend [ICODE]Tests\TestCase[/ICODE] instead.
+A test extending plain [ICODE]PHPUnit\Framework\TestCase[/ICODE] passes in a full run and fails alone, since XenForo's autoloader exists only once a test has booted the application. Extend [ICODE]Tests\TestCase[/ICODE] instead.
 
 [B][SIZE=6]7. Swapping XenForo Subsystems[/SIZE][/B]
 
@@ -253,12 +234,12 @@ Helpers to mock key subsystems:
 
 Fakes, which record what happened for you to assert on:
 [LIST]
-[*][ICODE]fakesErrors[/ICODE] — [ICODE]assertNothingLoggedContains[/ICODE] asserts that no logged message carries a given string, for keeping a credential or a user's data out of the log where the test cannot predict the message, and [ICODE]getLoggedMessages[/ICODE] hands back every message with its caller's prefix. Pair either with an assertion that something [I]was[/I] logged: a run that logged nothing contains your string either
+[*][ICODE]fakesErrors[/ICODE] — [ICODE]assertNothingLoggedContains[/ICODE] asserts that no logged message carries a given string, for keeping a credential out of the log, and [ICODE]getLoggedMessages[/ICODE] hands back every message. Pair either with an assertion that something [I]was[/I] logged
 [*][ICODE]fakesJobs[/ICODE] — and [ICODE]runJobToCompletion[/ICODE], which runs a job until it completes
-[*][ICODE]fakesLogger[/ICODE] records to XenForo's moderator log. [ICODE]recordsLog[/ICODE] is the other one: it records what your addon writes through a [ICODE]Psr\Log\LoggerInterface[/ICODE] of its own, under whatever container key you put it in, with [ICODE]assertLogged[/ICODE], [ICODE]assertNotLogged[/ICODE], [ICODE]assertNothingLogged[/ICODE] and [ICODE]getLogRecords[/ICODE] to assert on it. An entry is its level, the message as your code passed it with [ICODE]{placeholder}[/ICODE] braces intact, and its context
+[*][ICODE]fakesLogger[/ICODE] records to XenForo's moderator log. [ICODE]recordsLog[/ICODE] records what your addon writes through a [ICODE]Psr\Log\LoggerInterface[/ICODE] of its own, under whatever container key you put it in, with [ICODE]assertLogged[/ICODE], [ICODE]assertNotLogged[/ICODE], [ICODE]assertNothingLogged[/ICODE] and [ICODE]getLogRecords[/ICODE]
 [*][ICODE]fakesMail[/ICODE] — [ICODE]failWith[/ICODE] on the transport makes sending fail and [ICODE]sendsSuccessfully[/ICODE] lifts it, for the path your code takes when mail does not go out
 [*][ICODE]fakesSimpleCache[/ICODE] — read it back with [ICODE]getSimpleCache[/ICODE] rather than out of the container, which refuses when no fake was installed where the container hands you the forum's real cache
-[*][ICODE]fakesRegistry[/ICODE] intercepts writes to the data registry without isolating reads, so a key your test never wrote still answers from the forum — an assertion that a key exists passes whether or not the code under test put it there. Worth calling from the [ICODE]setUp()[/ICODE] of any class that creates or deletes content under a transaction, not only in a test about the registry
+[*][ICODE]fakesRegistry[/ICODE] intercepts writes to the data registry without isolating reads, so a key your test never wrote still answers from the forum. Worth calling from the [ICODE]setUp()[/ICODE] of any class that creates or deletes content under a transaction
 [*][ICODE]fakesHttp[/ICODE] and [ICODE]fakesHttpByUrl[/ICODE], which picks the response by request URL. Both cover a client your addon builds with [ICODE]$app->http()->createClient()[/ICODE] as well as the shared one, and [ICODE]getHttpRequests[/ICODE] hands you the requests to assert on
 [*][ICODE]fakesEvents[/ICODE] — records the code events your addon fires and stops them reaching any listener
 [/LIST]
@@ -274,30 +255,36 @@ Other helpers:
 [*][ICODE]actingAs[/ICODE], [ICODE]actingAsMember[/ICODE] and [ICODE]actingAsGuest[/ICODE] run the code as a given visitor, built in memory — [ICODE]buildVisitor[/ICODE] builds one without acting as it. [ICODE]setVisitorPermissions[/ICODE], [ICODE]setVisitorContentPermissions[/ICODE] and [ICODE]setVisitorAdminPermissions[/ICODE] grant permissions
 [*][ICODE]actingAsAdministrator[/ICODE] is the three lines an admin test opens with: a member with [ICODE]is_admin[/ICODE], an administrator record holding the permissions you name, and ordinary permissions where they matter
 [*][ICODE]createUserAccount[/ICODE] creates a member with the profile, option, privacy and authentication records a real user has. [ICODE]createEntity('XF:User')[/ICODE] writes the [ICODE]xf_user[/ICODE] row alone, which a XenForo page reading one of those relations cannot display
+[*][ICODE]createAdministratorFixture[/ICODE] creates an administrator in the database — a member and the administrator record XenForo reads admin permissions from — for code that reads administrators rather than the visitor
+[*][ICODE]createNodeFixture[/ICODE], [ICODE]createNodeTreeFixture[/ICODE] and [ICODE]createThreadFixture[/ICODE] create forum content without rebuilding the node tree — saving an [ICODE]XF:Node[/ICODE] the ordinary way writes every row in [ICODE]xf_node[/ICODE], which inside a transaction locks the whole tree until the test ends. A thread gets its first post
 [*][ICODE]makeEntity[/ICODE] builds an entity without touching the database; [ICODE]createEntity[/ICODE] saves it. Each refuses a value for a read-only or auto-increment column and names the [ICODE]setTrusted()[/ICODE] call that sets one, which is how to give an unsaved entity an id. [ICODE]mockFind[/ICODE] decides what [ICODE]\XF::em()->find()[/ICODE] returns for one id
 [*][ICODE]UsesDatabaseTransactions[/ICODE] is a trait you add to a test class: each test runs in a transaction that is rolled back afterwards. [ICODE]assertDatabaseHas[/ICODE], [ICODE]assertDatabaseMissing[/ICODE] and [ICODE]assertDatabaseCount[/ICODE] assert on the rows
-[*][ICODE]dispatch[/ICODE] runs a public, admin or api route and returns the controller's reply, including its access checks in [ICODE]preDispatch()[/ICODE]. It takes the request method, a [ICODE]GET[/ICODE] by default, and carries a CSRF token for anything else — so a write path is reachable with its own authorisation checks intact. Assert on the reply with [ICODE]assertReplyIsView[/ICODE], [ICODE]assertReplyTemplate[/ICODE], [ICODE]assertReplyViewClass[/ICODE], [ICODE]assertReplyParamSame[/ICODE], [ICODE]replyParam[/ICODE], [ICODE]assertReplyIsRedirect[/ICODE], [ICODE]assertReplyIsError[/ICODE], [ICODE]assertReplyIsMessage[/ICODE], [ICODE]assertReplyIsApiResult[/ICODE], [ICODE]replyApiResult[/ICODE] and [ICODE]replyErrors[/ICODE]. [ICODE]assertReplyParam[/ICODE] asserts only that the parameter is there: its third argument is a failure message, so use [ICODE]assertReplyParamSame[/ICODE] to compare a value
+[*][ICODE]dispatch[/ICODE] runs a public, admin or api route and returns the controller's reply, including its access checks in [ICODE]preDispatch()[/ICODE]. It takes the request method, a [ICODE]GET[/ICODE] by default, and carries a CSRF token for anything else. Assert on the reply with [ICODE]assertReplyIsView[/ICODE], [ICODE]assertReplyTemplate[/ICODE], [ICODE]assertReplyViewClass[/ICODE], [ICODE]assertReplyParamSame[/ICODE], [ICODE]replyParam[/ICODE], [ICODE]assertReplyIsRedirect[/ICODE], [ICODE]assertReplyIsError[/ICODE], [ICODE]assertReplyIsLoginRequired[/ICODE], [ICODE]assertReplyIsMessage[/ICODE], [ICODE]assertReplyIsApiResult[/ICODE], [ICODE]replyApiResult[/ICODE] and [ICODE]replyErrors[/ICODE]. [ICODE]assertReplyParam[/ICODE] asserts only that the parameter is there: its third argument is a failure message, so use [ICODE]assertReplyParamSame[/ICODE] to compare a value
 [*][ICODE]dispatchWithoutCsrfToken[/ICODE] sends no token, so a suite can still prove the check refuses. A token you pass yourself as [ICODE]_xfToken[/ICODE] is never replaced, which makes an invalid one testable too
 [*][ICODE]followRedirect[/ICODE] dispatches the route a redirect points at and returns that reply, so a test of a save can assert what the page the user lands on shows rather than stopping at the redirect. It reads the route type out of the url — the control panel has its own script, the api is routed through the public one behind a prefix, and link building honours the friendly-urls option for the public and api routers but not the admin one. One hop, as a [ICODE]GET[/ICODE]; a url pointing at another host is refused
 [*][ICODE]callAction[/ICODE] calls a controller action directly with a [ICODE]POST[/ICODE], for saves, toggles and deletes. It skips [ICODE]preDispatch()[/ICODE], so test access checks with [ICODE]dispatch[/ICODE]. It takes uploaded files too, built with [ICODE]uploadedFile[/ICODE] or [ICODE]uploadedFileFromPath[/ICODE]. Name the controller your addon [B]extends[/B], not your extension of it
+[*][ICODE]runDeferred[/ICODE] runs the work queued with [ICODE]\XF::runOnce()[/ICODE] and returns the keys of what was queued, for a test that saves or deletes an entity directly — [ICODE]dispatch[/ICODE], [ICODE]callAction[/ICODE] and [ICODE]runJobToCompletion[/ICODE] already run it. An exception in that work fails the test. A test calling [ICODE]\XF::triggerRunOnce()[/ICODE] itself should call this instead
 [*][ICODE]setAppClassType[/ICODE] puts a public, admin or api application in [ICODE]\XF::app()[/ICODE] and fires that type's setup event, which [ICODE]dispatch[/ICODE] does for you — an addon gated on [ICODE]$app instanceof \XF\Pub\App[/ICODE], or registering a container key in [ICODE]app_pub_setup[/ICODE], needs it
-[*][ICODE]actingAsApiKey[/ICODE] runs api dispatches as a given api key
+[*][ICODE]actingAsApiKey[/ICODE] runs api dispatches as a given api key. It defaults to a super-user key holding every scope, so a guard that refuses super-user keys or checks a scope is never reached by it; DOCS.md has the least-privilege form
 [*][ICODE]renderTemplate[/ICODE], [ICODE]renderMacro[/ICODE] and [ICODE]renderReply[/ICODE] render templates to HTML, with [ICODE]assertSee[/ICODE], [ICODE]assertDontSee[/ICODE], [ICODE]assertSeeText[/ICODE], [ICODE]assertDontSeeText[/ICODE] and [ICODE]assertSeeInOrder[/ICODE] to assert on the output. Every one of them takes a failure message last, prefixed to what the assertion found rather than replacing it — and refuses an empty value, which would be found at position 0 of anything and so could not fail
 [*][ICODE]renderTemplateWithoutModification[/ICODE] renders a template with one of its template modifications left out, so a test asserting on inserted markup can show that the modification is what inserts it. Nothing is written and the modification stays enabled, so it is safe on an install other suites are running against. To compare against a dispatch, render with the reply's own parameters — that is what [ICODE]renderReply[/ICODE] renders with, so the two differ by the modification and by [ICODE]$xf.reply[/ICODE], which describes the page and has no reply to come from here
+[*][ICODE]renderReplyPage[/ICODE] renders a View reply as the page a request would produce — the reply's template inside the page container of the application it was dispatched through, navigation, header, footer and staff bar included. [ICODE]['skipSidebarWidgets' => true][/ICODE] leaves the widgets out
+[*][ICODE]renderWidgetHtml[/ICODE] renders one widget, named by its definition class or by a configured widget's key. A widget that declines to show itself renders an empty string; a renderer naming no template, a missing template and a template that errored are refused instead, since an assertion cannot tell them from a decline
 [*][ICODE]globalTemplateData[/ICODE] hands back the [ICODE]xf[/ICODE] template parameter a render would see, so a test can assert on what a [ICODE]templater_global_data[/ICODE] listener of yours contributed. XenForo fires that event from inside its own method, which is why nothing else shows that your listener is registered with the class, method and signature XenForo calls
-[*][ICODE]assertTemplateModificationApplied[/ICODE] asserts a template modification has applied
+[*][ICODE]assertTemplateModificationApplied[/ICODE] asserts a template modification has applied, and [ICODE]assertTemplateModificationAppliedTimes[/ICODE] that it applied exactly so many times in each template it reaches — a [ICODE]str_replace[/ICODE] whose find matches twice inserts its block twice and still counts as applied
+[*][ICODE]assertAddOnTemplateModificationsApply[/ICODE] asserts that every template modification your addon registers still applies. One whose [ICODE]find[/ICODE] stops matching is silent: XenForo records it as [ICODE]ok[/ICODE] with an apply count of zero. [ICODE]assertAddOnTemplateModificationsApplyTimes[/ICODE] takes one count for all or a map of modification key to count, [ICODE]'absent'[/ICODE] for a template an optional addon supplies, and [ICODE]assertAddOnTemplateModificationFindsMatch[/ICODE] checks each [ICODE]find[/ICODE] in [ICODE]_output/template_modifications/[/ICODE] against the master template, so it fails before an import
 [*][ICODE]assertNoTemplateErrors[/ICODE] asserts nothing the test rendered raised an error, BB code included. Give it the prefix of the templates you own, or a list of prefixes: on a forum shared with other addons the blanket form describes the forum rather than your addon, as section 11 explains. Where your addon owns no templates at all and its markup is a modification of somebody else's, pass a closure and decide per error — it is handed each one XenForo recorded
-[*][ICODE]assertNoUnresolvedPhrases[/ICODE] asserts no phrase rendered as its own key, and takes several prefixes for an addon whose older phrases predate its naming convention. It searches the text a page displays and the page parameters the render set, not the whole markup — your prefix belongs in a field name, an id and a CSS class, where a phrase that resolved perfectly well would otherwise be reported. [B]Pass the keys rather than a bare prefix for an admin option page[/B], where XenForo displays each option's id as ordinary text; the FAQ has why that makes the result follow the install.
+[*][ICODE]assertNoUnresolvedPhrases[/ICODE] asserts no phrase rendered as its own key, and takes several prefixes for an addon whose older phrases predate its naming convention. It searches the text a page displays, the page parameters the render set, the side navigation and the sidebar, not the whole markup — your prefix belongs in a field name, an id and a CSS class, where a phrase that resolved perfectly well would otherwise be reported. [B]Pass the keys rather than a bare prefix for an admin option page[/B], where XenForo displays each option's id as ordinary text; the FAQ has why that makes the result follow the install.
 [*][ICODE]renderRawReply[/ICODE] renders a download or other raw view and returns the response with its body
-[*][ICODE]pageParam[/ICODE] reads what a rendered template set with [ICODE]<xf:title>[/ICODE] and similar tags
+[*][ICODE]pageParam[/ICODE] reads what a rendered template set with [ICODE]<xf:title>[/ICODE] and similar tags, and [ICODE]sideNavHtml[/ICODE] and [ICODE]sidebarHtml[/ICODE] what it contributed through [ICODE]<xf:sidenav>[/ICODE] and [ICODE]<xf:sidebar>[/ICODE], which compile to a write into the templater rather than to markup
 [*][ICODE]renderJsonReply[/ICODE] renders a reply through the JSON renderer and hands back the decoded document, for a view that shapes its own response in [ICODE]renderJson()[/ICODE]
 [*][ICODE]runConsoleCommand[/ICODE] runs one of your console commands against the booted application and returns Symfony's [ICODE]CommandTester[/ICODE], for asserting on its output and exit code. [ICODE]['inputs' => [...]][/ICODE] answers a command that asks questions, so the confirmed path of a destructive command is testable; [ICODE]['interactive' => false][/ICODE] answers every question with its default, which stops such a command at its confirmation and writes nothing
 [*][ICODE]assertConsoleCommandsLoad[/ICODE] asserts that every console command class your addon ships is one XenForo can load, and [ICODE]assertConsoleCommandLoads[/ICODE] checks one class. A command that cannot load takes [ICODE]cmd.php[/ICODE] down for every addon on the forum, since XenForo loads them all simply to list them, and nothing else in a suite loads them at all
 [*][ICODE]runRunnerStep[/ICODE] runs one step of a XenForo multi-part runner — a clean-up, merge or content-change service — to completion, for an addon that contributes work to a step without running every other step as well
 [*][ICODE]requireClassNotExtended[/ICODE] skips a test unless the class you name resolves unextended, for a test whose whole point is that an extension is absent
 [*][ICODE]setStaticProperty[/ICODE] sets a static property and restores it afterwards, and [ICODE]getStaticProperty[/ICODE] reads one
-[*][ICODE]createTempDirectory[/ICODE] gives you an empty directory to write into and removes it when the test finishes, so a test that needs scratch space needs no [ICODE]tearDown[/ICODE] of its own. The path is absolute and inside the system temporary directory, and the removal refuses any path that does not resolve inside there. Reach for it rather than pairing [ICODE]File::getTempDir()[/ICODE] with [ICODE]File::deleteDirectory()[/ICODE] — see the warning under [ICODE]UsesDatabaseTransactions[/ICODE] below
-[*][ICODE]assertAddOnClassExtensionsApply[/ICODE] asserts that every class extension your addon registers actually applies. One that does not is silent: XenForo's own class runs, your code in the extension never executes, and a suite with no test on the extended class has nothing to go red — so it passes whether the extension applied or not. It passes today, which is the point: it is there so that a XenForo release renaming or removing a class one of your extensions targets becomes a failure rather than code that has quietly stopped running. It reads the registered extensions from the database, so it does not see an [ICODE]_output/class_extensions/[/ICODE] artifact that was never imported — a test reading that directory is worth keeping beside it
+[*][ICODE]createTempDirectory[/ICODE] gives you an empty directory to write into and removes it when the test finishes, so a test that needs scratch space needs no [ICODE]tearDown[/ICODE] of its own. The path is inside the system temporary directory, and the removal refuses any path that does not resolve inside there
+[*][ICODE]assertAddOnClassExtensionsApply[/ICODE] asserts that every class extension your addon registers actually applies. One that does not is silent: XenForo's own class runs, your code in the extension never executes, and a suite with no test on the extended class has nothing to go red — so it passes whether the extension applied or not. It is there so that a XenForo release renaming or removing a class one of your extensions targets becomes a failure rather than code that has quietly stopped running. It reads the registered extensions from the database, so it does not see an [ICODE]_output/class_extensions/[/ICODE] artifact that was never imported — a test reading that directory is worth keeping beside it
 [*][ICODE]describeReply[/ICODE] describes a reply for a human — its class, status code, template, parameter names and any error text — for when an assertion fails and you want to know what came back
 [/LIST]
 
@@ -315,7 +302,7 @@ Add the following to your addon's [ICODE]composer.json[/ICODE], or create one wi
 
 [CODE=json]{
 "require-dev": {
-"hampel/xenforo-test-framework": "^5.28",
+"hampel/xenforo-test-framework": "^5.41",
 "nesbot/carbon": "^3.0"
 },
 "autoload-dev": {
@@ -327,7 +314,7 @@ Add the following to your addon's [ICODE]composer.json[/ICODE], or create one wi
 
 [ICODE]nesbot/carbon[/ICODE] is optional. Use [ICODE]^3.0[/ICODE] and so on for older lines — see Compatibility above.
 
-[B]If you add [ICODE]league/flysystem-memory[/ICODE] for [ICODE]swapFs()[/ICODE], Composer will refuse to resolve it.[/B] Every flysystem release up to 3.35.2 carries a low-severity advisory, and Composer blocks an affected package by default, so [ICODE]composer update[/ICODE] stops with [I]"not loaded, because they are affected by security advisories"[/I]. XenForo supplies flysystem 1.x, which has no patched release, so the version you need is the version that is flagged. Accept that one advisory by id, and keep the floor above the range of the critical one that [I]is[/I] patched:
+[B]If you add [ICODE]league/flysystem-memory[/ICODE] for [ICODE]swapFs()[/ICODE], Composer will refuse to resolve it[/B] — every flysystem release up to 3.35.2 carries a low-severity advisory, XenForo supplies 1.x, which has no patched release, and Composer blocks an affected package by default. Accept that one advisory by id, and keep the floor above the range of the critical one that [I]is[/I] patched:
 
 [CODE=json]{
 "require-dev": {
@@ -345,13 +332,13 @@ Add the following to your addon's [ICODE]composer.json[/ICODE], or create one wi
 }
 }[/CODE]
 
-Written as a map rather than a list, the reason appears in [ICODE]composer audit[/ICODE] output, which then lists the advisory as ignored rather than hiding it. [B]Do not ignore [ICODE]PKSA-pwh8-d4fr-nywn[/ICODE][/B] — that one is a remote-code-execution advisory, it is fixed in flysystem 1.1.4, and the floor above already excludes it.
+Written as a map, the reason appears in [ICODE]composer audit[/ICODE] output. [B]Do not ignore [ICODE]PKSA-pwh8-d4fr-nywn[/ICODE][/B] — that one is a remote-code-execution advisory, fixed in flysystem 1.1.4, which the floor above excludes.
 
-[B]If your addon pins [ICODE]config.platform.php[/ICODE] below 8.3, raising it to install this has a consequence.[/B] Composer uses that pin to guard every dependency's PHP requirement, so once it says 8.3 nothing stops a runtime dependency resolving to a release needing more than your addon's own floor. Check the [ICODE]packages[/ICODE] array in [ICODE]composer.lock[/ICODE] after each update.
+[B]If your addon pins [ICODE]config.platform.php[/ICODE] below 8.3, raising it to install this has a consequence:[/B] nothing then stops a runtime dependency resolving to a release needing more PHP than your addon's own floor. Check the [ICODE]packages[/ICODE] array in [ICODE]composer.lock[/ICODE] after each update.
 
-[B]Your dev dependencies are visible to other addons' test suites on the same install.[/B] If your addon declares [ICODE]composer_autoload[/ICODE], XenForo registers its whole [ICODE]vendor/[/ICODE] — dev tree included — on the class loader, so your copy of PHPUnit is present in another addon's test run unless that suite sets [ICODE]$addonsToLoad[/ICODE]. Setting it in your own [ICODE]tests/TestCase.php[/ICODE] protects your suite from theirs; it does not protect theirs from yours.
+[B]Your dev dependencies are visible to other addons' test suites on the same install.[/B] If your addon declares [ICODE]composer_autoload[/ICODE], XenForo registers its whole [ICODE]vendor/[/ICODE], dev tree included, so your copy of PHPUnit is in another addon's test run unless that suite sets [ICODE]$addonsToLoad[/ICODE]. Setting it yourself protects your suite from theirs, not theirs from yours.
 
-[B]A suite with no [ICODE]$addonsToLoad[/ICODE] can die before the first test where another addon vendors a different PHPUnit.[/B] Two copies on one class loader mean a class from one and its parent from the other, and PHP refuses outright — something like [I]"Readonly class PHPUnit\Framework\TestStatus\Known cannot extend non-readonly class"[/I], exit 255. The versions do not have to differ by a major: two patch releases of the same minor are enough. XenForo's error handler then logs that fatal as a real row in [ICODE]xf_error_log[/ICODE], which an addon that reports on the error log will mail onward. Setting [ICODE]$addonsToLoad[/ICODE] removes the whole class of problem, because no other addon's autoloader is registered.
+[B]A suite with no [ICODE]$addonsToLoad[/ICODE] can die before the first test where another addon vendors a different PHPUnit[/B] — two copies on one class loader, exit 255, and a real row in [ICODE]xf_error_log[/ICODE]; the FAQ has the detail. Setting [ICODE]$addonsToLoad[/ICODE] removes the whole class of problem, because no other addon's autoloader is registered.
 
 Install it — PHPUnit and Mockery come with it:
 
@@ -370,7 +357,7 @@ $ cp vendor/hampel/xenforo-test-framework/phpunit.xml .[/CODE]
 [*][ICODE]Feature/ExampleTest.php[/ICODE] — a placeholder for feature tests. [ICODE]phpunit.xml[/ICODE] will not run without the [ICODE]Feature[/ICODE] directory, so if you delete it before adding a feature test, commit a [ICODE].gitkeep[/ICODE] instead
 [/LIST]
 
-[ICODE]phpunit.xml[/ICODE] declares the Unit and Feature suites, and fails the run on deprecations, notices, warnings, risky tests and a run that executes no tests — such as a [ICODE]--filter[/ICODE] that matches nothing. It does not notice an empty Feature suite while the Unit suite passes, so when you add your first feature test, run [ICODE]vendor/bin/phpunit --testsuite Feature[/ICODE] and check the count includes it.
+[ICODE]phpunit.xml[/ICODE] declares the Unit and Feature suites and a [ICODE]<source>[/ICODE] block for coverage, and fails the run on deprecations, notices, warnings, risky tests and a run that executes no tests — such as a [ICODE]--filter[/ICODE] that matches nothing. It does not notice an empty Feature suite while the Unit suite passes, so when you add your first feature test, run [ICODE]vendor/bin/phpunit --testsuite Feature[/ICODE] and check the count includes it.
 
 Finally, remove the test files from your release build in [ICODE]build.json[/ICODE]. If you only use Composer for testing:
 
@@ -424,19 +411,26 @@ Read the exit code, not the summary line: a run failing on a deprecation still p
 
 [B][SIZE=6]10. Framework Documentation[/SIZE][/B]
 
-Every helper is documented in [URL='https://github.com/hampel/xenforo-test-framework/blob/master/DOCS.md']DOCS.md[/URL]. For v3.x, see [URL='https://github.com/hampel/xenforo-test-framework/blob/3.x/DOCS.md']DOCS.md for v3.x[/URL].
+[LIST]
+[*][URL='https://github.com/hampel/xenforo-test-framework/blob/master/DOCS.md']DOCS.md[/URL] — the API reference, one section per helper. For v3.x, see [URL='https://github.com/hampel/xenforo-test-framework/blob/3.x/DOCS.md']DOCS.md for v3.x[/URL]
+[*][URL='https://github.com/hampel/xenforo-test-framework/blob/master/TIPS.md']TIPS.md[/URL] — writing testable code, and what to reach for instead of mocking XenForo
+[*][URL='https://github.com/hampel/xenforo-test-framework/blob/master/UPGRADING.md']UPGRADING.md[/URL] — what to do when moving between versions
+[*][URL='https://github.com/hampel/xenforo-test-framework/blob/master/CHANGELOG.md']CHANGELOG.md[/URL] — everything that changed, per release
+[/LIST]
+
+For static analysis, use [URL='https://github.com/hampel/xenforo-phpstan']hampel/xenforo-phpstan[/URL]: PHPStan cannot analyse an addon on its own, because almost every class in one extends a XenForo class and XenForo is not on Packagist. This framework ships [ICODE]extension.neon[/ICODE], which types the entities [ICODE]makeEntity()[/ICODE] and [ICODE]createEntity()[/ICODE] return; include it in your [ICODE]phpstan.neon[/ICODE] beside that package's.
 
 [B][SIZE=6]11. Limitations[/SIZE][/B]
 
 [SIZE=5][B]Controllers[/B][/SIZE]
 
-[ICODE]dispatch()[/ICODE] covers a controller's reply and its access checks, for a read or a write alike. What stays out of reach is the [B]whole page[/B] — navigation, header and footer — and anything needing a real web request: session cookies, rewrites, JavaScript and appearance.
+[ICODE]dispatch()[/ICODE] covers a controller's reply and its access checks, for a read or a write alike, and [ICODE]renderReplyPage()[/ICODE] wraps the reply in the whole page. What stays out of reach is anything needing a real web request: session cookies, rewrites, JavaScript and appearance.
 
-[ICODE]dispatch()[/ICODE] sends a [ICODE]GET[/ICODE] by default and any method you ask for. XenForo asserts a CSRF token in [ICODE]preDispatch()[/ICODE] for anything that is not a [ICODE]GET[/ICODE], so a non-GET dispatch carries one with a matching cookie — which puts a write path behind its own authorisation checks within reach. [ICODE]dispatchWithoutCsrfToken()[/ICODE] sends none, for asserting that the check refuses. [ICODE]callAction()[/ICODE] skips [ICODE]preDispatch()[/ICODE] and so the permission checks with it, for the cases where that is what you want to test.
+[ICODE]dispatch()[/ICODE] sends a [ICODE]GET[/ICODE] by default and any method you ask for, with the CSRF token XenForo asserts in [ICODE]preDispatch()[/ICODE] for anything else. [ICODE]dispatchWithoutCsrfToken()[/ICODE] sends none, for asserting that the check refuses. [ICODE]callAction()[/ICODE] skips [ICODE]preDispatch()[/ICODE] and so the permission checks with it.
 
 A public route also needs the visitor to hold [ICODE]general.view[/ICODE], which a built visitor does not have until you grant it.
 
-Name the controller your addon [B]extends[/B], not your extension of it — [ICODE]'XF:Tools'[/ICODE], not [ICODE]MyVendor\MyAddon\XF\Admin\Controller\Tools[/ICODE]. XenForo resolves the base to the most derived class, which is yours, so resolving through the base is itself proof the extension applied. An extension named directly is refused, because the proxy it inherits from is declared only while XenForo resolves the class being extended — which makes the same call pass in a full run and fail under [ICODE]--filter[/ICODE].
+Name the controller your addon [B]extends[/B], not your extension of it — [ICODE]'XF:Tools'[/ICODE], not [ICODE]MyVendor\MyAddon\XF\Admin\Controller\Tools[/ICODE]. XenForo resolves the base to the most derived class, which is yours; an extension named directly is refused, and the FAQ says why.
 
 [SIZE=5][B]Entity saving and database queries[/B][/SIZE]
 
@@ -444,13 +438,13 @@ Name the controller your addon [B]extends[/B], not your extension of it — [ICO
 
 It cannot roll back schema changes, which MySQL commits implicitly, so a test altering the schema must clean up after itself — [ICODE]$db->emptyTable()[/ICODE] counts, since it issues a [ICODE]TRUNCATE[/ICODE]. Other connections cannot see the test's uncommitted rows, an [ICODE]AUTO_INCREMENT[/ICODE] counter stays advanced, and a file written by an entity that compiles into the code cache is not rolled back either.
 
-[B]The wrapper notices when the transaction is gone and fails the test rather than leaving the rows behind[/B], whichever way it went: something committed it, the code under test ended it with [ICODE]rollbackAll()[/ICODE] or [ICODE]commit()[/ICODE], or the server rolled it back on a deadlock. XenForo itself calls [ICODE]rollbackAll()[/ICODE] on its own error paths — the job manager does when a job throws — so a test running a failing job through the job manager is the common case. Test the method directly, or leave the trait off that class and undo the writes yourself.
+[B]The wrapper notices when the transaction is gone and fails the test rather than leaving the rows behind[/B], whichever way it went: something committed it, the code under test ended it with [ICODE]rollbackAll()[/ICODE] or [ICODE]commit()[/ICODE] — which XenForo's job manager does when a job throws — or the server rolled it back on a deadlock.
 
-The commonest way a transaction is lost on a development install is rendering a template whose [ICODE]_output/[/ICODE] file does not match the hash in [ICODE]_metadata.json[/ICODE] — the state an edit leaves it in. XenForo re-imports and compiles it, which truncates the CSS cache. Load a page that renders the template, outside any test, and the watcher writes the hash. Note [ICODE]xf-dev:import[/ICODE] does not clear it, and [ICODE]xf-dev:export[/ICODE] would write the database over your edited file.
+The commonest way a transaction is lost on a development install is rendering a template whose [ICODE]_output/[/ICODE] file does not match the hash in [ICODE]_metadata.json[/ICODE] — the state an edit leaves it in. The FAQ entry on the lost transaction has the remedy.
 
 [SIZE=5][B]Data in the database[/B][/SIZE]
 
-There is no way to seed a known set of data. Tests that depend on data already in your development forum are fragile.
+There is no way to seed a whole forum, and tests that depend on data already in your development forum are fragile. Create what a test needs under the transaction instead: [ICODE]createUserAccount()[/ICODE], [ICODE]createAdministratorFixture()[/ICODE], [ICODE]createNodeFixture()[/ICODE] and [ICODE]createThreadFixture()[/ICODE] exist for that.
 
 A test needing a table to exist cannot use [ICODE]UsesDatabaseTransactions[/ICODE] at all: [ICODE]SHOW TABLE STATUS[/ICODE] does not list temporary tables, so the fixture needs a real [ICODE]CREATE TABLE[/ICODE], which commits. Leave the trait off that class and undo its writes in [ICODE]tearDown()[/ICODE].
 
@@ -462,15 +456,15 @@ A test needing a table to exist cannot use [ICODE]UsesDatabaseTransactions[/ICOD
 
 [ICODE]renderTemplate()[/ICODE] renders a template as it would appear on a page, [ICODE]$xf[/ICODE] included, so a template modification applying and a phrase resolving can both be asserted. A template modification must be [B]installed[/B] in the forum the tests run against. On a development install, a template with an [ICODE]_output/[/ICODE] copy renders from that copy: an edit to it is seen without [ICODE]xf-dev:import[/ICODE], and a change made only in the database is not. To check a template test fails, break the [ICODE]_output/[/ICODE] file. Pass every parameter the template needs. For a modification there is a control that breaks nothing — see [ICODE]renderTemplateWithoutModification[/ICODE] above.
 
-[B]Phrases go the other way, which is why a phrase test is the harder of the two to prove can fail.[/B] A render resolves them from the database, so editing [ICODE]_output/phrases/[/ICODE] proves nothing. Change the phrase through its [ICODE]XF:Phrase[/ICODE] entity, and do it [B]before[/B] the render under test — the language keeps every phrase it has already resolved, so mutating one after a render in the same test appears to do nothing. Mutating the template is the easier control.
+[B]Phrases go the other way[/B]: a render resolves them from the database, so editing [ICODE]_output/phrases/[/ICODE] proves nothing. Change the phrase through its [ICODE]XF:Phrase[/ICODE] entity, [B]before[/B] the render under test. Mutating the template is the easier control.
 
-[ICODE]assertNoTemplateErrors()[/ICODE] on an install shared with other addons describes the forum rather than your addon: template modifications are compiled into the install's shared template cache and apply to every render, whatever [ICODE]$addonsToLoad[/ICODE] says, so a sibling addon's modification can raise errors on a page of yours that is faultless in a browser. Pass the prefix of the templates you own — or, if your addon owns no templates at all and its markup is a modification of somebody else's, a closure, which is handed each error and can decide on something other than the template name.
+[ICODE]assertNoTemplateErrors()[/ICODE] on an install shared with other addons describes the forum rather than your addon: every addon's template modifications apply to every render, whatever [ICODE]$addonsToLoad[/ICODE] says. Pass the prefix of the templates you own, or a closure where your addon owns none.
 
-The whole page, appearance and JavaScript still need checking by hand.
+Appearance and JavaScript still need checking by hand.
 
 [SIZE=5][B]Code which checks what kind of application is running[/B][/SIZE]
 
-The framework boots the base [ICODE]XF\App[/ICODE], so nothing gated on the application type happens by itself. [ICODE]dispatch()[/ICODE] and [ICODE]callAction()[/ICODE] now put a real [ICODE]XF\Pub\App[/ICODE], [ICODE]XF\Admin\App[/ICODE] or [ICODE]XF\Api\App[/ICODE] in [ICODE]\XF::app()[/ICODE] for the type being dispatched, sharing the same container, and fire that type's setup event — so a container key your addon registers in [ICODE]app_pub_setup[/ICODE] exists, and a listener checking [ICODE]$app instanceof \XF\Pub\App[/ICODE] runs its body. Call [ICODE]setAppClassType('public')[/ICODE] yourself before a render that depends on it.
+The framework boots the base [ICODE]XF\App[/ICODE], so nothing gated on the application type happens by itself. [ICODE]dispatch()[/ICODE] and [ICODE]callAction()[/ICODE] put a real [ICODE]XF\Pub\App[/ICODE], [ICODE]XF\Admin\App[/ICODE] or [ICODE]XF\Api\App[/ICODE] in [ICODE]\XF::app()[/ICODE] for the type being dispatched and fire that type's setup event. Call [ICODE]setAppClassType('public')[/ICODE] yourself before a render that depends on it.
 
 A link the controller builds during the dispatch comes from that type's router, so a redirect from an admin route carries an [ICODE]admin.php[/ICODE] url, as the forum itself produces. Build the url an assertion expects with the router rather than writing it out, and match it as a substring: a redirect's url may be absolute or carry a fragment, and a public or api one changes shape with the [I]Use full friendly URLs[/I] option, which [ICODE]dispatch()[/ICODE] follows. An admin url does not change with it.
 
