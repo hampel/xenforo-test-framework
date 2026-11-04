@@ -73,7 +73,7 @@ If you look at this file, it's pretty simple (comments are mine):
 $phpVersion = phpversion();
 if (version_compare($phpVersion, '5.6.0', '<'))
 {
-die("PHP 5.6.0 or newer is required. $phpVersion does not meet this requirement. Please ask your host to upgrade PHP.");
+    die("PHP 5.6.0 or newer is required. $phpVersion does not meet this requirement. Please ask your host to upgrade PHP.");
 }
 
 // save the current directory from our index.php file - we'll use that later as our forum root
@@ -88,11 +88,11 @@ XF::start($dir);
 // check whether we've got an API call
 if (\XF::requestUrlMatchesApi())
 {
-\XF::runApp('XF\Api\App');
+    \XF::runApp('XF\Api\App');
 }
 else // ... or a regular web call
 {
-\XF::runApp('XF\Pub\App');
+    \XF::runApp('XF\Pub\App');
 }[/CODE]
 
 You'll note that the API calls use the same entry point - making a HTTP call to [ICODE]{forum_root}/api[/ICODE] gets redirected via the same index file.
@@ -107,7 +107,7 @@ The second entry point is via the CLI - the Command Line Interface. In this case
 $phpVersion = phpversion();
 if (version_compare($phpVersion, '5.6.0', '<'))
 {
-die("PHP 5.6.0 or newer is required. $phpVersion does not meet this requirement. Please ask your host to upgrade PHP.");
+    die("PHP 5.6.0 or newer is required. $phpVersion does not meet this requirement. Please ask your host to upgrade PHP.");
 }
 
 // save the current directory from our cmd.php file - we'll use that later as our forum root
@@ -197,26 +197,26 @@ Most subsystems in the application container are closures that build the real ob
 
 [ICODE]fakesMail()[/ICODE] does exactly this — it swaps [ICODE]mailer.transport[/ICODE] for a transport that records messages instead of sending them:
 
-[CODE=php]    protected function fakesMail()
+[CODE=php]protected function fakesMail()
 {
-$this->setConfig('enableMailQueue', false);
+    $this->setConfig('enableMailQueue', false);
 
-        $this->swap('mailer.transport', function (Container $c)
-        {
-            return new TestTransport();
-        });
+    $this->swap('mailer.transport', function (Container $c)
+    {
+        return new TestTransport();
+    });
 
-        $this->app()->container()->decache('mailer');
+    $this->app()->container()->decache('mailer');
 
-        return $this->getMailTransport();
-    }[/CODE]
+    return $this->getMailTransport();
+}[/CODE]
 
 [B]Swapping a key does not reach anything already built from it[/B], so if you swap a key yourself, [ICODE]decache()[/ICODE] whatever was built from it, as above with [ICODE]mailer[/ICODE].
 
 [ICODE]mock()[/ICODE] swaps in a Mockery mock instead, with expectations. There is no HTTP request under PHPUnit, so to test code reading the visitor's IP address:
 
 [CODE=php]$this->mock('request', XF\Http\Request::class, function ($mock) {
-$mock->expects()->getIp(true)->once()->andReturns('10.0.0.1');
+    $mock->expects()->getIp()->once()->andReturns('10.0.0.1');
 });[/CODE]
 
 [ICODE]spy()[/ICODE] swaps in a spy, which records every call so you can assert afterwards. A spy returns [ICODE]null[/ICODE] for everything, so where the code under test uses a return value, use [ICODE]mock()[/ICODE].
@@ -301,15 +301,15 @@ These examples assume a forum root of [ICODE]/srv/www/xenforo[/ICODE] and an add
 Add the following to your addon's [ICODE]composer.json[/ICODE], or create one with it:
 
 [CODE=json]{
-"require-dev": {
-"hampel/xenforo-test-framework": "^5.41",
-"nesbot/carbon": "^3.0"
-},
-"autoload-dev": {
-"psr-4": {
-"Tests\\": "tests/"
-}
-}
+    "require-dev": {
+        "hampel/xenforo-test-framework": "^5.41",
+        "nesbot/carbon": "^3.0"
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Tests\\": "tests/"
+        }
+    }
 }[/CODE]
 
 [ICODE]nesbot/carbon[/ICODE] is optional. Use [ICODE]^3.0[/ICODE] and so on for older lines — see Compatibility above.
@@ -317,19 +317,19 @@ Add the following to your addon's [ICODE]composer.json[/ICODE], or create one wi
 [B]If you add [ICODE]league/flysystem-memory[/ICODE] for [ICODE]swapFs()[/ICODE], Composer will refuse to resolve it[/B] — every flysystem release up to 3.35.2 carries a low-severity advisory, XenForo supplies 1.x, which has no patched release, and Composer blocks an affected package by default. Accept that one advisory by id, and keep the floor above the range of the critical one that [I]is[/I] patched:
 
 [CODE=json]{
-"require-dev": {
-"league/flysystem": "^1.1.4",
-"league/flysystem-memory": "^1.0"
-},
-"config": {
-"policy": {
-"advisories": {
-"ignore-id": {
-"PKSA-w9tt-7782-78jx": "no patched flysystem 1.x exists; dev-only, for the test suite"
-}
-}
-}
-}
+    "require-dev": {
+        "league/flysystem": "^1.1.4",
+        "league/flysystem-memory": "^1.0"
+    },
+    "config": {
+        "policy": {
+            "advisories": {
+                "ignore-id": {
+                    "PKSA-w9tt-7782-78jx": "no patched flysystem 1.x exists; dev-only, for the test suite"
+                }
+            }
+        }
+    }
 }[/CODE]
 
 Written as a map, the reason appears in [ICODE]composer audit[/ICODE] output. [B]Do not ignore [ICODE]PKSA-pwh8-d4fr-nywn[/ICODE][/B] — that one is a remote-code-execution advisory, fixed in flysystem 1.1.4, which the floor above excludes.
@@ -362,14 +362,14 @@ $ cp vendor/hampel/xenforo-test-framework/phpunit.xml .[/CODE]
 Finally, remove the test files from your release build in [ICODE]build.json[/ICODE]. If you only use Composer for testing:
 
 [CODE=json]{
-"exec": [
-"rm -fv _build/upload/src/addons/{addon_id}/composer.json",
-"rm -fv _build/upload/src/addons/{addon_id}/composer.lock",
-"rm -fv _build/upload/src/addons/{addon_id}/phpunit.xml",
-"rm -rfv _build/upload/src/addons/{addon_id}/tests",
-"rm -rfv _build/upload/src/addons/{addon_id}/.phpunit.cache",
-"rm -rfv _build/upload/src/addons/{addon_id}/vendor"
-]
+    "exec": [
+        "rm -fv _build/upload/src/addons/{addon_id}/composer.json",
+        "rm -fv _build/upload/src/addons/{addon_id}/composer.lock",
+        "rm -fv _build/upload/src/addons/{addon_id}/phpunit.xml",
+        "rm -rfv _build/upload/src/addons/{addon_id}/tests",
+        "rm -rfv _build/upload/src/addons/{addon_id}/.phpunit.cache",
+        "rm -rfv _build/upload/src/addons/{addon_id}/vendor"
+    ]
 }[/CODE]
 
 [ICODE]-f[/ICODE] because a path that is not there is not a problem: without it the build prints an error for every file you have already removed. [B][ICODE].phpunit.cache[/ICODE] has to be named[/B] — XenForo skips a dot-entry by its own name but still walks into it, so [ICODE].phpunit.cache/test-results[/ICODE] reaches the zip. Removals go before any [ICODE]mv[/ICODE] of your documentation into [ICODE]_build/[/ICODE]; [ICODE]exec[/ICODE] runs in order.
@@ -379,12 +379,12 @@ Finally, remove the test files from your release build in [ICODE]build.json[/ICO
 If your addon also uses Composer at runtime, remove only the test files, and run [ICODE]composer install --no-dev[/ICODE] during the build:
 
 [CODE=json]{
-"exec": [
-"composer install --working-dir=_build/upload/src/addons/{addon_id}/ --no-dev --optimize-autoloader",
-"rm -fv _build/upload/src/addons/{addon_id}/phpunit.xml",
-"rm -rfv _build/upload/src/addons/{addon_id}/tests",
-"rm -rfv _build/upload/src/addons/{addon_id}/.phpunit.cache"
-]
+    "exec": [
+        "composer install --working-dir=_build/upload/src/addons/{addon_id}/ --no-dev --optimize-autoloader",
+        "rm -fv _build/upload/src/addons/{addon_id}/phpunit.xml",
+        "rm -rfv _build/upload/src/addons/{addon_id}/tests",
+        "rm -rfv _build/upload/src/addons/{addon_id}/.phpunit.cache"
+    ]
 }[/CODE]
 
 [B]Give every [ICODE]composer install[/ICODE] a [ICODE]--working-dir[/ICODE] pointing into [ICODE]_build/[/ICODE].[/B] XenForo runs each [ICODE]exec[/ICODE] line from your addon's own root, so a bare [ICODE]composer install --no-dev[/ICODE] strips the dev dependencies out of the working copy you develop in — this framework among them — every time you build. Reinstalling them is [ICODE]composer install[/ICODE], but nothing tells you it happened.
