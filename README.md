@@ -811,6 +811,12 @@ rather than per test class; `DOCS.md` has the detail, under "Unit Test Configura
 `XF::start()` installs its own error and exception handlers, and `TestCase` removes them after each test so that
 `failOnRisky` can be used. As a result, a handler your own code leaves installed is removed rather than reported.
 
+**A note on `failOnDeprecation`**
+
+XenForo's boot masks `E_DEPRECATED`, so a PHP deprecation in your code never reaches PHPUnit and `failOnDeprecation`
+does not see it. Only `E_USER_DEPRECATED` does, and under the framework it fails the test as an `ErrorException`.
+PHPStan with `phpVersion` set to the PHP you run on is what reports PHP's own deprecations.
+
 ## 10. Running Unit Tests
 
 Composer installed the PHPUnit executable at `{addon_root}/vendor/bin/phpunit`. To run our tests, we go to our addon 

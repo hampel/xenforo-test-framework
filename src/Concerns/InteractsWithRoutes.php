@@ -791,7 +791,6 @@ trait InteractsWithRoutes
 			$standIn = (new \ReflectionClass($appClass))->newInstanceWithoutConstructor();
 
 			$container = new \ReflectionProperty(App::class, 'container');
-			$container->setAccessible(true);
 			$container->setValue($standIn, $this->app()->container());
 
 			$this->writeStaticProperty(\XF::class, 'app', $standIn);

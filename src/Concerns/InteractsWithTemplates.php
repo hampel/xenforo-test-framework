@@ -743,7 +743,6 @@ trait InteractsWithTemplates
 			. '-' . $type . '-' . $title;
 
 		$cacheProperty = new \ReflectionProperty(Templater::class, 'templateCache');
-		$cacheProperty->setAccessible(true);
 
 		$cache = $cacheProperty->getValue($templater);
 		$had = array_key_exists($key, $cache);
@@ -847,7 +846,6 @@ trait InteractsWithTemplates
 	private function installGlobalTemplateData(Templater $templater, ?AbstractReply $reply)
 	{
 		$defaultParams = new \ReflectionProperty(Templater::class, 'defaultParams');
-		$defaultParams->setAccessible(true);
 		$current = $defaultParams->getValue($templater)['xf'] ?? null;
 
 		if ($current !== null && $current !== $this->installedGlobalTemplateData)

@@ -342,7 +342,6 @@ class TemplateRenderTest extends TestCase
 		$this->renderReply($this->dispatch('options', 'admin'));
 
 		$defaultParams = new \ReflectionProperty(Templater::class, 'defaultParams');
-		$defaultParams->setAccessible(true);
 
 		$this->assertSame('option_group_list', $defaultParams->getValue($this->app()->templater())['xf']['reply']['template']);
 	}

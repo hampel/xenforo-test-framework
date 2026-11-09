@@ -20,7 +20,6 @@ class RunOnceTest extends TestCase
 	{
 		$reflection = new \ReflectionClass(\XF::class);
 		$property = $reflection->getProperty('runOnce');
-		$property->setAccessible(true);
 
 		return array_keys($property->getValue());
 	}

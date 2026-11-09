@@ -30,7 +30,6 @@ class RunnerStepTest extends TestCase
 
 		// what calling the step directly does, which is why the helper loops
 		$step = new \ReflectionMethod($runner, 'stepBatched');
-		$step->setAccessible(true);
 		$offset = $step->invoke($runner, null, 0);
 
 		$this->assertSame([1, 2, 3], $runner->processed);

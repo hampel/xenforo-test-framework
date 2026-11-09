@@ -2,6 +2,10 @@
 
 ## 5.41.1
 
+* the `setAccessible()` calls on reflected properties and methods are gone. PHP 8.5 deprecates them
+  and they have done nothing since PHP 8.1
+* docs: the README says that `failOnDeprecation` cannot see a PHP deprecation under the framework,
+  because XenForo's boot masks `E_DEPRECATED`; only `E_USER_DEPRECATED` reaches a test
 * docs: the README's limitations no longer say that the whole page is out of reach, which
   `renderReplyPage()` renders, or that no data can be seeded, which the fixture helpers do
 

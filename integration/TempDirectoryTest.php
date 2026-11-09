@@ -60,7 +60,6 @@ class TempDirectoryTest extends TestCase
 	public function test_the_removal_refuses_any_path_outside_the_system_temporary_directory()
 	{
 		$decide = new \ReflectionMethod($this, 'isRemovableTempDirectory');
-		$decide->setAccessible(true);
 
 		$mine = $this->createTempDirectory();
 		$this->assertTrue($decide->invoke($this, $mine), 'a directory this trait created');

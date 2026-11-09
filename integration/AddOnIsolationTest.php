@@ -267,7 +267,6 @@ class AddOnIsolationTest extends TestCase
 	private function mapClassExtensions(array $rows)
 	{
 		$method = new \ReflectionMethod(Extension::class, 'mapClassExtensions');
-		$method->setAccessible(true);
 
 		return $method->invoke(null, $rows);
 	}
@@ -317,7 +316,6 @@ class AddOnIsolationTest extends TestCase
 	private function readProperty(Extension $extension, $name)
 	{
 		$property = new \ReflectionProperty(\XF\Extension::class, $name);
-		$property->setAccessible(true);
 
 		return $property->getValue($extension);
 	}

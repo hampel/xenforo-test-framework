@@ -108,7 +108,6 @@ trait InteractsWithJobs
 		}
 
 		$method = new \ReflectionMethod($runner, $stepName);
-		$method->setAccessible(true);
 
 		// stepMiscCleanUp() takes nothing, stepDeleteContent($lastOffset, $maxRunTime) takes two
 		$arity = $method->getNumberOfParameters();
@@ -149,7 +148,6 @@ trait InteractsWithJobs
 	private function runnerStepNames($runner)
 	{
 		$getSteps = new \ReflectionMethod($runner, 'getSteps');
-		$getSteps->setAccessible(true);
 
 		$names = [];
 
