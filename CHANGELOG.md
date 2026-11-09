@@ -1,6 +1,6 @@
 # Changelog
 
-## 5.41.1
+## 5.41.1 (2026-11-10)
 
 * the `setAccessible()` calls on reflected properties and methods are gone. PHP 8.5 deprecates them
   and they have done nothing since PHP 8.1
