@@ -4,6 +4,9 @@
 
 * the `setAccessible()` calls on reflected properties and methods are gone. PHP 8.5 deprecates them
   and they have done nothing since PHP 8.1
+* the floor of `mockery/mockery` is 1.6.10 and the development floor of `nesbot/carbon` is 2.73.0,
+  the first releases of each without the implicitly nullable parameters that PHP 8.4 and later
+  deprecate. `composer update` reaches both
 * docs: the README says that `failOnDeprecation` cannot see a PHP deprecation under the framework,
   because XenForo's boot masks `E_DEPRECATED`; only `E_USER_DEPRECATED` reaches a test
 * docs: the README's limitations no longer say that the whole page is out of reach, which

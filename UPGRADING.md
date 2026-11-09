@@ -7,7 +7,8 @@ Most releases need nothing beyond `composer update`. `CHANGELOG.md` lists everyt
 
 ## 5.41.1
 
-Nothing to do.
+Nothing to do. `composer update` brings `mockery/mockery` to 1.6.10 or later, which is the new
+floor.
 
 ## 5.41.0
 
