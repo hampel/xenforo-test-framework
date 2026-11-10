@@ -284,7 +284,9 @@ abstract class TestCase extends BaseTestCase
 				. "\n\n"
 				. 'Declare one $addonsToLoad for the whole suite, in tests/TestCase.php, naming every '
 				. 'add-on whose class extensions or content types your tests reach - rather than a '
-				. 'different list per test class. See DOCS.md, "Unit Test Configuration".'
+				. 'different list per test class. A test class that needs a different list on purpose '
+				. 'can run in its own process instead, with PHPUnit\'s #[RunTestsInSeparateProcesses] '
+				. 'attribute. See DOCS.md, "Unit Test Configuration".'
 		);
 	}
 

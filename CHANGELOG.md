@@ -1,5 +1,18 @@
 # Changelog
 
+## 5.41.3
+
+* the refusal of a test class whose `$addonsToLoad` would extend a class already resolved now names
+  PHPUnit's `#[RunTestsInSeparateProcesses]` attribute, for a class that needs a different list on
+  purpose
+* the scaffold's `tests/TestCase.php` declares `$addonsToLoad` as `string[]` and the `$file`
+  parameter of `getMockData()` as `string`, which PHPStan reported from levels 3 and 6. See
+  `UPGRADING.md` for the two lines
+* docs: `DOCS.md` describes running such a test class in its own process, under "Unit Test
+  Configuration"
+* docs: the README and `mockFind` in `DOCS.md` name `phpstan/phpstan-mockery` for a Mockery mock
+  passed to a typed parameter
+
 ## 5.41.2 (2026-11-10)
 
 * docs: the README says that PHPUnit 13 is not yet supported, and why

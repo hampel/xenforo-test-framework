@@ -87,6 +87,11 @@ class extensions or content types any of your tests reach, identically in every 
 `tests/TestCase.php` is the place for it - and neither of these is order-dependent any more. That
 one list is also the remedy for the content type handlers above, so it answers both.
 
+**A test class that needs a different list on purpose runs in its own process.** A test of your
+add-on beside another one, or of the forum without yours, names a list its siblings do not. Give
+that class PHPUnit's `#[RunTestsInSeparateProcesses]` attribute: the cache belongs to the process,
+so the class resolves every extension afresh under its own list, whatever ran before it.
+
 **Your own add-on's listeners do run**, including while the container builds something your test is
 not otherwise interested in - so a mock standing in for one subsystem may still need expectations
 for whatever your listeners ask of it.
@@ -3060,6 +3065,11 @@ $this->mockFind('XFMG:MediaItem', 43, null);
 It returns the finder mock, so further expectations can be set on it. `find()` reads the entity
 manager's cache before it builds a finder, so this clears the cache for that type - otherwise an
 entity the test loaded earlier would be returned instead of the mock.
+
+Under PHPStan, a `\Mockery::mock(MediaItem::class)` passed as the entity is reported from level 5
+as a `MockInterface` given where an entity is expected. Include
+[phpstan/phpstan-mockery](https://github.com/phpstan/phpstan-mockery)'s `extension.neon`, which
+types the mock as the class it mocks.
 
 ### mockEntity
 Mock an Entity.

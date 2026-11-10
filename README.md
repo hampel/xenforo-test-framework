@@ -249,7 +249,7 @@ abstract class TestCase extends BaseTestCase
     protected $rootDir = '../../../..';
 
     /**
-     * @var array $addonsToLoad an array of XenForo addon ids to load
+     * @var string[] $addonsToLoad an array of XenForo addon ids to load
      *
      * Specifying an array of addon ids will cause only those addons to be loaded - useful for isolating your addon for
      * testing purposes
@@ -263,7 +263,7 @@ abstract class TestCase extends BaseTestCase
      * To use, create a "mock" folder relative to the tests folder, eg:
      * 'src/addons/MyVendor/MyAddon/tests/mock'
      *
-     * @param $file
+     * @param string $file
      *
      * @return false|string
      */
@@ -807,7 +807,8 @@ included. On v4 and earlier it did not filter listeners.
 registered, and an operation that walks every content type can fail inside XenForo's own code. Nor can an extension be
 *added* to a class another test has already resolved, and a test class whose list would add one is refused in `setUp()`
 rather than quietly exercising XenForo's own class. Both are answered by declaring the list once for the whole suite
-rather than per test class; `DOCS.md` has the detail, under "Unit Test Configuration".
+rather than per test class; `DOCS.md` has the detail, under "Unit Test Configuration". A test class that needs a
+different list on purpose can run in its own process, with PHPUnit's `#[RunTestsInSeparateProcesses]` attribute.
 
 **A note on `failOnRisky`**
 
@@ -994,3 +995,7 @@ PHPStan's scan there, or the `tests/` scaffold this framework ships is read besi
 This framework ships a fragment of its own, `extension.neon`, which types the entities
 `makeEntity()` and `createEntity()` return from the name they are given. Include it beside
 hampel/xenforo-phpstan's; `DOCS.md` has the detail under `makeEntity`.
+
+If your tests pass Mockery mocks to typed parameters, such as the entity given to `mockFind()`,
+install [phpstan/phpstan-mockery](https://github.com/phpstan/phpstan-mockery) and include its
+`extension.neon` as well. It types `Mockery::mock(Foo::class)` as a `Foo`.

@@ -5,6 +5,20 @@ Most releases need nothing beyond `composer update`. `CHANGELOG.md` lists everyt
 
 `tests/TestCase.php` is copied into your add-on, so a change to it has to be merged by hand.
 
+## 5.41.3
+
+Nothing you must do. If you analyse `tests/` with PHPStan, two docblocks in your copy of
+`tests/TestCase.php` are reported, the first from level 3 and the second from level 6. Change them
+by hand:
+
+```php
+	 * @var string[] $addonsToLoad an array of XenForo addon ids to load
+```
+
+```php
+	 * @param string $file
+```
+
 ## 5.41.2
 
 Nothing to do.

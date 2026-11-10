@@ -17,7 +17,7 @@ abstract class TestCase extends BaseTestCase
 	protected $rootDir = '../../../..';
 
 	/**
-	 * @var array $addonsToLoad an array of XenForo addon ids to load
+	 * @var string[] $addonsToLoad an array of XenForo addon ids to load
 	 *
 	 * Name your own addon here, eg ['MyVendor/MyAddon']. Only those addons are loaded, which keeps
 	 * other addons' class extensions, code event listeners and Composer autoloading out of your
@@ -34,7 +34,7 @@ abstract class TestCase extends BaseTestCase
 	 * To use, create a "mock" folder relative to the tests folder, eg:
 	 * 'src/addons/MyVendor/MyAddon/tests/mock'
 	 *
-	 * @param $file
+	 * @param string $file
 	 *
 	 * @return false|string
 	 */

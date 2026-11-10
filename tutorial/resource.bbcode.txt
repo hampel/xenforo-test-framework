@@ -175,7 +175,7 @@ abstract class TestCase extends BaseTestCase
     protected $rootDir = '../../../..';
 
     /**
-     * @var array $addonsToLoad the XenForo addon ids to load, eg ['MyVendor/MyAddon'].
+     * @var string[] $addonsToLoad the XenForo addon ids to load, eg ['MyVendor/MyAddon'].
      *      Only those addons are loaded. Leaving it empty loads every installed addon.
      */
     protected $addonsToLoad = [];
