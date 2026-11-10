@@ -1,5 +1,9 @@
 # Changelog
 
+## 5.41.2
+
+* docs: the README says that PHPUnit 13 is not yet supported, and why
+
 ## 5.41.1 (2026-11-10)
 
 * the `setAccessible()` calls on reflected properties and methods are gone. PHP 8.5 deprecates them

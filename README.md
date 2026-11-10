@@ -23,6 +23,9 @@ Install the newest version your XenForo and PHP allow. Older lines stay on Packa
 v4 and v5 support the same XenForo and PHP versions; v5 is the current line, and
 [UPGRADING.md](UPGRADING.md) describes moving to it.
 
+v5 runs on PHPUnit 10.5, 11 and 12. PHPUnit 13 is not yet supported: from 13.2 it reports every test that boots
+XenForo as risky, because XenForo's boot closes PHPUnit's output buffer, and `failOnRisky` then fails the run.
+
 Put the version you picked in your addon's `require-dev` as `^5.41`, `^3.0` and so on - the installation section below
 shows the whole file.
 
