@@ -1,6 +1,6 @@
 # Changelog
 
-## 5.41.2
+## 5.41.2 (2026-11-10)
 
 * docs: the README says that PHPUnit 13 is not yet supported, and why
 
