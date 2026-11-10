@@ -1,6 +1,6 @@
 # Changelog
 
-## 5.41.3
+## 5.41.3 (2026-11-11)
 
 * the refusal of a test class whose `$addonsToLoad` would extend a class already resolved now names
   PHPUnit's `#[RunTestsInSeparateProcesses]` attribute, for a class that needs a different list on
