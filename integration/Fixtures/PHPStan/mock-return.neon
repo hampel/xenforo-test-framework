@@ -1,0 +1,9 @@
+# The configuration PhpStanMockReturnTest analyses its fixture with: this package's own, at the
+# level every mock helper's return type is checked, over the fixture alone.
+includes:
+    - ../../../phpstan.neon.dist
+
+parameters:
+    level: 9
+    paths!:
+        - MockReturnFixture.php

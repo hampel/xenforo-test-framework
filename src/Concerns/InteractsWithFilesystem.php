@@ -66,7 +66,7 @@ trait InteractsWithFilesystem
 	 * @param $fs - the name of the filesystem to mock (eg `data`, `internal-data`, `code-cache`)
 	 * @param (\Closure(MockInterface): mixed)|null $mock - the mock closure to set expectations on
 	 *
-	 * @return mixed
+	 * @return AdapterInterface&MockInterface
 	 */
 	protected function mockFs($fs, ?\Closure $mock = null)
 	{
@@ -81,7 +81,13 @@ trait InteractsWithFilesystem
 		$this->swap('config', $config);
 		$this->decacheFs();
 
-		return $this->adapterFor($fs);
+		$adapter = $this->adapterFor($fs);
+		if (!$adapter instanceof MockInterface)
+		{
+			throw new \LogicException("The '$fs' filesystem did not resolve to the mocked adapter");
+		}
+
+		return $adapter;
 	}
 
 	/**

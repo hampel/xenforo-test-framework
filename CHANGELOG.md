@@ -1,5 +1,16 @@
 # Changelog
 
+## 5.41.4 (unreleased)
+
+* `mock()` and `spy()` declare what they return as both the mocked class and
+  `Mockery\MockInterface`, where they declared `object`, so PHPStan accepts the result in a
+  `MockInterface` property and as an argument typed as the mocked class. Their `$abstract`
+  parameter is declared `class-string`
+* `mockDatabase()`, `mockRequest()` and `mockFs()` declare their return the same way, where they
+  declared `mixed`
+* `mockFactory()` and `mockService()` are declared `void`. They have never returned a value
+* docs: `DOCS.md` says what each of these helpers returns
+
 ## 5.41.3 (2026-11-11)
 
 * the refusal of a test class whose `$addonsToLoad` would extend a class already resolved now names

@@ -68,17 +68,23 @@ trait InteractsWithContainer
 	/**
 	 * Mock an instance of an object in the container.
 	 *
+	 * @template T of object
+	 *
 	 * @param  mixed  $key - the container key to be swapped with a mock
-	 * @param  string $abstract - the base class or interface to use for the mock
+	 * @param  class-string<T> $abstract - the base class or interface to use for the mock
 	 * @param  (\Closure(MockInterface): mixed)|null  $mock - (optional) the mock closure to define expectations on
-	 * @return object - the mock object
+	 * @return T&MockInterface - the mock object
 	 */
 	protected function mock($key, $abstract, ?\Closure $mock = null)
 	{
 		$args = func_get_args();
 		array_shift($args);
 
-		return $this->swap($key, \Mockery::mock(...array_filter($args)));
+		/** @var T&MockInterface $double */
+		$double = \Mockery::mock(...array_filter($args));
+		$this->swap($key, $double);
+
+		return $double;
 	}
 
 	/**
@@ -87,11 +93,11 @@ trait InteractsWithContainer
 	 * @param  mixed  $key - the container key to be swapped with a mock
 	 * @param  string $abstract - the base class or interface to use for the mock
 	 * @param  (\Closure(MockInterface): mixed)|null  $mock - (optional) the mock closure to define expectations on
-	 * @return object
+	 * @return void
 	 */
 	protected function mockFactory($key, $abstract, ?\Closure $mock = null)
 	{
-		return $this->app()->container()->factory($key, function () use ($abstract, $mock)
+		$this->app()->container()->factory($key, function () use ($abstract, $mock)
 		{
 			$args = [$abstract, $mock];
 
@@ -105,7 +111,7 @@ trait InteractsWithContainer
 	 * @param string $shortName - shortname for the class in Addon_Id:Class format
 	 * @param (\Closure(MockInterface): mixed)|null $mock - (optional) the mock closure to define expectations on
 	 *
-	 * @return object
+	 * @return void
 	 */
 	protected function mockService($shortName, ?\Closure $mock = null)
 	{
@@ -123,23 +129,29 @@ trait InteractsWithContainer
 			throw new \LogicException("Could not find service '$class' for '$shortName'");
 		}
 
-		return $this->mockFactory('service', $serviceClass, $mock);
+		$this->mockFactory('service', $serviceClass, $mock);
 	}
 
 	/**
 	 * Spy an instance of an object in the container.
 	 *
+	 * @template T of object
+	 *
 	 * @param  mixed  $key
-	 * @param  string $abstract
+	 * @param  class-string<T> $abstract
 	 * @param  (\Closure(MockInterface): mixed)|null  $mock
-	 * @return object
+	 * @return T&MockInterface
 	 */
 	protected function spy($key, $abstract, ?\Closure $mock = null)
 	{
 		$args = func_get_args();
 		array_shift($args);
 
-		return $this->swap($key, \Mockery::spy(...array_filter($args)));
+		/** @var T&MockInterface $double */
+		$double = \Mockery::spy(...array_filter($args));
+		$this->swap($key, $double);
+
+		return $double;
 	}
 
 	/**

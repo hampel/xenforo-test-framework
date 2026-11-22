@@ -14,7 +14,7 @@ trait InteractsWithRequest
 	 *
 	 * @param (\Closure(MockInterface): mixed)|null $mock - mock closure to set expectations
 	 *
-	 * @return mixed
+	 * @return Request&MockInterface
 	 */
 	protected function mockRequest(?\Closure $mock = null)
 	{

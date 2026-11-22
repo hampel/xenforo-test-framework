@@ -5,6 +5,18 @@ Most releases need nothing beyond `composer update`. `CHANGELOG.md` lists everyt
 
 `tests/TestCase.php` is copied into your add-on, so a change to it has to be merged by hand.
 
+## 5.41.4
+
+Nothing you must do. If you analyse `tests/` with PHPStan:
+
+- an ignore for `assign.propertyType` on a mock kept from `mock()` or `spy()` no longer matches
+  and can be removed
+- `mock()` or `spy()` given something other than a class name as its second argument, such as
+  Mockery's `'alias:...'` form, is reported as `argument.type`. Call `\Mockery::mock()` and
+  `swap()` for those
+- using the result of `mockFactory()` or `mockService()` is reported. Neither has ever returned a
+  value; set expectations in the closure
+
 ## 5.41.3
 
 Nothing you must do. If you analyse `tests/` with PHPStan, two docblocks in your copy of

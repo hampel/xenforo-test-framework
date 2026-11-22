@@ -13,7 +13,7 @@ trait InteractsWithDatabase
 	 *
 	 * @param (\Closure(MockInterface): mixed)|null $mock
 	 *
-	 * @return mixed
+	 * @return AbstractAdapter&MockInterface
 	 */
 	protected function mockDatabase(?\Closure $mock = null)
 	{

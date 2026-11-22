@@ -2289,8 +2289,10 @@ Mock an instance of an object in the container
 ##### Parameters:
 
 * `key` - the container key to be swapped with a mock
-* `abstract` - the base class or interface to use for the mock
+* `abstract` - the base class or interface to use for the mock, as a class name
 * `mock` - optional - the mock closure to define expectations on
+
+Returns the mock, typed as both `abstract` and `Mockery\MockInterface`.
 
 ##### Example:
 
@@ -2327,8 +2329,10 @@ after the code under test has run.
 ##### Parameters:
 
 * `key` - the container key to be swapped with a spy
-* `abstract` - the base class or interface to use for the spy
+* `abstract` - the base class or interface to use for the spy, as a class name
 * `mock` - optional - a closure to set return values on, for the calls whose result matters
+
+Returns the spy, typed as both `abstract` and `Mockery\MockInterface`.
 
 ##### Example:
 
@@ -2453,6 +2457,9 @@ Mock a factory builder in the container.
 * `abstract` - the base class or interface to use for the mock
 * `mock` - optional - the mock closure to define expectations on
 
+Returns nothing: the container builds a new mock each time the factory is asked for one, so set
+expectations in the closure.
+
 #### Example:
 
 ```php
@@ -2492,6 +2499,7 @@ Mock a service factory builder in the container.
   2.3 service classes carry a `Service` suffix: `MyAddon:MessageEvent` resolves to
   `MessageEventService`.
 * **The mock is typed as the class XenForo would build**, including an add-on's extension of it.
+* **It returns nothing.** Set expectations in the closure.
 
 #### Example:
 
@@ -2777,6 +2785,8 @@ Mock the database adapter.
 ##### Parameters
 
 * `mock` - optional - the mock closure to define expectations on
+
+Returns the mock, typed as both `XF\Db\AbstractAdapter` and `Mockery\MockInterface`.
 
 **Call it before `mockRepository()`, `mockFinder()` or `mockEntity()`.** It rebuilds the entity
 manager, which discards any repository, finder and entity mocks registered before it.
@@ -3306,6 +3316,9 @@ Allow us to mock the local filesystem to assert that certain operations have tak
 
 * `fs` - the name of the filesystem to mock (eg `data`, `internal-data`, `code-cache`)
 * `mock` - optional - the mock closure to set expectations on
+
+Returns the mocked adapter, typed as both `League\Flysystem\AdapterInterface` and
+`Mockery\MockInterface`.
 
 ##### Example:
 
@@ -4183,6 +4196,8 @@ certain attributes on a request.
 ##### Parameters:
 
 * `mock` - optional - mock closure to set expectations
+
+Returns the mock, typed as both `XF\Http\Request` and `Mockery\MockInterface`.
 
 ##### Example: 
 
