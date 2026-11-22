@@ -1,6 +1,6 @@
 # Changelog
 
-## 5.41.4 (unreleased)
+## 5.41.4 (2026-11-22)
 
 * `mock()` and `spy()` declare what they return as both the mocked class and
   `Mockery\MockInterface`, where they declared `object`, so PHPStan accepts the result in a
