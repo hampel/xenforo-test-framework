@@ -126,8 +126,12 @@ trait InteractsWithPsrLog
 	 * Assert that something was logged through the recorder.
 	 *
 	 * @param string|null $level - the PSR-3 level, eg 'error'; omit it to match any level
-	 * @param string|\Closure|null $filter - a string the message must contain, or a closure given
-	 *                                       the whole entry; omit it to match any message
+	 * @param string|(\Closure(array{
+	 *     level: string,
+	 *     message: string,
+	 *     context: array<mixed>,
+	 * }): mixed)|null $filter - a string the message must contain, or a closure given the
+	 *                                       whole entry; omit it to match any message
 	 * @param string|null $message - prefixed to the failure
 	 *
 	 * @return void
@@ -168,7 +172,11 @@ trait InteractsWithPsrLog
 	 * Assert that nothing matching was logged, which is narrower than nothing at all.
 	 *
 	 * @param string|null $level
-	 * @param string|\Closure|null $filter
+	 * @param string|(\Closure(array{
+	 *     level: string,
+	 *     message: string,
+	 *     context: array<mixed>,
+	 * }): mixed)|null $filter
 	 * @param string|null $message
 	 *
 	 * @return void

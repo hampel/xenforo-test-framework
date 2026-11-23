@@ -5,6 +5,13 @@ Most releases need nothing beyond `composer update`. `CHANGELOG.md` lists everyt
 
 `tests/TestCase.php` is copied into your add-on, so a change to it has to be merged by hand.
 
+## 5.41.5
+
+Nothing you must do. If you analyse `tests/` with PHPStan, a callback given to one of the `assert*`
+helpers that reads a key or calls a method its argument does not have is now reported. The mail
+callbacks are given a `Symfony\Component\Mime\Email` and the HTTP ones a
+`Psr\Http\Message\RequestInterface`.
+
 ## 5.41.4
 
 Nothing you must do. If you analyse `tests/` with PHPStan:

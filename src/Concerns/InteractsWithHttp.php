@@ -301,7 +301,7 @@ trait InteractsWithHttp
 	/**
 	 * Assert if request was sent based on a truth-test callback.
 	 *
-	 * @param  callable|int|null  $callback
+	 * @param (callable(RequestInterface): mixed)|int|null $callback
 	 * @return void
 	 *
 	 * @throws \Exception
@@ -343,7 +343,7 @@ trait InteractsWithHttp
 	/**
 	 * Determine if request was not sent based on a truth-test callback.
 	 *
-	 * @param  callable|null  $callback
+	 * @param (callable(RequestInterface): mixed)|null $callback
 	 * @return void
 	 *
 	 * @throws \Exception
@@ -375,7 +375,7 @@ trait InteractsWithHttp
 	/**
 	 * Get all of the sent requests matching a truth-test callback.
 	 *
-	 * @param  callable|null  $callback
+	 * @param (callable(RequestInterface): mixed)|null $callback
 	 * @return array
 	 *
 	 * @throws \Exception

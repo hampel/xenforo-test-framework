@@ -209,7 +209,13 @@ trait InteractsWithJobs
 	 * Assert if job was queued based on a truth-test callback.
 	 *
 	 * @param string $shortName
-	 * @param  callable|int|null  $callback
+	 * @param (callable(array{
+	 *     execute_class: string,
+	 *     execute_data: array<mixed>,
+	 *     unique_key: string|null,
+	 *     manual_execute: bool,
+	 *     trigger_date: int,
+	 * }): mixed)|int|null $callback
 	 * @return void
 	 *
 	 * @throws \Exception
@@ -253,7 +259,13 @@ trait InteractsWithJobs
 	 * Determine if job was not queued based on a truth-test callback.
 	 *
 	 * @param string $shortName
-	 * @param  callable|null  $callback
+	 * @param (callable(array{
+	 *     execute_class: string,
+	 *     execute_data: array<mixed>,
+	 *     unique_key: string|null,
+	 *     manual_execute: bool,
+	 *     trigger_date: int,
+	 * }): mixed)|null $callback
 	 * @return void
 	 *
 	 * @throws \Exception
@@ -286,7 +298,13 @@ trait InteractsWithJobs
 	 * Get all of the queued jobs matching a truth-test callback.
 	 *
 	 * @param string $shortName
-	 * @param  callable|null  $callback
+	 * @param (callable(array{
+	 *     execute_class: string,
+	 *     execute_data: array<mixed>,
+	 *     unique_key: string|null,
+	 *     manual_execute: bool,
+	 *     trigger_date: int,
+	 * }): mixed)|null $callback
 	 * @return array
 	 *
 	 * @throws \Exception

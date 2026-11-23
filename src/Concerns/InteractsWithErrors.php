@@ -85,10 +85,19 @@ trait InteractsWithErrors
 	 * Assert that an exception of the given class was logged.
 	 *
 	 * @param string $class - the exception class
-	 * @param int|string|callable|null $filter - a count, a string the logged message must contain,
-	 *                                           or a callback given the logged entry. The message
-	 *                                           carries the prefix passed to \XF::logException(),
-	 *                                           so the prefix itself is a string you can match on
+	 * @param int|string|(callable(array{
+	 *     exception_date: int,
+	 *     exception_type: string,
+	 *     message: string,
+	 *     filename: string,
+	 *     line: int,
+	 *     trace_string: string,
+	 *     request_state: string|false,
+	 *     raw_exception: \Throwable,
+	 * }): mixed)|null $filter - a count, a string the logged message must contain, or a
+	 *                                       callback given the logged entry. The message carries
+	 *                                       the prefix passed to \XF::logException(), so the
+	 *                                       prefix itself is a string you can match on
 	 *
 	 * @return void
 	 *
@@ -155,7 +164,16 @@ trait InteractsWithErrors
 	 * PHP would reject it as not callable. Use assertExceptionLoggedTimes() to assert a count.
 	 *
 	 * @param string $class - the exception class
-	 * @param string|callable|null $filter - a string the logged message must contain, or a callback
+	 * @param string|(callable(array{
+	 *     exception_date: int,
+	 *     exception_type: string,
+	 *     message: string,
+	 *     filename: string,
+	 *     line: int,
+	 *     trace_string: string,
+	 *     request_state: string|false,
+	 *     raw_exception: \Throwable,
+	 * }): mixed)|null $filter - a string the logged message must contain, or a callback
 	 *                                       given the logged entry. Narrowing the assertion this
 	 *                                       way asserts that no exception of that class MATCHING
 	 *                                       the filter was logged, not that none was logged at all
@@ -302,7 +320,16 @@ trait InteractsWithErrors
 	 * Get all of the logged exceptions matching the given filter.
 	 *
 	 * @param string $class
-	 * @param string|callable|null $filter
+	 * @param string|(callable(array{
+	 *     exception_date: int,
+	 *     exception_type: string,
+	 *     message: string,
+	 *     filename: string,
+	 *     line: int,
+	 *     trace_string: string,
+	 *     request_state: string|false,
+	 *     raw_exception: \Throwable,
+	 * }): mixed)|null $filter
 	 * @return array
 	 *
 	 * @throws \Exception

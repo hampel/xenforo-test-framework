@@ -1029,9 +1029,15 @@ trait InteractsWithTemplates
 	 * PHP functions as well as plausible template names, so the form decides this rather than
 	 * whether the value happens to be callable: pass a closure to filter by anything else.
 	 *
-	 * @param string|string[]|\Closure|null $templateFilter - a template name to match, a list of
-	 *                                                        them, or a closure given each error;
-	 *                                                        null asserts on every error raised
+	 * @param string|string[]|(\Closure(array{
+	 *     template: string,
+	 *     type: int,
+	 *     error: string,
+	 *     file: string,
+	 *     line: int,
+	 * }): mixed)|null $templateFilter - a template name to match, a list of them, or
+	 *                                                 a closure given each error; null asserts on
+	 *                                                 every error raised
 	 * @param string|null $message - prefixed to the failure
 	 *
 	 * @return void

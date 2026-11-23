@@ -4,6 +4,7 @@ namespace Hampel\Testing\Concerns;
 
 use Hampel\Testing\Mail\TestTransport;
 use PHPUnit\Framework\Assert as PHPUnit;
+use Symfony\Component\Mime\Email;
 use XF\Container;
 
 trait InteractsWithMail
@@ -61,7 +62,7 @@ trait InteractsWithMail
 	/**
 	 * Assert if mail was sent based on a truth-test callback.
 	 *
-	 * @param  callable|int|null  $callback
+	 * @param (callable(Email): mixed)|int|null $callback
 	 * @return void
 	 *
 	 * @throws \Exception
@@ -105,7 +106,7 @@ trait InteractsWithMail
 	/**
 	 * Determine if mail was not sent based on a truth-test callback.
 	 *
-	 * @param  callable|null  $callback
+	 * @param (callable(Email): mixed)|null $callback
 	 * @return void
 	 *
 	 * @throws \Exception
@@ -137,7 +138,7 @@ trait InteractsWithMail
 	/**
 	 * Get all of the emails matching a truth-test callback.
 	 *
-	 * @param  callable|null  $callback
+	 * @param (callable(Email): mixed)|null $callback
 	 * @return array
 	 *
 	 * @throws \Exception

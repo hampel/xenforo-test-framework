@@ -3465,6 +3465,8 @@ replaces it.
 * `assertHttpRequestSentTimes`
 * `assertNoHttpRequestSent`
 
+A truth-test callback receives the request, a `Psr\Http\Message\RequestInterface`.
+
 ##### Reading the requests:
 
 * `getHttpRequests()` - the requests sent, in order
@@ -3812,6 +3814,9 @@ none
 * `assertNoActionsLogged`
 * `assertNoChangesLogged`
 
+A truth-test callback receives an array: `type`, `content`, `action` and `params` for an action,
+and `type`, `content` and `field` for a change.
+
 ##### Example: 
 
 ```php
@@ -3979,6 +3984,8 @@ none
 * `assertMailSentTimes`
 * `assertMailNotSent`
 * `assertNoMailSent`
+
+A truth-test callback receives the message, a `Symfony\Component\Mime\Email`.
 
 ##### Example: 
 

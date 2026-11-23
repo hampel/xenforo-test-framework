@@ -70,7 +70,7 @@ trait InteractsWithEvents
 	 * Assert that a code event was fired, optionally matching a truth-test callback.
 	 *
 	 * @param string $event - the event id, eg 'entity_post_save'
-	 * @param callable|int|null $callback - a truth test receiving ($args, $hint), or a count
+	 * @param (callable(array<mixed>, string|null): mixed)|int|null $callback - a truth test receiving ($args, $hint), or a count
 	 *
 	 * @return void
 	 *
@@ -117,7 +117,7 @@ trait InteractsWithEvents
 	 * Assert that a code event was not fired.
 	 *
 	 * @param string $event
-	 * @param callable|null $callback
+	 * @param (callable(array<mixed>, string|null): mixed)|null $callback
 	 *
 	 * @return void
 	 *
@@ -154,7 +154,7 @@ trait InteractsWithEvents
 
 	/**
 	 * @param string $event
-	 * @param callable|null $callback
+	 * @param (callable(array<mixed>, string|null): mixed)|null $callback
 	 *
 	 * @return array
 	 *

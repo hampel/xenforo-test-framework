@@ -62,7 +62,12 @@ trait InteractsWithLogger
 	 * Assert an action on a particular content type was logged based on a truth-test callback.
 	 *
 	 * @param string $type
-	 * @param  callable|int|null  $callback
+	 * @param (callable(array{
+	 *     type: string,
+	 *     content: mixed,
+	 *     action: string,
+	 *     params: array<mixed>,
+	 * }): mixed)|int|null $callback
 	 *
 	 * @return void
 	 *
@@ -88,7 +93,11 @@ trait InteractsWithLogger
 	 * Assert a change on a particular content type was logged based on a truth-test callback.
 	 *
 	 * @param string $type
-	 * @param  callable|int|null  $callback
+	 * @param (callable(array{
+	 *     type: string,
+	 *     content: mixed,
+	 *     field: string|null,
+	 * }): mixed)|int|null $callback
 	 *
 	 * @return void
 	 *
@@ -154,7 +163,12 @@ trait InteractsWithLogger
 	* Determine if action was not logged based on a truth-test callback.
 	*
 	* @param string $type
-	 * @param  callable|null  $callback
+	 * @param (callable(array{
+	 *     type: string,
+	 *     content: mixed,
+	 *     action: string,
+	 *     params: array<mixed>,
+	 * }): mixed)|null $callback
 	*
 	* @return void
 	*
@@ -174,7 +188,11 @@ trait InteractsWithLogger
 	* Determine if change was not logged based on a truth-test callback.
 	*
 	* @param string $type
-	 * @param  callable|null  $callback
+	 * @param (callable(array{
+	 *     type: string,
+	 *     content: mixed,
+	 *     field: string|null,
+	 * }): mixed)|null $callback
 	*
 	* @return void
 	*
@@ -222,7 +240,12 @@ trait InteractsWithLogger
 	 * Get all of the logged actions matching a truth-test callback.
 	 *
 	 * @param string $type
-	 * @param  callable|null  $callback
+	 * @param (callable(array{
+	 *     type: string,
+	 *     content: mixed,
+	 *     action: string,
+	 *     params: array<mixed>,
+	 * }): mixed)|null $callback
 	 *
 	 * @return array
 	 *
@@ -252,7 +275,11 @@ trait InteractsWithLogger
 	 * Get all of the logged changes matching a truth-test callback.
 	 *
 	 * @param string $type
-	 * @param  callable|null  $callback
+	 * @param (callable(array{
+	 *     type: string,
+	 *     content: mixed,
+	 *     field: string|null,
+	 * }): mixed)|null $callback
 	 *
 	 * @return array
 	 *

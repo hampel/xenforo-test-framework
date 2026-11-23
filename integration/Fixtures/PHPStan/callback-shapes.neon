@@ -1,0 +1,9 @@
+# The configuration PhpStanCallbackShapesTest analyses its fixture with: this package's own, at
+# the level an untyped closure parameter is reported as mixed, over the fixture alone.
+includes:
+    - ../../../phpstan.neon.dist
+
+parameters:
+    level: 10
+    paths!:
+        - CallbackShapesFixture.php

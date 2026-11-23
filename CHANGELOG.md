@@ -1,5 +1,13 @@
 # Changelog
 
+## 5.41.5 (unreleased)
+
+* the truth-test callbacks of the job, mail, code event, HTTP, moderator log and error log
+  assertions declare what they are given, where they declared `callable`, so PHPStan types a
+  closure parameter left untyped. So do the closures given to `assertLogged()`, `assertNotLogged()`
+  and `assertNoTemplateErrors()`
+* docs: `DOCS.md` says what the mail, HTTP and moderator log callbacks receive
+
 ## 5.41.4 (2026-11-22)
 
 * `mock()` and `spy()` declare what they return as both the mocked class and
