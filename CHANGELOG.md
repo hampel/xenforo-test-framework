@@ -1,6 +1,6 @@
 # Changelog
 
-## 5.41.5 (unreleased)
+## 5.41.5 (2026-11-23)
 
 * the truth-test callbacks of the job, mail, code event, HTTP, moderator log and error log
   assertions declare what they are given, where they declared `callable`, so PHPStan types a
