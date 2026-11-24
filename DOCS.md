@@ -1260,7 +1260,8 @@ $this->actingAsApiKey([                               // a user key holding one 
 ```
 
 `is_super_user` sets the key type that `assertSuperUserKey()` checks, and `allow_all_scopes`
-grants every scope.
+grants every scope. A key that allows all scopes and is given no `scopes` also holds every scope
+the forum defines by name, so it passes a scope check on XenForo 2.3.0, which reads `scopes` alone.
 
 **The default is the most powerful key there is**, a super user holding every scope, so a guard
 that refuses super-user keys, or a scope check, is never reached by it. A test of either passes

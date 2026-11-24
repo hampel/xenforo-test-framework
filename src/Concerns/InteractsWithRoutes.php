@@ -59,7 +59,10 @@ trait InteractsWithRoutes
 	 *
 	 * Two fields decide what the guards make of a key, and neither is guessable: is_super_user
 	 * drives the key_type getter that assertSuperUserKey() reads, and allow_all_scopes
-	 * short-circuits hasScope() ahead of the scopes array.
+	 * short-circuits hasScope() ahead of the scopes array - on a current XenForo. XenForo 2.3.0's
+	 * hasScope() reads the scopes array alone, so a key with the flag and no scopes holds nothing
+	 * there. A key that allows all scopes and was given none is therefore handed every scope the
+	 * forum defines, by name, which holds on both. The key is never saved, so nothing empties it.
 	 *
 	 * The default is the most powerful key there is - a super user holding every scope - so a
 	 * guard that refuses super-user keys, or a scope check, is never reached by it. The
@@ -77,12 +80,21 @@ trait InteractsWithRoutes
 	 */
 	protected function actingAsApiKey(array $values = [])
 	{
-		$key = $this->makeEntity('XF:ApiKey', $values + [
+		$values += [
 			'api_key' => 'test-' . bin2hex(random_bytes(8)),
 			'is_super_user' => true,
 			'allow_all_scopes' => true,
 			'user_id' => \XF::visitor()->user_id,
-		]);
+		];
+
+		if ($values['allow_all_scopes'] && !array_key_exists('scopes', $values))
+		{
+			$values['scopes'] = $this->app()->db()->fetchAllColumn(
+				'SELECT api_scope_id FROM xf_api_scope ORDER BY api_scope_id'
+			);
+		}
+
+		$key = $this->makeEntity('XF:ApiKey', $values);
 
 		if (!($key instanceof ApiKey))
 		{

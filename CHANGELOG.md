@@ -1,5 +1,11 @@
 # Changelog
 
+## 5.41.7 (unreleased)
+
+* on XenForo 2.3.0, the default `actingAsApiKey()` key passes a scope check, where every scoped
+  route refused it with `missing_scope`. A key that allows all scopes and is given no `scopes`
+  now holds every scope the forum defines by name as well
+
 ## 5.41.6 (2026-11-24)
 
 * on XenForo 2.3.0, a class whose name lacks the suffix of its namespace - a controller not named
