@@ -1,6 +1,6 @@
 # Changelog
 
-## 5.41.7 (unreleased)
+## 5.41.7 (2026-11-24)
 
 * on XenForo 2.3.0, the default `actingAsApiKey()` key passes a scope check, where every scoped
   route refused it with `missing_scope`. A key that allows all scopes and is given no `scopes`
