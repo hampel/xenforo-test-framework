@@ -1,5 +1,11 @@
 # Changelog
 
+## 5.41.6 (unreleased)
+
+* on XenForo 2.3.0, a class whose name lacks the suffix of its namespace - a controller not named
+  `...Controller`, a service not named `...Service` - is built by the second and later tests in a
+  run, where they failed with a `LogicException` saying nothing had resolved its extension chain
+
 ## 5.41.5 (2026-11-23)
 
 * the truth-test callbacks of the job, mail, code event, HTTP, moderator log and error log

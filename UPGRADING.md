@@ -5,6 +5,10 @@ Most releases need nothing beyond `composer update`. `CHANGELOG.md` lists everyt
 
 `tests/TestCase.php` is copied into your add-on, so a change to it has to be merged by hand.
 
+## 5.41.6
+
+Nothing to do.
+
 ## 5.41.5
 
 Nothing you must do. If you analyse `tests/` with PHPStan, a callback given to one of the `assert*`

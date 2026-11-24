@@ -502,9 +502,14 @@ class Extension extends BaseExtension
 			$class = substr($class, 1);
 		}
 
-		if (isset(self::$globalInverseExtensionMap[$class]))
+		// under the name as given and under its alias, because XenForo looks for both and
+		// XenForo 2.3.0 records a class under an alias that differs from its own name
+		foreach ([$class, $this->getAliasedClass($class)] AS $name)
 		{
-			$this->inverseExtensionMap[$class] = self::$globalInverseExtensionMap[$class];
+			if (isset(self::$globalInverseExtensionMap[$name]))
+			{
+				$this->inverseExtensionMap[$name] = self::$globalInverseExtensionMap[$name];
+			}
 		}
 
 		try
