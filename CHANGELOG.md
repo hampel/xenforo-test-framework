@@ -1,6 +1,6 @@
 # Changelog
 
-## 5.41.6 (unreleased)
+## 5.41.6 (2026-11-24)
 
 * on XenForo 2.3.0, a class whose name lacks the suffix of its namespace - a controller not named
   `...Controller`, a service not named `...Service` - is built by the second and later tests in a
