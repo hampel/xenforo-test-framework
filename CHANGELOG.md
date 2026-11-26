@@ -1,6 +1,6 @@
 # Changelog
 
-## 5.41.8 (unreleased)
+## 5.41.8 (2026-11-27)
 
 * `getHttpRequests()`, `getHttpHistory()`, `getErrors()` and `getExceptions()` declare what they
   return, where they declared `array`, so PHPStan types an element read from them
