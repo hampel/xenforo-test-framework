@@ -49,5 +49,16 @@ class CallbackShapesFixture extends TestCase
 
 		$this->assertNoTemplateErrors(fn ($error) => strpos($error['error'], 'x') !== false); // expect: clean
 		$this->assertNoTemplateErrors(fn ($error) => $error['no_such_key'] === 1); // expect: reported
+
+		// what the reading helpers return is typed as well, so an element needs no wrapper
+		$this->getHttpRequests()[0]->getHeaderLine('X-Test'); // expect: clean
+		$this->getHttpRequests()[0]->noSuchMethod(); // expect: reported
+		$this->getHttpHistory()[0]['request']->getMethod(); // expect: clean
+		$this->getHttpHistory()[0]['response']?->getStatusCode(); // expect: clean
+		$this->getHttpHistory()[0]['no_such_key']; // expect: reported
+		$this->assertNotSame(0, strlen($this->getErrors()[0]['message'])); // expect: clean
+		$this->getErrors()[0]['no_such_key']; // expect: reported
+		$this->getExceptions()[0]['raw_exception']->getCode(); // expect: clean
+		$this->getExceptions()[0]['no_such_key']; // expect: reported
 	}
 }

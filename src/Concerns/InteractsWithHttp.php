@@ -278,7 +278,12 @@ trait InteractsWithHttp
 	/**
 	 * Return an array of all Http client history
 	 *
-	 * @return array
+	 * @return array<int, array{
+	 *     request: RequestInterface,
+	 *     response: ResponseInterface|null,
+	 *     error: mixed,
+	 *     options: array<string, mixed>,
+	 * }>
 	 */
 	protected function getHttpHistory()
 	{
@@ -288,13 +293,13 @@ trait InteractsWithHttp
 	/**
 	 * Return an array of all Http client requests made
 	 *
-	 * @return array
+	 * @return array<int, RequestInterface>
 	 */
 	protected function getHttpRequests()
 	{
 		return array_map(function ($item)
 		{
-			return $item['request'] ?: null;
+			return $item['request'];
 		}, $this->getHttpHistory());
 	}
 

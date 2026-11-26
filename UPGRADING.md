@@ -5,6 +5,11 @@ Most releases need nothing beyond `composer update`. `CHANGELOG.md` lists everyt
 
 `tests/TestCase.php` is copied into your add-on, so a change to it has to be merged by hand.
 
+## 5.41.8
+
+Nothing to do. A helper written to assert the type of what `getHttpRequests()` or `getErrors()`
+returns is no longer needed.
+
 ## 5.41.7
 
 Nothing to do. A test given an explicit scope because the default `actingAsApiKey()` key was

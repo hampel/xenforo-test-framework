@@ -47,7 +47,7 @@ class PhpStanCallbackShapesTest extends TestCase
 		$output = $this->analyse();
 		$expectations = $this->expectations();
 
-		$this->assertCount(29, $expectations, 'the fixture should carry twenty-nine marked lines');
+		$this->assertCount(38, $expectations, 'the fixture should carry thirty-eight marked lines');
 
 		// the run happened and each entry reaches the report under its own type
 		$this->assertStringContainsString("Offset 'no_such_key' does not exist on array{execute_class: string", $output);

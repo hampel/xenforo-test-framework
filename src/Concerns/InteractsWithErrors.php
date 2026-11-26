@@ -41,7 +41,16 @@ trait InteractsWithErrors
 	 *
 	 * Note that errors are stored as exceptions of type \ErrorException
 	 *
-	 * @return array
+	 * @return array<int, array{
+	 *     exception_date: int,
+	 *     exception_type: string,
+	 *     message: string,
+	 *     filename: string,
+	 *     line: int,
+	 *     trace_string: string,
+	 *     request_state: string|false,
+	 *     raw_exception: \Throwable,
+	 * }>
 	 * @throws \Exception
 	 */
 	protected function getExceptions()
@@ -52,7 +61,16 @@ trait InteractsWithErrors
 	/**
 	 * Return an array of all errors
 	 *
-	 * @return array
+	 * @return array<int, array{
+	 *     exception_date: int,
+	 *     exception_type: string,
+	 *     message: string,
+	 *     filename: string,
+	 *     line: int,
+	 *     trace_string: string,
+	 *     request_state: string|false,
+	 *     raw_exception: \Throwable,
+	 * }>
 	 * @throws \Exception
 	 */
 	protected function getErrors()
@@ -424,7 +442,16 @@ trait InteractsWithErrors
 	 * Get all of the logged exceptions for a given type.
 	 *
 	 * @param  string  $class
-	 * @return array
+	 * @return array<int, array{
+	 *     exception_date: int,
+	 *     exception_type: string,
+	 *     message: string,
+	 *     filename: string,
+	 *     line: int,
+	 *     trace_string: string,
+	 *     request_state: string|false,
+	 *     raw_exception: \Throwable,
+	 * }>
 	 * @throws \Exception
 	 */
 	private function exceptionsOf($class)

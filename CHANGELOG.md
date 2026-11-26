@@ -1,5 +1,10 @@
 # Changelog
 
+## 5.41.8 (unreleased)
+
+* `getHttpRequests()`, `getHttpHistory()`, `getErrors()` and `getExceptions()` declare what they
+  return, where they declared `array`, so PHPStan types an element read from them
+
 ## 5.41.7 (2026-11-24)
 
 * on XenForo 2.3.0, the default `actingAsApiKey()` key passes a scope check, where every scoped
